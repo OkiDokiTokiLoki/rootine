@@ -4,7 +4,7 @@ export const seedCycles = [
         name: "Grow #1",
         startDate: "2026-04-10",
         entries: [
-            { id: "s0", dt: "2026-06-12T13:00", plants: { COP: { water: 2 }, H: { water: 2 }, GC: { water: 2 }, GC2: { water: 2 } }, actions: [] },
+            { id: "s0", dt: "2026-06-12T13:00", plants: { COP: { water: 2 }, H: { water: 2 }, GC: { water: 2 }, GC2: { water: 2 } }, actions: [], obs: "Yellowing continues on bigger plants, rotated plants, busy flushing for now, ph tested" },
             { id: "s1", dt: "2026-06-10T13:00", plants: { COP: { water: 2 }, H: { water: 2 }, GC: { water: 2 }, GC2: { water: 2 } }, actions: [] },
             { id: "s2", dt: "2026-06-08T14:00", plants: { COP: { fish: 1, grow: 1, bloom: 1 }, H: { fish: 1, grow: 1, bloom: 1 }, GC: { fish: 1, grow: 1, bloom: 1 }, GC2: { fish: 1, grow: 1 } }, actions: [], obs: "Yellowing on COP (most), H, GC — possibly nute-related" },
             { id: "s3", dt: "2026-06-05T13:00", plants: { COP: { water: 2 }, H: { water: 2 }, GC: { water: 2 }, GC2: { water: 2 } }, actions: [] },

@@ -1,6 +1,6 @@
 import { seedCycles } from "./data.js";
 
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 4;
 
 export function loadCycles() {
     try {
