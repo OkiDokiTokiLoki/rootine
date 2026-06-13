@@ -45,6 +45,22 @@ function showTab(name) {
         document.getElementById("section-" + t).classList.toggle("active", t === name);
         document.getElementById("tab-" + t).classList.toggle("active", t === name);
     });
+    if (name === "add" && !editingEntryId) {
+        ["COP", "H", "GC", "GC2"].forEach((p) =>
+            ["fish", "grow", "bloom", "water"].forEach((n) => {
+                document.getElementById(p + "-" + n).value = "";
+            })
+        );
+        ["lst", "def", "repot"].forEach((id) => {
+            document.getElementById("ck-" + id).checked = false;
+        });
+        document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.checked = false));
+        document.getElementById("lst-plants").style.display = "none";
+        document.getElementById("def-plants").style.display = "none";
+        document.getElementById("repot-plants").style.display = "none";
+        document.getElementById("new-obs").value = "";
+        setDateDefault();
+    }
 }
 
 // ── Grow age header ───────────────────────────────────────────────────────────
@@ -160,8 +176,6 @@ function editEntry(id) {
     const actions = entry.actions || [];
     document.getElementById("ck-lst").checked = actions.some((a) => a.startsWith("LST"));
     document.getElementById("ck-def").checked = actions.some((a) => a.startsWith("Defoliate"));
-    document.getElementById("ck-top").checked = actions.some((a) => a.startsWith("Top / FIM"));
-    document.getElementById("ck-sticky").checked = actions.some((a) => a.startsWith("Sticky traps"));
     document.getElementById("ck-light").checked = actions.some((a) => a.startsWith("Light adjusted"));
     document.getElementById("ck-repot").checked = actions.some((a) => a.startsWith("Repot / transplant"));
 
