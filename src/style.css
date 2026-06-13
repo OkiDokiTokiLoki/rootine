@@ -648,22 +648,37 @@ textarea.form-input {
     font-weight: 600;
 }
 
-.delete-cycle-btn {
+.settings-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     padding: 0;
-    background: var(--red-bg);
-    color: var(--red);
     border: none;
     border-radius: 6px;
     cursor: pointer;
 }
 
-.cycle-header.collapsed .delete-cycle-btn {
-    display: none;
+.add-plant-btn {
+    background: var(--green-bg);
+    color: rgb(245, 160, 91);
+}
+
+.edit-cycle-btn {
+    background: var(--blue-bg);
+    color: var(--blue);
+}
+
+.delete-cycle-btn {
+    background: var(--red-bg);
+    color: var(--red);
+}
+
+.cycle-header.collapsed .settings-btn,
+.entry-card:not(.open) .settings-btn {
+    opacity: 0.25;
+    pointer-events: none;
 }
 
 .cycle-active-badge {

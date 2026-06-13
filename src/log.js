@@ -80,7 +80,7 @@ function renderEntriesForCycle(cycle) {
     });
 
     if (lastWk !== null) html += "</div>";
-    return html || '<div class="empty" style="padding:20px 0">No entries yet.</div>';
+    return html || '<div class="empty" style="padding:20px 0">No entries yet. <span onclick="document.querySelectorAll(\'#tabs button\')[1].click()" style="color:var(--green);cursor:pointer;text-decoration:underline">Change that.</span></div>';
 }
 
 function renderEntryCard(e) {
@@ -120,7 +120,7 @@ function renderEntryCard(e) {
         body += `<div class="action-list${collapsedActions ? " collapsed" : ""}">` + e.actions.map((a) => `<span class="action-tag">${a}</span>`).join("") + "</div>";
     }
     if (e.obs) body += `<div class="obs-box">${e.obs}</div>`;
-    body += `<div style="display:flex;gap:6px"><button class="edit-entry-btn" onclick="editEntry('${e.id}')" title="Edit entry"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3 17.25V21h3.75L17.81 9.94M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><button class="delete-entry-btn" onclick="deleteEntry('${e.id}')" title="Delete entry"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></div>`;
+    // body += `<div style="display:flex;gap:6px"><button class="edit-entry-btn" onclick="editEntry('${e.id}')" title="Edit entry"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3 17.25V21h3.75L17.81 9.94M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><button class="delete-entry-btn" onclick="deleteEntry('${e.id}')" title="Delete entry"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></div>`;
 
     const hasLight = (e.actions || []).some((a) => a.startsWith("Light adjusted"));
     const lightIcon = hasLight ? `<svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:var(--amber);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.6-1.4 4.9-3.5 6.2V17a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-1.8A7 7 0 0 1 5 9a7 7 0 0 1 7-7z"/></svg>` : "";
@@ -132,6 +132,12 @@ function renderEntryCard(e) {
           <div class="entry-date">${fmtDate(e.dt)}</div>
           <div class="entry-time">${fmtTime(e.dt)}</div>
         </div>
+        <button class="settings-btn edit-entry-btn" onclick="editEntry('${e.id}')" title="Edit entry">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3 17.25V21h3.75L17.81 9.94M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </button>
+        <button class="settings-btn delete-entry-btn" onclick="deleteEntry('${e.id}')" title="Delete entry">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
         <span style="display:flex;align-items:center;gap:6px;margin-left:auto">${lightIcon}${badgeHtml}</span>
         <svg class="chevron" id="chev-${e.id}" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
@@ -157,7 +163,13 @@ export function renderLog(cycles, activeCycleId) {
             <span class="cycle-name">${cycle.name}</span>
             ${activePill}
             <span class="cycle-start">${startFmt}</span>
-            <button class="delete-cycle-btn" onclick="event.stopPropagation();deleteCycle('${cycle.id}')" title="Delete cycle">
+            <button class="settings-btn add-plant-btn" onclick="event.stopPropagation();addNewPlant('${cycle.id}')" title="Add new plant">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="11" y="4" width="2" height="16" fill="currentColor"/><rect x="4" y="11" width="16" height="2" fill="currentColor"/></svg>
+            </button>
+            <button class="settings-btn edit-cycle-btn" onclick="event.stopPropagation();editCycleName('${cycle.id}', '${cycle.name.replace(/'/g, "\\\'")}')" title="Edit cycle name">
+                <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3 17.25V21h3.75L17.81 9.94M20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </button>
+            <button class="settings-btn delete-cycle-btn" onclick="event.stopPropagation();deleteCycle('${cycle.id}')" title="Delete cycle">
               <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
             </button>
           </div>

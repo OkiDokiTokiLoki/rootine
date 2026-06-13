@@ -69,7 +69,7 @@ function updateGrowAge() {
     if (!cycle) return;
     const start = new Date(cycle.startDate);
     const days = Math.floor((new Date() - start) / (24 * 60 * 60 * 1000));
-    const week = Math.ceil(days / 7);
+    const week = Math.max(1, Math.ceil(days / 7));
     document.getElementById("grow-age").textContent = `${cycle.name} · Day ${days} · Week ${week}`;
 }
 
@@ -139,6 +139,36 @@ window.confirmNewCycle = function () {
 
 window.cancelNewCycle = function () {
     document.getElementById("new-cycle-modal").style.display = "none";
+};
+
+window.editCycleName = function (id, currentName) {
+    const modal = document.getElementById("rename-cycle-modal");
+    const input = document.getElementById("rename-cycle-input");
+    input.value = currentName;
+    modal.style.display = "flex";
+    input.focus();
+    modal._cycleId = id;
+    modal._currentName = currentName;
+};
+
+window.cancelRenameCycle = function () {
+    document.getElementById("rename-cycle-modal").style.display = "none";
+};
+
+window.confirmRenameCycle = function () {
+    const modal = document.getElementById("rename-cycle-modal");
+    const name = document.getElementById("rename-cycle-input").value.trim();
+    if (!name || name === modal._currentName) {
+        modal.style.display = "none";
+        return;
+    }
+    const cycle = cycles.find((c) => c.id === modal._cycleId);
+    if (cycle) {
+        cycle.name = name;
+        saveCycles(cycles);
+        renderLog(cycles, activeCycleId);
+    }
+    modal.style.display = "none";
 };
 
 // ── Stats cycle toggle ────────────────────────────────────────────────────────
