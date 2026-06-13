@@ -7,9 +7,9 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Rootine - Grow Journal" />
         <meta name="theme-color" content="#1a1a1a" />
-        <title>Rootine</title>
-      <script type="module" crossorigin src="/rootine/assets/index-b0h9A9dv.js"></script>
-      <link rel="stylesheet" crossorigin href="/rootine/assets/index-DNVt2OKW.css">
+        <title>Rootine</title>
+      <script type="module" crossorigin src="/rootine/assets/index-NklkCQp7.js"></script>
+      <link rel="stylesheet" crossorigin href="/rootine/assets/index-DnsuAn0J.css">
     </head>
     <body>
         <div id="app">
@@ -197,5 +197,16 @@
             </div>
         </div>
 
+        <div id="rename-cycle-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 100; align-items: center; justify-content: center; padding: 24px">
+            <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: 320px">
+                <div style="font-size: 15px; font-weight: 600; margin-bottom: 14px">Rename Cycle</div>
+                <input id="rename-cycle-input" type="text" class="form-input form-input-full" style="margin-bottom: 14px" />
+                <div style="display: flex; gap: 8px">
+                    <button onclick="cancelRenameCycle()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Cancel</button>
+                    <button onclick="confirmRenameCycle()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">Rename</button>
+                </div>
+            </div>
+        </div>
+
     </body>
 </html>
