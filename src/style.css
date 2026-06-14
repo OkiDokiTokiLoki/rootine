@@ -353,45 +353,6 @@ body {
     line-height: 1.5;
 }
 
-/* Delete button */
-.delete-entry-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    margin-top: 12px;
-    background: var(--red-bg);
-    color: var(--red);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.edit-entry-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    margin-top: 12px;
-    background: var(--blue-bg);
-    color: var(--blue);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.entry-card:not(.open) .delete-entry-btn {
-    display: none;
-}
-
-.entry-card:not(.open) .edit-entry-btn {
-    display: none;
-}
-
 /* Add form */
 .form-section {
     background: var(--surface);
@@ -616,7 +577,8 @@ textarea.form-input {
     justify-content: space-between;
 }
 
-.new-cycle-btn {
+.new-cycle-btn,
+.add-plant-btn {
     font-size: 12px;
     font-weight: 600;
     padding: 6px 12px;
@@ -662,8 +624,8 @@ textarea.form-input {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: none;
     border-radius: 6px;
@@ -675,17 +637,21 @@ textarea.form-input {
     color: rgb(245, 160, 91);
 }
 
-.edit-cycle-btn {
+.edit-cycle-btn,
+.edit-entry-btn {
     background: var(--blue-bg);
     color: var(--blue);
 }
 
-.delete-cycle-btn {
+.delete-cycle-btn,
+.delete-entry-btn {
     background: var(--red-bg);
     color: var(--red);
 }
 
-.cycle-header.collapsed .settings-btn {
+.cycle-header.collapsed .settings-btn,
+.entry-card:not(.open) .delete-entry-btn,
+.entry-card:not(.open) .edit-entry-btn {
     opacity: 0.25;
     pointer-events: none;
 }
@@ -778,21 +744,19 @@ input[type="datetime-local"] {
     justify-content: space-between;
     gap: 10px;
 }
-.add-plant-btn {
-    background: var(--surface2);
-    border: 0.5px solid var(--border2);
-    color: var(--green);
-    padding: 6px 12px;
-    border-radius: 8px;
+
+/* .add-plant-btn {
     font-size: 12px;
     font-weight: 600;
+    padding: 6px 12px;
+    background: var(--surface2);
+    color: var(--green);
+    border: 0.5px solid var(--border2);
+    border-radius: 8px;
     cursor: pointer;
     white-space: nowrap;
-    transition: border-color 0.15s;
-}
-.add-plant-btn:hover {
-    border-color: var(--green);
-}
+} */
+
 .plant-picker-list {
     display: flex;
     gap: 8px;
