@@ -107,10 +107,10 @@ function renderEntryCard(e) {
         body += "<div>";
         plants.forEach(([p, d]) => {
             let pills = "";
-            if (d.fish) pills += `<span class="pill pill-fish">Fish ${d.fish}c</span>`;
-            if (d.grow) pills += `<span class="pill pill-grow">Grow ${d.grow}c</span>`;
-            if (d.bloom) pills += `<span class="pill pill-bloom">Bloom ${d.bloom}c</span>`;
-            if (d.water) pills += `<span class="pill pill-water">Water ${d.water}c</span>`;
+            if (d.fish) pills += `<span class="pill pill-fish">Fish - ${d.fish} cup(s)</span>`;
+            if (d.grow) pills += `<span class="pill pill-grow">Grow - ${d.grow} cup(s)</span>`;
+            if (d.bloom) pills += `<span class="pill pill-bloom">Bloom - ${d.bloom} cup(s)</span>`;
+            if (d.water) pills += `<span class="pill pill-water">Water - ${d.water} cup(s)</span>`;
             body += `<div class="plant-row"><span class="pname">${p}</span><div class="pills">${pills || "—"}</div></div>`;
         });
         body += "</div>";

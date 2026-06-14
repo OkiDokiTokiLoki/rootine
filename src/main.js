@@ -186,37 +186,6 @@ function toggleLightInputs() {
     document.getElementById("light-inputs").style.display = document.getElementById("ck-light").checked ? "block" : "none";
 }
 
-// function updateLightStatus() {
-//     const d = loadLightDefaults();
-//     const el = document.getElementById("light-status-text");
-//     if (!el) return;
-//     const parts = [];
-//     if (d.lux) parts.push(d.lux + "k");
-//     if (d.start && d.end) {
-//         // compute on/off hours
-//         const [sh, sm] = d.start.split(":").map(Number);
-//         const [eh, em] = d.end.split(":").map(Number);
-//         let onMins = eh * 60 + em - (sh * 60 + sm);
-//         if (onMins < 0) onMins += 24 * 60;
-//         const onH = Math.round(onMins / 60);
-//         const offH = 24 - onH;
-//         const fmt = (t) => {
-//             const [h, m] = t.split(":");
-//             const hr = parseInt(h);
-//             const ampm = hr >= 12 ? "PM" : "AM";
-//             const h12 = hr % 12 || 12;
-//             return h12 + (m !== "00" ? ":" + m : "") + ampm;
-//         };
-//         parts.push(fmt(d.start) + "–" + fmt(d.end) + " (" + onH + "/" + offH + ")");
-//     }
-//     const status = document.getElementById("light-status");
-//     if (parts.length) {
-//         el.textContent = parts.join(" · ");
-//         status.style.display = "flex";
-//     } else {
-//         status.style.display = "none";
-//     }
-// }
 function updateLightStatus() {
     const d = loadLightDefaults();
     const el = document.getElementById("light-status-text");
@@ -260,7 +229,7 @@ function updateLightStatus() {
 
     const status = document.getElementById("light-status");
     if (parts.length) {
-        el.textContent = parts.join(" · ");
+        el.textContent = parts.join("·");
         status.style.display = "flex";
     } else {
         status.style.display = "none";
