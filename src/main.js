@@ -1,7 +1,7 @@
 import "./style.css";
 import { uid, cycleUid } from "./utils.js";
-import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedActions, loadLightDefaults, saveLightDefaults } from "./storage.js";
-import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry, toggleActionList } from "./log.js";
+import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadLightDefaults, saveLightDefaults } from "./storage.js";
+import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, getStatsMode } from "./stats.js";
 import { registerServiceWorker } from "./sw.js";
 
@@ -10,17 +10,15 @@ let cycles = loadCycles();
 let activeCycleId = loadActiveCycleId(cycles);
 const collapsedCycles = loadCollapsedCycles();
 const collapsedWeeks = loadCollapsedWeeks();
-const collapsedActions = loadCollapsedActions();
 let editingEntryId = null; // Track if we're editing an entry
 
-initLog(collapsedWeeks, collapsedCycles, collapsedActions);
+initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
 
 // ── Expose globals ────────────────────────────────────────────────────────────
 window.toggleWeek = toggleWeek;
 window.toggleCycle = toggleCycle;
 window.toggleEntry = toggleEntry;
-window.toggleActionList = toggleActionList;
 window.deleteEntry = deleteEntry;
 window.editEntry = editEntry;
 window.cancelEdit = cancelEdit;
@@ -33,10 +31,84 @@ window.saveLightDefaults = _saveLightDefaults;
 window.setStatsCycle = setStatsCycle;
 window.newCycle = newCycle;
 window.deleteCycle = deleteCycle;
+window.openPlantManager = openPlantManager;
+window.closePlantManager = closePlantManager;
+window.openAddPlant = openAddPlant;
+window.confirmAddPlant = confirmAddPlant;
+window.renamePlant = renamePlant;
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function activeCycle() {
     return cycles.find((c) => c.id === activeCycleId);
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function cyclePlants() {
+    return activeCycle()?.plants || [];
+}
+
+// ── Render add form (dynamic plants) ─────────────────────────────────────────
+function renderAddForm() {
+    const plants = cyclePlants();
+
+    // Plant tabs
+    const tabsContainer = document.getElementById("plant-tabs");
+    tabsContainer.innerHTML = "";
+    if (plants.length === 0) {
+        const empty = document.createElement("div");
+        empty.style.cssText = "padding: 14px; color: var(--muted); font-size: 13px; text-align: center; background: var(--surface2); border: 0.5px dashed var(--border2); border-radius: 10px;";
+        empty.textContent = 'No plants yet. Tap "🌱 Plants" above to add some.';
+        tabsContainer.appendChild(empty);
+    } else {
+        plants.forEach((p, i) => {
+            const tab = document.createElement("div");
+            tab.className = "plant-tab" + (i === 0 ? " active" : "");
+            tab.textContent = p;
+            tab.dataset.plant = p;
+            tab.onclick = () => switchPlant(p);
+            tabsContainer.appendChild(tab);
+        });
+    }
+
+    // Plant panels
+    const panelsContainer = document.getElementById("plant-panels");
+    panelsContainer.innerHTML = "";
+    plants.forEach((p, i) => {
+        const panel = document.createElement("div");
+        panel.className = "plant-panel" + (i === 0 ? " active" : "");
+        panel.id = "panel-" + p;
+        panel.innerHTML = `
+            <div class="form-row"><label class="form-label">Fish (cups)</label><input class="form-input" type="number" min="0" step="0.5" placeholder="0" id="${p}-fish" /></div>
+            <div class="form-row"><label class="form-label">Grow (cups)</label><input class="form-input" type="number" min="0" step="0.5" placeholder="0" id="${p}-grow" /></div>
+            <div class="form-row"><label class="form-label">Bloom (cups)</label><input class="form-input" type="number" min="0" step="0.5" placeholder="0" id="${p}-bloom" /></div>
+            <div class="form-row"><label class="form-label">Water (cups)</label><input class="form-input" type="number" min="0" step="0.5" placeholder="0" id="${p}-water" /></div>
+        `;
+        panelsContainer.appendChild(panel);
+    });
+
+    // Plant pickers (LST, Defoliate, Repot)
+    ["lst", "def", "repot"].forEach((action) => {
+        const picker = document.getElementById(action + "-plants");
+        const list = picker.querySelector(".plant-picker-list");
+        if (!list) return;
+        list.innerHTML = "";
+        if (plants.length === 0) {
+            list.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available.</div>';
+            return;
+        }
+        plants.forEach((p) => {
+            const label = document.createElement("label");
+            label.className = "plant-picker-opt";
+            label.innerHTML = `<input type="checkbox" class="${action}-plant" value="${escapeHtml(p)}" /> ${escapeHtml(p)}`;
+            list.appendChild(label);
+        });
+    });
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -46,27 +118,40 @@ function showTab(name) {
         document.getElementById("tab-" + t).classList.toggle("active", t === name);
     });
     if (name === "add" && !editingEntryId) {
-        ["COP", "H", "GC", "GC2"].forEach((p) =>
-            ["fish", "grow", "bloom", "water"].forEach((n) => {
-                document.getElementById(p + "-" + n).value = "";
-            })
-        );
-        ["lst", "def", "repot"].forEach((id) => {
-            document.getElementById("ck-" + id).checked = false;
-        });
-        document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.checked = false));
-        document.getElementById("lst-plants").style.display = "none";
-        document.getElementById("def-plants").style.display = "none";
-        document.getElementById("repot-plants").style.display = "none";
-        document.getElementById("new-obs").value = "";
+        resetAddForm();
         setDateDefault();
     }
+}
+
+function resetAddForm() {
+    const plants = cyclePlants();
+    plants.forEach((p) =>
+        ["fish", "grow", "bloom", "water"].forEach((n) => {
+            const el = document.getElementById(p + "-" + n);
+            if (el) el.value = "";
+        })
+    );
+    ["lst", "def", "repot"].forEach((id) => {
+        const el = document.getElementById("ck-" + id);
+        if (el) el.checked = false;
+    });
+    document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.checked = false));
+    document.getElementById("lst-plants").style.display = "none";
+    document.getElementById("def-plants").style.display = "none";
+    document.getElementById("repot-plants").style.display = "none";
+    document.getElementById("ck-light").checked = false;
+    document.getElementById("light-inputs").style.display = "none";
+    _loadLightDefaults();
+    document.getElementById("new-obs").value = "";
 }
 
 // ── Grow age header ───────────────────────────────────────────────────────────
 function updateGrowAge() {
     const cycle = activeCycle();
-    if (!cycle) return;
+    if (!cycle) {
+        document.getElementById("grow-age").textContent = "";
+        return;
+    }
     const start = new Date(cycle.startDate);
     const days = Math.floor((new Date() - start) / (24 * 60 * 60 * 1000));
     const week = Math.max(1, Math.ceil(days / 7));
@@ -82,7 +167,7 @@ function setDateDefault() {
 
 // ── Plant tabs ────────────────────────────────────────────────────────────────
 function switchPlant(p) {
-    document.querySelectorAll(".plant-tab").forEach((el) => el.classList.toggle("active", el.textContent === p));
+    document.querySelectorAll(".plant-tab").forEach((el) => el.classList.toggle("active", (el.dataset.plant || el.textContent) === p));
     document.querySelectorAll(".plant-panel").forEach((el) => el.classList.toggle("active", el.id === "panel-" + p));
 }
 
@@ -106,6 +191,157 @@ function _loadLightDefaults() {
     if (d.dist) document.getElementById("light-dist").value = d.dist;
 }
 
+// ── Plant management ──────────────────────────────────────────────────────────
+function openPlantManager() {
+    renderPlantList();
+    document.getElementById("plant-manage-modal").style.display = "flex";
+}
+
+function closePlantManager() {
+    document.getElementById("plant-manage-modal").style.display = "none";
+}
+
+function renderPlantList() {
+    const cycle = activeCycle();
+    const list = document.getElementById("plant-list");
+    if (!cycle) {
+        list.innerHTML = '<div class="plant-empty">No active cycle.</div>';
+        return;
+    }
+    const plants = cycle.plants || [];
+    if (plants.length === 0) {
+        list.innerHTML = '<div class="plant-empty">No plants yet. Add some to start logging.</div>';
+        return;
+    }
+    list.innerHTML = "";
+    plants.forEach((p, i) => {
+        const row = document.createElement("div");
+        row.className = "plant-manage-row";
+        row.innerHTML = `
+            <div class="plant-manage-name">${escapeHtml(p)}</div>
+            <div class="plant-manage-actions">
+                <button onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename">✏️</button>
+                <button onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete">🗑</button>
+            </div>
+        `;
+        list.appendChild(row);
+    });
+}
+
+function openAddPlant() {
+    document.getElementById("new-plant-name").value = "";
+    document.getElementById("add-plant-modal").style.display = "flex";
+    setTimeout(() => document.getElementById("new-plant-name").focus(), 50);
+}
+
+function confirmAddPlant() {
+    const name = document.getElementById("new-plant-name").value.trim();
+    if (!name) {
+        alert("Enter a plant name.");
+        return;
+    }
+    if (!PLANT_NAME_RE.test(name)) {
+        alert("Plant name can only contain letters, numbers, spaces, dashes, and underscores.");
+        return;
+    }
+    const cycle = activeCycle();
+    if (!cycle) {
+        alert("No active cycle.");
+        return;
+    }
+    if (!Array.isArray(cycle.plants)) cycle.plants = [];
+    if (cycle.plants.includes(name)) {
+        alert("A plant with that name already exists.");
+        return;
+    }
+    cycle.plants.push(name);
+    saveCycles(cycles);
+    document.getElementById("add-plant-modal").style.display = "none";
+    renderPlantList();
+    renderAddForm();
+    renderAll();
+}
+
+function cancelAddPlant() {
+    document.getElementById("add-plant-modal").style.display = "none";
+}
+
+function renamePlant(index) {
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const oldName = cycle.plants[index];
+    document.getElementById("rename-plant-input").value = oldName;
+    const modal = document.getElementById("rename-plant-modal");
+    modal.style.display = "flex";
+    modal._plantIndex = index;
+    modal._oldName = oldName;
+    setTimeout(() => {
+        const el = document.getElementById("rename-plant-input");
+        el.focus();
+        el.select();
+    }, 50);
+}
+
+function confirmRenamePlant() {
+    const modal = document.getElementById("rename-plant-modal");
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const newName = document.getElementById("rename-plant-input").value.trim();
+    const index = modal._plantIndex;
+    const oldName = modal._oldName;
+    if (!newName || newName === oldName) {
+        modal.style.display = "none";
+        return;
+    }
+    if (!PLANT_NAME_RE.test(newName)) {
+        alert("Plant name can only contain letters, numbers, spaces, dashes, and underscores.");
+        return;
+    }
+    if (cycle.plants.includes(newName)) {
+        alert("A plant with that name already exists.");
+        return;
+    }
+    cycle.plants[index] = newName;
+    // Migrate existing entry data so history stays consistent.
+    cycle.entries.forEach((e) => {
+        if (e.plants && e.plants[oldName]) {
+            e.plants[newName] = e.plants[oldName];
+            delete e.plants[oldName];
+        }
+        // Update action strings of the form "LST (COP, H)" → "LST (Plant1, H)".
+        if (Array.isArray(e.actions)) {
+            e.actions = e.actions.map((a) => {
+                const m = a.match(/^(.*?)\s*\((.*?)\)\s*$/);
+                if (!m) return a;
+                const prefix = m[1];
+                const items = m[2].split(", ").map((p) => (p === oldName ? newName : p));
+                return `${prefix} (${items.join(", ")})`;
+            });
+        }
+    });
+    saveCycles(cycles);
+    modal.style.display = "none";
+    renderPlantList();
+    renderAddForm();
+    renderAll();
+}
+
+function cancelRenamePlant() {
+    document.getElementById("rename-plant-modal").style.display = "none";
+}
+
+function deletePlant(index) {
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const name = cycle.plants[index];
+    if (!confirm(`Remove plant "${name}"? It will disappear from the Add form. Existing entries that reference it keep their data.`)) return;
+    cycle.plants.splice(index, 1);
+    saveCycles(cycles);
+    renderPlantList();
+    renderAddForm();
+    renderAll();
+}
+
 // ── New cycle modal ───────────────────────────────────────────────────────────
 function newCycle() {
     const defaultName = `Grow #${cycles.length + 1}`;
@@ -125,7 +361,8 @@ window.confirmNewCycle = function () {
     const pad = (n) => String(n).padStart(2, "0");
     const startDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
-    const newC = { id: cycleUid(), name, startDate, entries: [] };
+    // New cycles start with no plants — the user adds them via the Plants modal.
+    const newC = { id: cycleUid(), name, startDate, plants: [], entries: [] };
     cycles.push(newC);
     activeCycleId = newC.id;
 
@@ -133,6 +370,7 @@ window.confirmNewCycle = function () {
     saveActiveCycleId(activeCycleId);
 
     updateGrowAge();
+    renderAddForm();
     renderAll();
     showTab("log");
 };
@@ -177,7 +415,7 @@ function setStatsCycle(id) {
     renderStats(cycles, activeCycleId);
 }
 
-// ── Save entry ────────────────────────────────────────────────────────────────
+// ── Edit entry ────────────────────────────────────────────────────────────────
 function editEntry(id) {
     let entry = null;
     for (let c of cycles) {
@@ -191,9 +429,10 @@ function editEntry(id) {
     // Load date/time
     document.getElementById("new-dt").value = entry.dt;
 
-    // Load plants
-    ["COP", "H", "GC", "GC2"].forEach((p) => {
-        const pdata = entry.plants[p];
+    // Load plants — only those that exist on the current cycle.
+    const plants = cyclePlants();
+    plants.forEach((p) => {
+        const pdata = entry.plants && entry.plants[p];
         if (pdata) {
             if (pdata.fish) document.getElementById(p + "-fish").value = pdata.fish;
             if (pdata.grow) document.getElementById(p + "-grow").value = pdata.grow;
@@ -212,7 +451,7 @@ function editEntry(id) {
     // Handle LST plants
     if (document.getElementById("ck-lst").checked) {
         const lstAction = actions.find((a) => a.startsWith("LST"));
-        const lstMatch = lstAction.match(/\((.*?)\)/);
+        const lstMatch = lstAction && lstAction.match(/\((.*?)\)/);
         if (lstMatch) {
             lstMatch[1].split(", ").forEach((p) => {
                 const el = document.querySelector(`.lst-plant[value="${p.trim()}"]`);
@@ -227,7 +466,7 @@ function editEntry(id) {
     // Handle Defoliate plants
     if (document.getElementById("ck-def").checked) {
         const defAction = actions.find((a) => a.startsWith("Defoliate"));
-        const defMatch = defAction.match(/\((.*?)\)/);
+        const defMatch = defAction && defAction.match(/\((.*?)\)/);
         if (defMatch) {
             defMatch[1].split(", ").forEach((p) => {
                 const el = document.querySelector(`.def-plant[value="${p.trim()}"]`);
@@ -239,10 +478,25 @@ function editEntry(id) {
         document.getElementById("def-plants").style.display = "none";
     }
 
+    // Handle Repot plants
+    if (document.getElementById("ck-repot").checked) {
+        const repotAction = actions.find((a) => a.startsWith("Repot / transplant"));
+        const repotMatch = repotAction && repotAction.match(/\((.*?)\)/);
+        if (repotMatch) {
+            repotMatch[1].split(", ").forEach((p) => {
+                const el = document.querySelector(`.repot-plant[value="${p.trim()}"]`);
+                if (el) el.checked = true;
+            });
+        }
+        document.getElementById("repot-plants").style.display = "block";
+    } else {
+        document.getElementById("repot-plants").style.display = "none";
+    }
+
     // Handle light inputs
     if (document.getElementById("ck-light").checked) {
         const lightAction = actions.find((a) => a.startsWith("Light adjusted"));
-        const lightMatch = lightAction.match(/\((.*?)\)/);
+        const lightMatch = lightAction && lightAction.match(/\((.*?)\)/);
         if (lightMatch) {
             const parts = lightMatch[1].split(", ");
             parts.forEach((part) => {
@@ -256,21 +510,6 @@ function editEntry(id) {
         document.getElementById("light-inputs").style.display = "block";
     } else {
         document.getElementById("light-inputs").style.display = "none";
-    }
-
-    // Handle Repot plants
-    if (document.getElementById("ck-repot").checked) {
-        const repotAction = actions.find((a) => a.startsWith("Repot / transplant"));
-        const repotMatch = repotAction.match(/\((.*?)\)/);
-        if (repotMatch) {
-            repotMatch[1].split(", ").forEach((p) => {
-                const el = document.querySelector(`.repot-plant[value="${p.trim()}"]`);
-                if (el) el.checked = true;
-            });
-        }
-        document.getElementById("repot-plants").style.display = "block";
-    } else {
-        document.getElementById("repot-plants").style.display = "none";
     }
 
     // Load observations
@@ -309,7 +548,7 @@ function saveEntry() {
     }
 
     const plants = {};
-    ["COP", "H", "GC", "GC2"].forEach((p) => {
+    cyclePlants().forEach((p) => {
         const fish = parseFloat(document.getElementById(p + "-fish").value) || 0;
         const grow = parseFloat(document.getElementById(p + "-grow").value) || 0;
         const bloom = parseFloat(document.getElementById(p + "-bloom").value) || 0;
@@ -344,46 +583,14 @@ function saveEntry() {
     saveCycles(cycles);
     renderAll();
 
-    // Reset form
-    ["COP", "H", "GC", "GC2"].forEach((p) =>
-        ["fish", "grow", "bloom", "water"].forEach((n) => {
-            document.getElementById(p + "-" + n).value = "";
-        })
-    );
-    ["lst", "def", "repot"].forEach((id) => {
-        document.getElementById("ck-" + id).checked = false;
-    });
-    document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.checked = false));
-    document.getElementById("lst-plants").style.display = "none";
-    document.getElementById("def-plants").style.display = "none";
-    document.getElementById("repot-plants").style.display = "none";
-    document.getElementById("ck-light").checked = false;
-    document.getElementById("light-inputs").style.display = "none";
-    _loadLightDefaults();
-    document.getElementById("new-obs").value = "";
+    resetAddForm();
     showTab("log");
 }
 
 // ── Cancel edit ───────────────────────────────────────────────────────────────
 function cancelEdit() {
     editingEntryId = null;
-    // Reset form
-    ["COP", "H", "GC", "GC2"].forEach((p) =>
-        ["fish", "grow", "bloom", "water"].forEach((n) => {
-            document.getElementById(p + "-" + n).value = "";
-        })
-    );
-    ["lst", "def", "repot"].forEach((id) => {
-        document.getElementById("ck-" + id).checked = false;
-    });
-    document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.checked = false));
-    document.getElementById("lst-plants").style.display = "none";
-    document.getElementById("def-plants").style.display = "none";
-    document.getElementById("repot-plants").style.display = "none";
-    document.getElementById("ck-light").checked = false;
-    document.getElementById("light-inputs").style.display = "none";
-    _loadLightDefaults();
-    document.getElementById("new-obs").value = "";
+    resetAddForm();
     setDateDefault();
     showTab("log");
 }
@@ -410,6 +617,7 @@ function deleteCycle(id) {
     }
     saveCycles(cycles);
     updateGrowAge();
+    renderAddForm();
     renderAll();
 }
 
@@ -419,9 +627,12 @@ function renderAll() {
     renderStats(cycles, activeCycleId);
 }
 
+// localStorage.removeItem("collapsed_actions");
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 updateGrowAge();
 setDateDefault();
 _loadLightDefaults();
+renderAddForm();
 renderAll();
 registerServiceWorker();

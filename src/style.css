@@ -209,8 +209,18 @@ body {
 }
 
 .badge-note {
-    background: var(--amber-bg);
+    background: #212129;
+    color: #a94aec;
+}
+
+.badge-light {
+    background: #3d2f08;
     color: var(--amber);
+}
+
+.badge-scissors {
+    background: #2e2e2e;
+    color: #999999;
 }
 
 .chevron {
@@ -301,9 +311,9 @@ body {
     margin-top: 8px;
 }
 
-.action-list.collapsed {
+/* .action-list.collapsed {
     display: none;
-}
+} */
 
 .action-header {
     display: flex;
@@ -675,8 +685,7 @@ textarea.form-input {
     color: var(--red);
 }
 
-.cycle-header.collapsed .settings-btn,
-.entry-card:not(.open) .settings-btn {
+.cycle-header.collapsed .settings-btn {
     opacity: 0.25;
     pointer-events: none;
 }
@@ -761,4 +770,77 @@ input[type="datetime-local"] {
     accent-color: var(--green);
     cursor: pointer;
     flex-shrink: 0;
+}
+
+.subtitle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.add-plant-btn {
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    color: var(--green);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s;
+}
+.add-plant-btn:hover {
+    border-color: var(--green);
+}
+.plant-picker-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.plant-manage-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    gap: 8px;
+}
+.plant-manage-name {
+    font-size: 14px;
+    font-weight: 500;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.plant-manage-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.plant-manage-actions button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1;
+}
+.plant-manage-actions button:hover {
+    background: var(--border);
+}
+.plant-empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 14px;
+    text-align: center;
+    background: var(--surface2);
+    border: 0.5px dashed var(--border2);
+    border-radius: 10px;
+    margin-bottom: 6px;
 }

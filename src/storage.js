@@ -1,14 +1,29 @@
 import { seedCycles } from "./data.js";
 
 const STORAGE_VERSION = 2;
+const DEFAULT_PLANTS = ["COP", "H", "GC", "GC2"];
 
 export function loadCycles() {
     try {
-        const version = parseInt(localStorage.getItem("grow_version") || "0");
         const stored = localStorage.getItem("grow_cycles");
-        if (stored && version === STORAGE_VERSION) return JSON.parse(stored);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            // Migration: ensure every cycle has a plants array.
+            // Older saves / seed data didn't carry one, so we fill in the
+            // legacy defaults rather than wiping user history.
+            parsed.forEach((c) => {
+                if (!Array.isArray(c.plants)) c.plants = [...DEFAULT_PLANTS];
+            });
+            localStorage.setItem("grow_version", String(STORAGE_VERSION));
+            return parsed;
+        }
     } catch (e) {}
-    const cycles = seedCycles.map((c) => ({ ...c, entries: [...c.entries] }));
+    // Fresh seed
+    const cycles = seedCycles.map((c) => ({
+        ...c,
+        plants: Array.isArray(c.plants) ? [...c.plants] : [...DEFAULT_PLANTS],
+        entries: [...c.entries],
+    }));
     localStorage.setItem("grow_cycles", JSON.stringify(cycles));
     localStorage.setItem("grow_version", String(STORAGE_VERSION));
     return cycles;
@@ -43,14 +58,6 @@ export function loadCollapsedWeeks() {
 
 export function saveCollapsedWeeks(set) {
     localStorage.setItem("collapsed_weeks", JSON.stringify([...set]));
-}
-
-export function loadCollapsedActions() {
-    return JSON.parse(localStorage.getItem("collapsed_actions") || "true");
-}
-
-export function saveCollapsedActions(value) {
-    localStorage.setItem("collapsed_actions", JSON.stringify(value));
 }
 
 export function loadLightDefaults() {
