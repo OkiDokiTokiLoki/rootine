@@ -68,6 +68,6 @@ export function loadLightDefaults() {
     }
 }
 
-export function saveLightDefaults(lux, dist) {
-    localStorage.setItem("light_defaults", JSON.stringify({ lux, dist }));
+export function saveLightDefaults(lux, dist, start, end) {
+    localStorage.setItem("light_defaults", JSON.stringify({ lux, dist, start, end }));
 }

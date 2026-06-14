@@ -186,14 +186,98 @@ function toggleLightInputs() {
     document.getElementById("light-inputs").style.display = document.getElementById("ck-light").checked ? "block" : "none";
 }
 
+// function updateLightStatus() {
+//     const d = loadLightDefaults();
+//     const el = document.getElementById("light-status-text");
+//     if (!el) return;
+//     const parts = [];
+//     if (d.lux) parts.push(d.lux + "k");
+//     if (d.start && d.end) {
+//         // compute on/off hours
+//         const [sh, sm] = d.start.split(":").map(Number);
+//         const [eh, em] = d.end.split(":").map(Number);
+//         let onMins = eh * 60 + em - (sh * 60 + sm);
+//         if (onMins < 0) onMins += 24 * 60;
+//         const onH = Math.round(onMins / 60);
+//         const offH = 24 - onH;
+//         const fmt = (t) => {
+//             const [h, m] = t.split(":");
+//             const hr = parseInt(h);
+//             const ampm = hr >= 12 ? "PM" : "AM";
+//             const h12 = hr % 12 || 12;
+//             return h12 + (m !== "00" ? ":" + m : "") + ampm;
+//         };
+//         parts.push(fmt(d.start) + "–" + fmt(d.end) + " (" + onH + "/" + offH + ")");
+//     }
+//     const status = document.getElementById("light-status");
+//     if (parts.length) {
+//         el.textContent = parts.join(" · ");
+//         status.style.display = "flex";
+//     } else {
+//         status.style.display = "none";
+//     }
+// }
+function updateLightStatus() {
+    const d = loadLightDefaults();
+    const el = document.getElementById("light-status-text");
+    const bulb = document.getElementById("light-status-bulb");
+    if (!el) return;
+
+    let isOn = false;
+    const parts = [];
+    if (d.lux) parts.push(d.lux + "K");
+    if (d.start && d.end) {
+        const [sh, sm] = d.start.split(":").map(Number);
+        const [eh, em] = d.end.split(":").map(Number);
+        let onMins = eh * 60 + em - (sh * 60 + sm);
+        if (onMins < 0) onMins += 24 * 60;
+        const onH = Math.round(onMins / 60);
+        const offH = 24 - onH;
+
+        // Check if lights are currently on
+        const now = new Date();
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const startMins = sh * 60 + sm;
+        const endMins = eh * 60 + em;
+        if (startMins < endMins) {
+            isOn = nowMins >= startMins && nowMins < endMins;
+        } else {
+            // Wraps midnight
+            isOn = nowMins >= startMins || nowMins < endMins;
+        }
+
+        const fmt = (t) => {
+            const [h, m] = t.split(":");
+            const hr = parseInt(h);
+            const ampm = hr >= 12 ? "PM" : "AM";
+            const h12 = hr % 12 || 12;
+            return h12 + (m !== "00" ? ":" + m : "") + ampm;
+        };
+        parts.push(fmt(d.start) + "–" + fmt(d.end) + " (" + onH + "/" + offH + ")");
+    }
+
+    if (bulb) bulb.style.stroke = isOn ? "var(--amber)" : "var(--muted)";
+
+    const status = document.getElementById("light-status");
+    if (parts.length) {
+        el.textContent = parts.join(" · ");
+        status.style.display = "flex";
+    } else {
+        status.style.display = "none";
+    }
+}
+
 function _saveLightDefaults() {
-    saveLightDefaults(document.getElementById("light-lux").value, document.getElementById("light-dist").value);
+    saveLightDefaults(document.getElementById("light-lux").value, document.getElementById("light-dist").value, document.getElementById("light-start").value, document.getElementById("light-end").value);
+    updateLightStatus();
 }
 
 function _loadLightDefaults() {
     const d = loadLightDefaults();
     if (d.lux) document.getElementById("light-lux").value = d.lux;
     if (d.dist) document.getElementById("light-dist").value = d.dist;
+    if (d.start) document.getElementById("light-start").value = d.start;
+    if (d.end) document.getElementById("light-end").value = d.end;
 }
 
 // ── Plant management ──────────────────────────────────────────────────────────
@@ -543,8 +627,11 @@ function saveEntry() {
     if (document.getElementById("ck-light").checked) {
         const lux = document.getElementById("light-lux").value;
         const dist = document.getElementById("light-dist").value;
+        const start = document.getElementById("light-start").value;
+        const end = document.getElementById("light-end").value;
         let label = "Light adjusted";
-        if (lux || dist) label += " (" + [lux ? lux + "k lux" : null, dist ? dist + "cm" : null].filter(Boolean).join(", ") + ")";
+        const parts = [lux ? lux + "k lux" : null, dist ? dist + "cm" : null, start && end ? start + "–" + end : null].filter(Boolean);
+        if (parts.length) label += " (" + parts.join(", ") + ")";
         actions.push(label);
     }
     if (document.getElementById("ck-repot").checked) {
@@ -636,6 +723,7 @@ function renderAll() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 updateGrowAge();
+updateLightStatus();
 setDateDefault();
 _loadLightDefaults();
 renderAddForm();

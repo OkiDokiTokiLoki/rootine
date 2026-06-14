@@ -36,7 +36,6 @@ body {
     overscroll-behavior: none;
 }
 
-/* Layout */
 #app {
     display: flex;
     flex-direction: column;
@@ -107,7 +106,6 @@ body {
     stroke-linejoin: round;
 }
 
-/* Sections */
 .section {
     display: none;
     padding: 14px 16px;
@@ -118,7 +116,6 @@ body {
     display: block;
 }
 
-/* Week group */
 .week-header {
     font-size: 11px;
     font-weight: 600;
@@ -160,7 +157,6 @@ body {
     display: none;
 }
 
-/* Entry card */
 .entry-card {
     background: var(--surface);
     border-radius: 12px;
@@ -249,7 +245,6 @@ body {
     display: block;
 }
 
-/* Plant rows */
 .plant-row {
     display: grid;
     grid-template-columns: 46px 1fr;
@@ -303,17 +298,12 @@ body {
     color: var(--blue);
 }
 
-/* Actions & obs */
 .action-list {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
     margin-top: 8px;
 }
-
-/* .action-list.collapsed {
-    display: none;
-} */
 
 .action-header {
     display: flex;
@@ -353,7 +343,6 @@ body {
     line-height: 1.5;
 }
 
-/* Add form */
 .form-section {
     background: var(--surface);
     border-radius: 12px;
@@ -490,7 +479,6 @@ textarea.form-input {
     opacity: 0.85;
 }
 
-/* Stats */
 .stat-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -556,7 +544,6 @@ textarea.form-input {
     line-height: 1.5;
 }
 
-/* Plant nute totals */
 .plant-stat-row {
     display: flex;
     align-items: center;
@@ -570,7 +557,6 @@ textarea.form-input {
     border-bottom: none;
 }
 
-/* Header row */
 .header-row {
     display: flex;
     align-items: center;
@@ -590,7 +576,6 @@ textarea.form-input {
     white-space: nowrap;
 }
 
-/* Cycle accordion */
 .cycle-block {
     margin-bottom: 6px;
 }
@@ -632,10 +617,10 @@ textarea.form-input {
     cursor: pointer;
 }
 
-/* .entry-card:not(.open) .delete-entry-btn,
+.entry-card:not(.open) .delete-entry-btn,
 .entry-card:not(.open) .edit-entry-btn {
     display: none;
-} */
+}
 
 .edit-btn,
 .edit-cycle-btn,
@@ -680,7 +665,6 @@ textarea.form-input {
     display: none;
 }
 
-/* Stats cycle toggle */
 .stats-cycle-toggle {
     display: flex;
     gap: 6px;
@@ -705,7 +689,6 @@ textarea.form-input {
     border-color: transparent;
 }
 
-/* Empty state */
 .empty {
     text-align: center;
     padding: 40px 20px;
@@ -713,7 +696,6 @@ textarea.form-input {
     font-size: 14px;
 }
 
-/* Date input */
 input[type="datetime-local"] {
     color-scheme: dark;
 }
@@ -780,19 +762,6 @@ input[type="datetime-local"] {
     flex-shrink: 0;
 }
 
-/* .plant-manage-actions button {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 15px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    line-height: 1;
-}
-
-.plant-manage-actions button:hover {
-    background: var(--border);
-} */
 .plant-empty {
     color: var(--muted);
     font-size: 13px;
