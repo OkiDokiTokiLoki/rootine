@@ -10,7 +10,7 @@ let cycles = loadCycles();
 let activeCycleId = loadActiveCycleId(cycles);
 const collapsedCycles = loadCollapsedCycles();
 const collapsedWeeks = loadCollapsedWeeks();
-let editingEntryId = null; // Track if we're editing an entry
+let editingEntryId = null;
 
 initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
@@ -36,6 +36,11 @@ window.closePlantManager = closePlantManager;
 window.openAddPlant = openAddPlant;
 window.confirmAddPlant = confirmAddPlant;
 window.renamePlant = renamePlant;
+window.cancelAddPlant = cancelAddPlant;
+window.confirmAddPlant = confirmAddPlant;
+window.cancelRenamePlant = cancelRenamePlant;
+window.confirmRenamePlant = confirmRenamePlant;
+window.deletePlant = deletePlant;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
@@ -63,7 +68,7 @@ function renderAddForm() {
     if (plants.length === 0) {
         const empty = document.createElement("div");
         empty.style.cssText = "padding: 14px; color: var(--muted); font-size: 13px; text-align: center; background: var(--surface2); border: 0.5px dashed var(--border2); border-radius: 10px;";
-        empty.textContent = 'No plants yet. Tap "🌱 Plants" above to add some.';
+        empty.textContent = 'No plants yet for this grow cycle yet. Tap "Plants" above to add some.';
         tabsContainer.appendChild(empty);
     } else {
         plants.forEach((p, i) => {
@@ -220,8 +225,8 @@ function renderPlantList() {
         row.innerHTML = `
             <div class="plant-manage-name">${escapeHtml(p)}</div>
             <div class="plant-manage-actions">
-                <button onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename">✏️</button>
-                <button onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete">🗑</button>
+                <button class="settings-btn edit-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.08" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
+                <button class="settings-btn delete-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
             </div>
         `;
         list.appendChild(row);

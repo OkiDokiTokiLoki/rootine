@@ -209,7 +209,7 @@ body {
 }
 
 .badge-note {
-    background: #212129;
+    background: #2d204e;
     color: #a94aec;
 }
 
@@ -632,20 +632,22 @@ textarea.form-input {
     cursor: pointer;
 }
 
-.add-plant-btn {
-    background: var(--green-bg);
-    color: rgb(245, 160, 91);
-}
+/* .entry-card:not(.open) .delete-entry-btn,
+.entry-card:not(.open) .edit-entry-btn {
+    display: none;
+} */
 
+.edit-btn,
 .edit-cycle-btn,
 .edit-entry-btn {
-    background: var(--blue-bg);
+    background-color: var(--blue-bg);
     color: var(--blue);
 }
 
+.delete-btn,
 .delete-cycle-btn,
 .delete-entry-btn {
-    background: var(--red-bg);
+    background-color: var(--red-bg);
     color: var(--red);
 }
 
@@ -745,23 +747,12 @@ input[type="datetime-local"] {
     gap: 10px;
 }
 
-/* .add-plant-btn {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 6px 12px;
-    background: var(--surface2);
-    color: var(--green);
-    border: 0.5px solid var(--border2);
-    border-radius: 8px;
-    cursor: pointer;
-    white-space: nowrap;
-} */
-
 .plant-picker-list {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
 }
+
 .plant-manage-row {
     display: flex;
     align-items: center;
@@ -773,6 +764,7 @@ input[type="datetime-local"] {
     margin-bottom: 6px;
     gap: 8px;
 }
+
 .plant-manage-name {
     font-size: 14px;
     font-weight: 500;
@@ -781,12 +773,14 @@ input[type="datetime-local"] {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
 .plant-manage-actions {
     display: flex;
     gap: 4px;
     flex-shrink: 0;
 }
-.plant-manage-actions button {
+
+/* .plant-manage-actions button {
     background: transparent;
     border: none;
     cursor: pointer;
@@ -795,9 +789,10 @@ input[type="datetime-local"] {
     border-radius: 6px;
     line-height: 1;
 }
+
 .plant-manage-actions button:hover {
     background: var(--border);
-}
+} */
 .plant-empty {
     color: var(--muted);
     font-size: 13px;
