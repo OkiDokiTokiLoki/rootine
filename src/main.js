@@ -14,6 +14,10 @@ let editingEntryId = null;
 let pendingAddPlantType = "auto";
 let pendingRenamePlantType = "auto";
 
+try {
+    localStorage.removeItem("light_defaults");
+} catch (e) {}
+
 initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
 
@@ -191,7 +195,7 @@ function toggleLightInputs() {
 }
 
 function updateLightStatus() {
-    const d = loadLightDefaults();
+    const d = loadLightDefaults(activeCycleId);
     const el = document.getElementById("light-status-text");
     const bulb = document.getElementById("light-status-bulb");
     if (!el) return;
@@ -231,22 +235,16 @@ function updateLightStatus() {
 
     if (bulb) bulb.style.stroke = isOn ? "var(--amber)" : "var(--muted)";
 
-    const status = document.getElementById("light-status");
-    if (parts.length) {
-        el.textContent = parts.join("·");
-        status.style.display = "flex";
-    } else {
-        status.style.display = "none";
-    }
+    el.textContent = parts.length ? parts.join("·") : "no active schedule";
 }
 
 function _saveLightDefaults() {
-    saveLightDefaults(document.getElementById("light-lux").value, document.getElementById("light-dist").value, document.getElementById("light-start").value, document.getElementById("light-end").value);
+    saveLightDefaults(activeCycleId, document.getElementById("light-lux").value, document.getElementById("light-dist").value, document.getElementById("light-start").value, document.getElementById("light-end").value);
     updateLightStatus();
 }
 
 function _loadLightDefaults() {
-    const d = loadLightDefaults();
+    const d = loadLightDefaults(activeCycleId);
     if (d.lux) document.getElementById("light-lux").value = d.lux;
     if (d.dist) document.getElementById("light-dist").value = d.dist;
     if (d.start) document.getElementById("light-start").value = d.start;
@@ -382,45 +380,59 @@ function confirmRenamePlant() {
     const modal = document.getElementById("rename-plant-modal");
     const cycle = activeCycle();
     if (!cycle) return;
-    const newName = document.getElementById("rename-plant-input").value.trim();
+    const newNameRaw = document.getElementById("rename-plant-input").value.trim();
     const index = modal._plantIndex;
     const oldName = modal._oldName;
-    if (!newName || newName === oldName) {
-        modal.style.display = "none";
+    const newType = pendingRenamePlantType;
+
+    // The user can confirm to change: name only, type only, or both.
+    // Only short-circuit if the trimmed name is empty.
+    if (!newNameRaw) {
+        alert("Plant name can't be empty.");
         return;
     }
-    if (!PLANT_NAME_RE.test(newName)) {
-        alert("Plant name can only contain letters, numbers, spaces, dashes, and underscores.");
-        return;
-    }
-    if (cycle.plants.includes(newName)) {
-        alert("A plant with that name already exists.");
-        return;
-    }
-    cycle.plants[index] = newName;
-    // Migrate the type key to the new name; pendingRenamePlantType reflects
-    // the user's current toggle selection (initialized to the old type in renamePlant,
-    // and updated if the user clicked a different option in the modal).
+
+    // Make sure plantTypes exists; every plant should be in it (auto or photo).
     if (!cycle.plantTypes || typeof cycle.plantTypes !== "object") cycle.plantTypes = {};
-    delete cycle.plantTypes[oldName];
-    cycle.plantTypes[newName] = pendingRenamePlantType;
-    // Migrate existing entry data so history stays consistent.
-    cycle.entries.forEach((e) => {
-        if (e.plants && e.plants[oldName]) {
-            e.plants[newName] = e.plants[oldName];
-            delete e.plants[oldName];
+
+    // Decide the final name. If the user didn't change it, keep the old name.
+    const newName = newNameRaw === oldName ? oldName : newNameRaw;
+
+    if (newName !== oldName) {
+        if (!PLANT_NAME_RE.test(newName)) {
+            alert("Plant name can only contain letters, numbers, spaces, dashes, and underscores.");
+            return;
         }
-        // Update action strings of the form "LST (COP, H)" → "LST (Plant1, H)".
-        if (Array.isArray(e.actions)) {
-            e.actions = e.actions.map((a) => {
-                const m = a.match(/^(.*?)\s*\((.*?)\)\s*$/);
-                if (!m) return a;
-                const prefix = m[1];
-                const items = m[2].split(", ").map((p) => (p === oldName ? newName : p));
-                return `${prefix} (${items.join(", ")})`;
-            });
+        if (cycle.plants.includes(newName)) {
+            alert("A plant with that name already exists.");
+            return;
         }
-    });
+        cycle.plants[index] = newName;
+        // Migrate the type key to the new name.
+        delete cycle.plantTypes[oldName];
+        // Migrate existing entry data so history stays consistent.
+        cycle.entries.forEach((e) => {
+            if (e.plants && e.plants[oldName]) {
+                e.plants[newName] = e.plants[oldName];
+                delete e.plants[oldName];
+            }
+            // Update action strings of the form "LST (COP, H)" → "LST (Plant1, H)".
+            if (Array.isArray(e.actions)) {
+                e.actions = e.actions.map((a) => {
+                    const m = a.match(/^(.*?)\s*\((.*?)\)\s*$/);
+                    if (!m) return a;
+                    const prefix = m[1];
+                    const items = m[2].split(", ").map((p) => (p === oldName ? newName : p));
+                    return `${prefix} (${items.join(", ")})`;
+                });
+            }
+        });
+    }
+
+    // Always persist the type — even if the name didn't change, the toggle
+    // selection needs to be saved.
+    cycle.plantTypes[newName] = newType;
+
     saveCycles(cycles);
     modal.style.display = "none";
     renderPlantList();
@@ -475,6 +487,9 @@ window.confirmNewCycle = function () {
     updateGrowAge();
     renderAddForm();
     renderAll();
+    resetAddForm();
+    setDateDefault();
+    updateLightStatus();
     showTab("log");
 };
 

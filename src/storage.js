@@ -72,14 +72,16 @@ export function saveCollapsedWeeks(set) {
     localStorage.setItem("collapsed_weeks", JSON.stringify([...set]));
 }
 
-export function loadLightDefaults() {
+export function loadLightDefaults(cycleId) {
     try {
-        return JSON.parse(localStorage.getItem("light_defaults") || "{}");
+        if (!cycleId) return {};
+        return JSON.parse(localStorage.getItem("light_defaults_" + cycleId) || "{}");
     } catch (e) {
         return {};
     }
 }
 
-export function saveLightDefaults(lux, dist, start, end) {
-    localStorage.setItem("light_defaults", JSON.stringify({ lux, dist, start, end }));
+export function saveLightDefaults(cycleId, lux, dist, start, end) {
+    if (!cycleId) return;
+    localStorage.setItem("light_defaults_" + cycleId, JSON.stringify({ lux, dist, start, end }));
 }
