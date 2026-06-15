@@ -184,7 +184,12 @@
             <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: 320px">
                 <div style="font-size: 15px; font-weight: 600; margin-bottom: 14px">Add Plant</div>
                 <input id="new-plant-name" type="text" class="form-input form-input-full" placeholder="e.g. Plant A" style="margin-bottom: 14px" />
-                <div style="font-size: 12px; color: var(--muted); margin-bottom: 14px; margin-top: -8px">Letters, numbers, spaces, dashes, underscores.</div>
+                <div style="font-size: 12px; color: var(--muted); margin: -8px 0 14px">Letters, numbers, spaces, dashes, underscores.</div>
+                <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px">Type</div>
+                <div class="type-toggle" id="add-plant-type-toggle">
+                    <button type="button" class="type-toggle-opt active" data-type="auto" onclick="selectPlantType('add', 'auto')">Auto</button>
+                    <button type="button" class="type-toggle-opt" data-type="photo" onclick="selectPlantType('add', 'photo')">Photo</button>
+                </div>
                 <div style="display: flex; gap: 8px">
                     <button onclick="cancelAddPlant()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Cancel</button>
                     <button onclick="confirmAddPlant()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">Add</button>
@@ -197,6 +202,11 @@
             <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: 320px">
                 <div style="font-size: 15px; font-weight: 600; margin-bottom: 14px">Rename Plant</div>
                 <input id="rename-plant-input" type="text" class="form-input form-input-full" style="margin-bottom: 14px" />
+                <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px">Type</div>
+                <div class="type-toggle" id="rename-plant-type-toggle">
+                    <button type="button" class="type-toggle-opt active" data-type="auto" onclick="selectPlantType('rename', 'auto')">Auto</button>
+                    <button type="button" class="type-toggle-opt" data-type="photo" onclick="selectPlantType('rename', 'photo')">Photo</button>
+                </div>
                 <div style="display: flex; gap: 8px">
                     <button onclick="cancelRenamePlant()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Cancel</button>
                     <button onclick="confirmRenamePlant()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">Rename</button>

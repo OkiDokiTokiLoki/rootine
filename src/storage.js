@@ -8,12 +8,23 @@ export function loadCycles() {
         const stored = localStorage.getItem("grow_cycles");
         if (stored) {
             const parsed = JSON.parse(stored);
-            // Migration: ensure every cycle has a plants array.
-            // Older saves / seed data didn't carry one, so we fill in the
-            // legacy defaults rather than wiping user history.
+            // Migration: ensure every cycle has a plants array AND a plantTypes map.
+            // Older saves didn't carry plantTypes, so we fill in safe defaults
+            // rather than wiping user history. We persist the migrated shape back
+            // to localStorage so the migration only runs once.
             parsed.forEach((c) => {
                 if (!Array.isArray(c.plants)) c.plants = [...DEFAULT_PLANTS];
+                if (!c.plantTypes || typeof c.plantTypes !== "object") c.plantTypes = {};
+                // Any plant missing a type gets 'photo'. Photoperiod is the
+                // conservative pick for legacy grows; the user can flip
+                // individual plants to 'auto' from the Plants modal.
+                c.plants.forEach((p) => {
+                    if (c.plantTypes[p] !== "auto" && c.plantTypes[p] !== "photo") {
+                        c.plantTypes[p] = "auto";
+                    }
+                });
             });
+            localStorage.setItem("grow_cycles", JSON.stringify(parsed));
             localStorage.setItem("grow_version", String(STORAGE_VERSION));
             return parsed;
         }
@@ -22,6 +33,7 @@ export function loadCycles() {
     const cycles = seedCycles.map((c) => ({
         ...c,
         plants: Array.isArray(c.plants) ? [...c.plants] : [...DEFAULT_PLANTS],
+        plantTypes: c.plantTypes && typeof c.plantTypes === "object" ? { ...c.plantTypes } : {},
         entries: [...c.entries],
     }));
     localStorage.setItem("grow_cycles", JSON.stringify(cycles));

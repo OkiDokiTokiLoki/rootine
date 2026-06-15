@@ -11,6 +11,8 @@ let activeCycleId = loadActiveCycleId(cycles);
 const collapsedCycles = loadCollapsedCycles();
 const collapsedWeeks = loadCollapsedWeeks();
 let editingEntryId = null;
+let pendingAddPlantType = "auto";
+let pendingRenamePlantType = "auto";
 
 initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
@@ -41,6 +43,8 @@ window.confirmAddPlant = confirmAddPlant;
 window.cancelRenamePlant = cancelRenamePlant;
 window.confirmRenamePlant = confirmRenamePlant;
 window.deletePlant = deletePlant;
+window.selectPlantType = selectPlantType;
+window.togglePlantType = togglePlantType;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
@@ -273,11 +277,15 @@ function renderPlantList() {
     }
     list.innerHTML = "";
     plants.forEach((p, i) => {
+        const type = (cycle.plantTypes || {})[p] || "photo";
+        const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
+        const badgeLabel = type === "auto" ? "AUTO" : "PHOTO";
         const row = document.createElement("div");
         row.className = "plant-manage-row";
         row.innerHTML = `
             <div class="plant-manage-name">${escapeHtml(p)}</div>
             <div class="plant-manage-actions">
+                <span class="${badgeClass}" onclick="togglePlantType(${i})" title="Click to toggle type">${badgeLabel}</span>
                 <button class="settings-btn edit-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.08" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
                 <button class="settings-btn delete-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
             </div>
@@ -288,8 +296,33 @@ function renderPlantList() {
 
 function openAddPlant() {
     document.getElementById("new-plant-name").value = "";
+    pendingAddPlantType = "auto";
+    selectPlantType("add", "auto");
     document.getElementById("add-plant-modal").style.display = "flex";
     setTimeout(() => document.getElementById("new-plant-name").focus(), 50);
+}
+
+function selectPlantType(scope, type) {
+    if (scope === "add") {
+        pendingAddPlantType = type;
+    } else {
+        pendingRenamePlantType = type;
+    }
+    const sel = scope === "add" ? "#add-plant-type-toggle" : "#rename-plant-type-toggle";
+    document.querySelectorAll(sel + " .type-toggle-opt").forEach((el) => {
+        el.classList.toggle("active", el.dataset.type === type);
+    });
+}
+
+function togglePlantType(index) {
+    const cycle = activeCycle();
+    if (!cycle) return;
+    if (!cycle.plantTypes || typeof cycle.plantTypes !== "object") cycle.plantTypes = {};
+    const name = cycle.plants[index];
+    const current = cycle.plantTypes[name] || "photo";
+    cycle.plantTypes[name] = current === "auto" ? "photo" : "auto";
+    saveCycles(cycles);
+    renderPlantList();
 }
 
 function confirmAddPlant() {
@@ -313,6 +346,8 @@ function confirmAddPlant() {
         return;
     }
     cycle.plants.push(name);
+    if (!cycle.plantTypes || typeof cycle.plantTypes !== "object") cycle.plantTypes = {};
+    cycle.plantTypes[name] = pendingAddPlantType;
     saveCycles(cycles);
     document.getElementById("add-plant-modal").style.display = "none";
     renderPlantList();
@@ -328,7 +363,10 @@ function renamePlant(index) {
     const cycle = activeCycle();
     if (!cycle) return;
     const oldName = cycle.plants[index];
+    const existingType = (cycle.plantTypes || {})[oldName] || "auto";
     document.getElementById("rename-plant-input").value = oldName;
+    pendingRenamePlantType = existingType;
+    selectPlantType("rename", existingType);
     const modal = document.getElementById("rename-plant-modal");
     modal.style.display = "flex";
     modal._plantIndex = index;
@@ -360,6 +398,12 @@ function confirmRenamePlant() {
         return;
     }
     cycle.plants[index] = newName;
+    // Migrate the type key to the new name; pendingRenamePlantType reflects
+    // the user's current toggle selection (initialized to the old type in renamePlant,
+    // and updated if the user clicked a different option in the modal).
+    if (!cycle.plantTypes || typeof cycle.plantTypes !== "object") cycle.plantTypes = {};
+    delete cycle.plantTypes[oldName];
+    cycle.plantTypes[newName] = pendingRenamePlantType;
     // Migrate existing entry data so history stays consistent.
     cycle.entries.forEach((e) => {
         if (e.plants && e.plants[oldName]) {
@@ -394,6 +438,7 @@ function deletePlant(index) {
     const name = cycle.plants[index];
     if (!confirm(`Remove plant "${name}"? It will disappear from the Add form. Existing entries that reference it keep their data.`)) return;
     cycle.plants.splice(index, 1);
+    if (cycle.plantTypes) delete cycle.plantTypes[name];
     saveCycles(cycles);
     renderPlantList();
     renderAddForm();
@@ -420,7 +465,7 @@ window.confirmNewCycle = function () {
     const startDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
     // New cycles start with no plants — the user adds them via the Plants modal.
-    const newC = { id: cycleUid(), name, startDate, plants: [], entries: [] };
+    const newC = { id: cycleUid(), name, startDate, plants: [], plantTypes: {}, entries: [] };
     cycles.push(newC);
     activeCycleId = newC.id;
 

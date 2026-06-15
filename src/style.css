@@ -772,3 +772,66 @@ input[type="datetime-local"] {
     border-radius: 10px;
     margin-bottom: 6px;
 }
+
+.type-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 14px;
+    gap: 2px;
+}
+.type-toggle-opt {
+    flex: 1;
+    padding: 9px 12px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s;
+    font-family: inherit;
+}
+.type-toggle-opt.active {
+    background: var(--green);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.plant-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 9px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    cursor: pointer;
+    border: 0.5px solid transparent;
+    transition:
+        opacity 0.15s,
+        transform 0.1s;
+    user-select: none;
+    min-width: 48px;
+}
+.plant-type-badge:hover {
+    opacity: 0.75;
+}
+.plant-type-badge:active {
+    transform: scale(0.95);
+}
+.plant-type-badge.auto {
+    background: rgba(110, 207, 110, 0.15);
+    color: #6ecf6e;
+    border-color: rgba(110, 207, 110, 0.35);
+}
+.plant-type-badge.photo {
+    background: rgba(91, 156, 255, 0.15);
+    color: #5b9cff;
+    border-color: rgba(91, 156, 255, 0.35);
+}
