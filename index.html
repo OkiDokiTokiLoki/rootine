@@ -120,8 +120,8 @@
                         </div>
                     </div>
 
-                    <div class="section-title">Total nutrients per plant</div>
-                    <div class="form-section" id="nute-totals" style="margin-bottom: 14px"></div>
+                    <div class="section-title">Plants</div>
+                    <div class="form-section" id="stats-plants" style="margin-bottom: 14px"></div>
 
                     <div class="section-title">All observations</div>
                     <div id="obs-list"></div>
@@ -223,6 +223,20 @@
                 <div style="display: flex; gap: 8px">
                     <button onclick="closePlantManager()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Close</button>
                     <button onclick="openAddPlant()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">+ Add Plant</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plant detail modal -->
+        <div id="plant-detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 105; align-items: center; justify-content: center; padding: 24px">
+            <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: min(400px, calc(100% - 3rem)); max-height: 80vh; display: flex; flex-direction: column">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px">
+                    <div id="plant-detail-name" style="font-size: 16px; font-weight: 600"></div>
+                    <span id="plant-detail-type" class="plant-type-badge photo">PHOTO</span>
+                </div>
+                <div id="plant-detail-stats" style="flex: 1; overflow-y: auto"></div>
+                <div style="display: flex; gap: 8px; margin-top: 14px">
+                    <button onclick="closePlantDetail()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Close</button>
                 </div>
             </div>
         </div>

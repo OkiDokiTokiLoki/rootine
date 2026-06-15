@@ -1,7 +1,6 @@
 import { fmtDate, fmtTime, getWeekNum, entryType } from "./utils.js";
 
-// activeCycleId: which cycle to show when not showing all
-let statsMode = "active"; // 'active' | 'all'
+let statsMode = "active";
 
 export function initStats(initialMode) {
     statsMode = initialMode || "active";
@@ -15,12 +14,18 @@ export function getStatsMode() {
     return statsMode;
 }
 
+function ageInDays(repottedAt, asOf) {
+    if (!repottedAt) return 0;
+    const start = new Date(repottedAt);
+    const end = asOf ? new Date(asOf) : new Date();
+    return Math.max(0, Math.floor((end - start) / (24 * 60 * 60 * 1000)));
+}
+
 function computeStats(entries) {
     let feeds = 0,
         waters = 0,
         issues = 0;
     const days = new Set();
-    const totals = {};
     const obsEntries = [];
 
     entries.forEach((e) => {
@@ -32,20 +37,39 @@ function computeStats(entries) {
             obsEntries.push(e);
         }
         days.add(e.dt.slice(0, 10));
-        Object.entries(e.plants || {}).forEach(([p, d]) => {
-            if (!totals[p]) totals[p] = { fish: 0, grow: 0, bloom: 0, water: 0 };
-            totals[p].fish += d.fish || 0;
-            totals[p].grow += d.grow || 0;
-            totals[p].bloom += d.bloom || 0;
-            totals[p].water += d.water || 0;
-        });
     });
 
-    return { feeds, waters, issues, days, totals, obsEntries };
+    return { feeds, waters, issues, days, obsEntries };
+}
+
+function plantType(cycle, name) {
+    const t = cycle?.plantTypes?.[name];
+    if (!t) return { type: "photo", repottedAt: cycle?.startDate };
+    if (typeof t === "string") return { type: t, repottedAt: cycle?.startDate };
+    return { type: t.type || "photo", repottedAt: t.repottedAt || cycle?.startDate };
+}
+
+function renderPlantCard(name, totals, type, repottedAt) {
+    const safeName = name.replace(/'/g, "\\'");
+    const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
+    const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
+
+    return `
+    <div class="plant-stat-row plant-stat-row-clickable" onclick="openPlantDetail('${safeName}')">
+        <div style="display:flex;align-items:center;gap:8px;flex:1">
+            <span style="font-weight:600">${name}</span>
+            <span class="${badgeClass}" style="font-size:10px;padding:2px 6px">${typeBadge}</span>
+        </div>
+        <span style="font-size:12px;color:var(--muted)">
+            <span style="color:#d0d34e">F ${totals.fish.toFixed(1)}</span> &nbsp;
+            <span style="color:#6ecf6e">G ${totals.grow.toFixed(1)}</span> &nbsp;
+            <span style="color:#c07df0">B ${totals.bloom.toFixed(1)}</span> &nbsp;
+            <span style="color:var(--blue)">W ${totals.water.toFixed(1)}</span>
+        </span>
+    </div>`;
 }
 
 export function renderStats(cycles, activeCycleId) {
-    // Render the cycle toggle pills
     const toggleHtml = `
     <div class="stats-cycle-toggle">
       ${cycles
@@ -61,44 +85,70 @@ export function renderStats(cycles, activeCycleId) {
       <button class="stats-cycle-btn${statsMode === "all" ? " active" : ""}" onclick="setStatsCycle('all')">All</button>
     </div>`;
 
-    // Determine which entries to use
-    let entries;
-    let cycleStartDate;
+    // Determine which cycles feed the stats. For "all" we want every cycle's
+    // plants listed; for a single cycle we want just that one.
+    let targetCycles;
     if (statsMode === "all") {
-        entries = cycles.flatMap((c) => c.entries);
-        cycleStartDate = null;
+        targetCycles = cycles;
     } else {
         const targetId = statsMode === "active" ? activeCycleId : statsMode;
         const cycle = cycles.find((c) => c.id === targetId) || cycles.find((c) => c.id === activeCycleId);
-        entries = cycle ? cycle.entries : [];
-        cycleStartDate = cycle ? cycle.startDate : null;
+        targetCycles = cycle ? [cycle] : [];
     }
 
-    const { feeds, waters, issues, days, totals, obsEntries } = computeStats(entries);
+    // Aggregate entries across the target cycles for the headline numbers.
+    const entries = targetCycles.flatMap((c) => c.entries);
+    const cycleStartDate = statsMode === "all" ? null : targetCycles[0]?.startDate || null;
+
+    const { feeds, waters, issues, days, obsEntries } = computeStats(entries);
 
     document.getElementById("s-feeds").textContent = feeds;
     document.getElementById("s-waters").textContent = waters;
     document.getElementById("s-days").textContent = days.size;
     document.getElementById("s-issues").textContent = issues;
-
     document.getElementById("stats-cycle-toggle-container").innerHTML = toggleHtml;
 
-    const plantOrder = Object.keys(totals).sort();
-    let nutHtml = plantOrder.length ? "" : '<div style="color:var(--muted);font-size:13px">No nutrient data.</div>';
-    plantOrder.forEach((p) => {
-        const d = totals[p];
-        nutHtml += `<div class="plant-stat-row">
-      <span style="font-weight:600">${p}</span>
-      <span style="font-size:12px;color:var(--muted)">
-        <span style="color:#d0d34e">F ${d.fish.toFixed(1)}</span> &nbsp;
-        <span style="color:#6ecf6e">G ${d.grow.toFixed(1)}</span> &nbsp;
-        <span style="color:#c07df0">B ${d.bloom.toFixed(1)}</span> &nbsp;
-        <span style="color:var(--blue)">W ${d.water.toFixed(1)}</span>
-      </span>
-    </div>`;
-    });
-    document.getElementById("nute-totals").innerHTML = nutHtml;
+    // Per-cycle plant list. Each cycle is its own block, with that cycle's
+    // plants listed even if they have no entries yet.
+    let plantsHtml = "";
+    targetCycles.forEach((cycle) => {
+        const cycleTotals = (() => {
+            const t = {};
+            cycle.entries.forEach((e) => {
+                Object.entries(e.plants || {}).forEach(([p, d]) => {
+                    if (!t[p]) t[p] = { fish: 0, grow: 0, bloom: 0, water: 0 };
+                    t[p].fish += d.fish || 0;
+                    t[p].grow += d.grow || 0;
+                    t[p].bloom += d.bloom || 0;
+                    t[p].water += d.water || 0;
+                });
+            });
+            return t;
+        })();
 
+        const cyclePlants = cycle.plants || [];
+        if (cyclePlants.length === 0) {
+            plantsHtml += `<div class="stats-cycle-block">
+                <div style="color:var(--muted);font-size:13px">No plants in this cycle yet.</div>
+            </div>`;
+            return;
+        }
+
+        plantsHtml += `<div class="stats-cycle-block">`;
+        cyclePlants.forEach((p) => {
+            const meta = plantType(cycle, p);
+            const t = cycleTotals[p] || { fish: 0, grow: 0, bloom: 0, water: 0 };
+            plantsHtml += renderPlantCard(p, t, meta.type, meta.repottedAt);
+        });
+        plantsHtml += `</div>`;
+    });
+
+    if (!targetCycles.length) {
+        plantsHtml = '<div style="color:var(--muted);font-size:13px">No cycles to show.</div>';
+    }
+    document.getElementById("stats-plants").innerHTML = plantsHtml;
+
+    // Observations
     obsEntries.sort((a, b) => new Date(b.dt) - new Date(a.dt));
     let obsHtml = "";
     obsEntries.forEach((e) => {

@@ -1,5 +1,5 @@
 import "./style.css";
-import { uid, cycleUid } from "./utils.js";
+import { uid, cycleUid, fmtDate, fmtTime } from "./utils.js";
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadLightDefaults, saveLightDefaults } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, getStatsMode } from "./stats.js";
@@ -275,7 +275,8 @@ function renderPlantList() {
     }
     list.innerHTML = "";
     plants.forEach((p, i) => {
-        const type = (cycle.plantTypes || {})[p] || "photo";
+        const meta = cycle.plantTypes?.[p] || { type: "photo" };
+        const type = typeof meta === "string" ? meta : meta.type;
         const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
         const badgeLabel = type === "auto" ? "AUTO" : "PHOTO";
         const row = document.createElement("div");
@@ -317,8 +318,11 @@ function togglePlantType(index) {
     if (!cycle) return;
     if (!cycle.plantTypes || typeof cycle.plantTypes !== "object") cycle.plantTypes = {};
     const name = cycle.plants[index];
-    const current = cycle.plantTypes[name] || "photo";
-    cycle.plantTypes[name] = current === "auto" ? "photo" : "auto";
+    const current = getPlantMeta(cycle, name).type;
+    if (!cycle.plantTypes[name] || typeof cycle.plantTypes[name] !== "object") {
+        cycle.plantTypes[name] = { type: current, repottedAt: cycle.startDate };
+    }
+    cycle.plantTypes[name].type = current === "auto" ? "photo" : "auto";
     saveCycles(cycles);
     renderPlantList();
 }
@@ -393,7 +397,11 @@ function confirmRenamePlant() {
     }
 
     // Make sure plantTypes exists; every plant should be in it (auto or photo).
-    if (!cycle.plantTypes || typeof cycle.plantTypes !== "object") cycle.plantTypes = {};
+    if (!cycle.plantTypes[newName] || typeof cycle.plantTypes[newName] !== "object") {
+        cycle.plantTypes[newName] = { type: newType, repottedAt: cycle.startDate };
+    } else {
+        cycle.plantTypes[newName].type = newType;
+    }
 
     // Decide the final name. If the user didn't change it, keep the old name.
     const newName = newNameRaw === oldName ? oldName : newNameRaw;
@@ -456,6 +464,135 @@ function deletePlant(index) {
     renderAddForm();
     renderAll();
 }
+
+function getPlantMeta(cycle, name) {
+    const raw = cycle?.plantTypes?.[name];
+    if (!raw) return { type: "photo", repottedAt: cycle?.startDate };
+    if (typeof raw === "string") return { type: raw, repottedAt: cycle?.startDate };
+    return { type: raw.type || "photo", repottedAt: raw.repottedAt || cycle?.startDate };
+}
+
+window.openPlantDetail = function (name) {
+    // Find the cycle this plant belongs to. In "active"/single mode it's the
+    // current cycle. In "all" mode we just use the active one for the click,
+    // since the plants section only renders plants for the active cycle when
+    // not in "all" mode.
+    const cycle = activeCycle();
+    if (!cycle || !cycle.plants.includes(name)) {
+        // The user might have clicked a plant in another cycle while in "all"
+        // mode. Look it up.
+        const found = cycles.find((c) => c.plants && c.plants.includes(name));
+        if (!found) return;
+        return renderPlantDetailModal(found, name);
+    }
+    renderPlantDetailModal(cycle, name);
+};
+
+function renderPlantDetailModal(cycle, name) {
+    const meta = getPlantMeta(cycle, name);
+    const type = meta.type;
+    const typeLabel = type === "auto" ? "AUTO" : "PHOTO";
+    const typeBadgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
+
+    // Compute totals for this plant within this cycle. Track the most recent
+    // feed and the most recent water separately — they often diverge in
+    // flower (water daily, feed every other watering) so a combined
+    // "last fed/watered" stat hides useful information.
+    const t = { fish: 0, grow: 0, bloom: 0, water: 0 };
+    let lastFeed = null;
+    let lastWater = null;
+    let feedCount = 0;
+    let waterCount = 0;
+    cycle.entries.forEach((e) => {
+        const pd = e.plants?.[name];
+        if (!pd) return;
+        t.fish += pd.fish || 0;
+        t.grow += pd.grow || 0;
+        t.bloom += pd.bloom || 0;
+        t.water += pd.water || 0;
+        const isFeed = pd.fish || pd.grow || pd.bloom;
+        const isWater = pd.water;
+        if (isFeed) {
+            feedCount++;
+            if (!lastFeed || new Date(e.dt) > new Date(lastFeed)) lastFeed = e.dt;
+        }
+        if (isWater) {
+            waterCount++;
+            if (!lastWater || new Date(e.dt) > new Date(lastWater)) lastWater = e.dt;
+        }
+    });
+
+    const repottedAt = meta.repottedAt || cycle.startDate;
+    const repottedDate = repottedAt ? new Date(repottedAt) : new Date(cycle.startDate);
+    const ageDays = Math.max(0, Math.floor((new Date() - repottedDate) / (24 * 60 * 60 * 1000)));
+    const ageWeeks = Math.max(1, Math.ceil(ageDays / 7));
+
+    document.getElementById("plant-detail-name").textContent = name;
+    const typeEl = document.getElementById("plant-detail-type");
+    typeEl.className = typeBadgeClass;
+    typeEl.textContent = typeLabel;
+
+    const fmtStamp = (s) => (s ? `${fmtDate(s)} · ${fmtTime(s)}` : "—");
+    const repottedFmt = repottedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+    const statsHtml = `
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Type</div>
+            <div class="plant-detail-value">${typeLabel}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Repotted</div>
+            <div class="plant-detail-value">${repottedFmt}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Age (since repot)</div>
+            <div class="plant-detail-value">${ageDays} days · ${ageWeeks} week${ageWeeks === 1 ? "" : "s"}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Fish</div>
+            <div class="plant-detail-value" style="color:#d0d34e">${t.fish.toFixed(1)} cup${t.fish === 1 ? "" : "s"}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Grow</div>
+            <div class="plant-detail-value" style="color:#6ecf6e">${t.grow.toFixed(1)} cup${t.grow === 1 ? "" : "s"}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Bloom</div>
+            <div class="plant-detail-value" style="color:#c07df0">${t.bloom.toFixed(1)} cup${t.bloom === 1 ? "" : "s"}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Water</div>
+            <div class="plant-detail-value" style="color:var(--blue)">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Activity</div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Feed sessions</div>
+            <div class="plant-detail-value">${feedCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Water sessions</div>
+            <div class="plant-detail-value">${waterCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last fed</div>
+            <div class="plant-detail-value">${fmtStamp(lastFeed)}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last watered</div>
+            <div class="plant-detail-value">${fmtStamp(lastWater)}</div>
+        </div>
+    `;
+
+    document.getElementById("plant-detail-stats").innerHTML = statsHtml;
+    document.getElementById("plant-detail-modal").style.display = "flex";
+}
+
+window.closePlantDetail = function () {
+    document.getElementById("plant-detail-modal").style.display = "none";
+};
 
 // ── New cycle modal ───────────────────────────────────────────────────────────
 function newCycle() {
@@ -536,11 +673,22 @@ function setStatsCycle(id) {
 // ── Edit entry ────────────────────────────────────────────────────────────────
 function editEntry(id) {
     let entry = null;
+    let entryCycle = null;
     for (let c of cycles) {
         entry = c.entries.find((e) => e.id === id);
-        if (entry) break;
+        if (entry) {
+            entryCycle = c;
+            break;
+        }
     }
     if (!entry) return;
+
+    if (entryCycle && entryCycle.id !== activeCycleId) {
+        activeCycleId = entryCycle.id;
+        saveActiveCycleId(activeCycleId);
+        updateGrowAge();
+        renderAddForm();
+    }
 
     editingEntryId = id;
 
@@ -644,6 +792,8 @@ function saveEntry() {
         return;
     }
 
+    const cycle = activeCycle();
+
     const actions = [];
     if (document.getElementById("ck-lst").checked) {
         const plants = [...document.querySelectorAll(".lst-plant:checked")].map((el) => el.value);
@@ -664,8 +814,17 @@ function saveEntry() {
         actions.push(label);
     }
     if (document.getElementById("ck-repot").checked) {
-        const plants = [...document.querySelectorAll(".repot-plant:checked")].map((el) => el.value);
-        actions.push("Repot / transplant" + (plants.length ? " (" + plants.join(", ") + ")" : ""));
+        const repottedPlants = [...document.querySelectorAll(".repot-plant:checked")].map((el) => el.value);
+        actions.push("Repot / transplant" + (repottedPlants.length ? " (" + repottedPlants.join(", ") + ")" : ""));
+
+        const repotDate = dt.slice(0, 10);
+        repottedPlants.forEach((name) => {
+            if (!cycle.plantTypes[name] || typeof cycle.plantTypes[name] !== "object") {
+                cycle.plantTypes[name] = { type: "auto", repottedAt: repotDate };
+            } else {
+                cycle.plantTypes[name].repottedAt = repotDate;
+            }
+        });
     }
 
     const plants = {};
@@ -684,7 +843,6 @@ function saveEntry() {
     });
 
     const obs = document.getElementById("new-obs").value.trim();
-    const cycle = activeCycle();
 
     if (editingEntryId) {
         // Update existing entry
@@ -694,6 +852,9 @@ function saveEntry() {
             entry.plants = plants;
             entry.actions = actions;
             entry.obs = obs || undefined;
+        } else {
+            alert("Couldn't find the entry to update. Please try editing it again.");
+            return;
         }
         editingEntryId = null;
     } else {
@@ -746,6 +907,16 @@ function deleteCycle(id) {
 function renderAll() {
     renderLog(cycles, activeCycleId);
     renderStats(cycles, activeCycleId);
+    refreshOpenPlantDetail();
+}
+
+function refreshOpenPlantDetail() {
+    const modal = document.getElementById("plant-detail-modal");
+    if (!modal || modal.style.display === "none") return;
+    const name = document.getElementById("plant-detail-name").textContent;
+    if (!name) return;
+    const cycle = cycles.find((c) => c.plants && c.plants.includes(name));
+    if (cycle) renderPlantDetailModal(cycle, name);
 }
 
 // localStorage.removeItem("collapsed_actions");

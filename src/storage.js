@@ -8,19 +8,24 @@ export function loadCycles() {
         const stored = localStorage.getItem("grow_cycles");
         if (stored) {
             const parsed = JSON.parse(stored);
-            // Migration: ensure every cycle has a plants array AND a plantTypes map.
-            // Older saves didn't carry plantTypes, so we fill in safe defaults
-            // rather than wiping user history. We persist the migrated shape back
-            // to localStorage so the migration only runs once.
             parsed.forEach((c) => {
                 if (!Array.isArray(c.plants)) c.plants = [...DEFAULT_PLANTS];
                 if (!c.plantTypes || typeof c.plantTypes !== "object") c.plantTypes = {};
-                // Any plant missing a type gets 'photo'. Photoperiod is the
-                // conservative pick for legacy grows; the user can flip
-                // individual plants to 'auto' from the Plants modal.
                 c.plants.forEach((p) => {
-                    if (c.plantTypes[p] !== "auto" && c.plantTypes[p] !== "photo") {
-                        c.plantTypes[p] = "auto";
+                    // plantTypes used to be a flat "auto"/"photo" string. New
+                    // shape is { type, repottedAt } so we can track the
+                    // starting point for "age" stats.
+                    const raw = c.plantTypes[p];
+                    if (typeof raw === "string") {
+                        c.plantTypes[p] = {
+                            type: raw === "auto" || raw === "photo" ? raw : "auto",
+                            repottedAt: c.startDate || new Date().toISOString().slice(0, 10),
+                        };
+                    } else if (!raw || typeof raw !== "object") {
+                        c.plantTypes[p] = { type: "auto", repottedAt: c.startDate || new Date().toISOString().slice(0, 10) };
+                    } else {
+                        if (raw.type !== "auto" && raw.type !== "photo") raw.type = "auto";
+                        if (!raw.repottedAt) raw.repottedAt = c.startDate || new Date().toISOString().slice(0, 10);
                     }
                 });
             });
@@ -36,6 +41,17 @@ export function loadCycles() {
         plantTypes: c.plantTypes && typeof c.plantTypes === "object" ? { ...c.plantTypes } : {},
         entries: [...c.entries],
     }));
+    // Seed plants also get the new shape
+    cycles.forEach((c) => {
+        c.plants.forEach((p) => {
+            const raw = c.plantTypes[p];
+            if (typeof raw === "string") {
+                c.plantTypes[p] = { type: raw, repottedAt: c.startDate };
+            } else if (!raw) {
+                c.plantTypes[p] = { type: "auto", repottedAt: c.startDate };
+            }
+        });
+    });
     localStorage.setItem("grow_cycles", JSON.stringify(cycles));
     localStorage.setItem("grow_version", String(STORAGE_VERSION));
     return cycles;

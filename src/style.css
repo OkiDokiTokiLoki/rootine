@@ -835,3 +835,52 @@ input[type="datetime-local"] {
     color: #5b9cff;
     border-color: rgba(91, 156, 255, 0.35);
 }
+
+.plant-stat-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+.plant-stat-row-clickable:hover {
+    background: var(--surface2);
+    border-radius: 8px;
+}
+
+.stats-cycle-block {
+    margin-bottom: 14px;
+}
+
+.plant-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 7px 0;
+    font-size: 14px;
+    border-bottom: 0.5px solid var(--border2);
+}
+.plant-detail-row:last-child {
+    border-bottom: none;
+}
+.plant-detail-label {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.plant-detail-value {
+    font-weight: 600;
+    font-size: 14px;
+    text-align: right;
+}
+.plant-detail-divider {
+    height: 1px;
+    background: var(--border2);
+    margin: 8px 0;
+}
+.plant-detail-section-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+    padding: 0 2px;
+}
