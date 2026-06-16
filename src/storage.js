@@ -1,57 +1,58 @@
 import { seedCycles } from "./data.js";
 
-const STORAGE_VERSION = 2;
-const DEFAULT_PLANTS = ["COP", "H", "GC", "GC2"];
+// Each migration takes cycles, returns cycles. Migrations[0] is v1→v2, [1] is
+// v2→v3, etc. To bump the version: write a function, append it. That's it.
+const migrations = [
+    // v1 → v2: ensure every cycle has a plants array. Older cycles didn't
+    // track plants, so leave the array empty — the user adds plants through
+    // the Plants modal rather than inheriting a hardcoded list.
+    (cycles) =>
+        cycles.map((c) => ({
+            ...c,
+            plants: c.plants || [],
+        })),
+
+    // v2 → v3: plantTypes went from "auto"/"photo" string to { type, repottedAt }.
+    (cycles) =>
+        cycles.map((c) => {
+            const plantTypes = { ...(c.plantTypes || {}) };
+            const fallback = c.startDate || new Date().toISOString().slice(0, 10);
+            (c.plants || []).forEach((p) => {
+                const raw = plantTypes[p];
+                if (typeof raw === "string") {
+                    plantTypes[p] = { type: raw, repottedAt: fallback };
+                } else if (!raw || typeof raw !== "object") {
+                    plantTypes[p] = { type: "auto", repottedAt: fallback };
+                }
+            });
+            return { ...c, plantTypes };
+        }),
+];
+
+const STORAGE_VERSION = migrations.length + 1;
+
+function seed() {
+    // Fresh install: deep-copy the seed and stamp the current version. The
+    // seed is assumed to be authored in the current shape, so no migrations
+    // run against it.
+    const cycles = JSON.parse(JSON.stringify(seedCycles));
+    localStorage.setItem("grow_cycles", JSON.stringify(cycles));
+    localStorage.setItem("grow_version", String(STORAGE_VERSION));
+    return cycles;
+}
 
 export function loadCycles() {
-    try {
-        const stored = localStorage.getItem("grow_cycles");
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            parsed.forEach((c) => {
-                if (!Array.isArray(c.plants)) c.plants = [...DEFAULT_PLANTS];
-                if (!c.plantTypes || typeof c.plantTypes !== "object") c.plantTypes = {};
-                c.plants.forEach((p) => {
-                    // plantTypes used to be a flat "auto"/"photo" string. New
-                    // shape is { type, repottedAt } so we can track the
-                    // starting point for "age" stats.
-                    const raw = c.plantTypes[p];
-                    if (typeof raw === "string") {
-                        c.plantTypes[p] = {
-                            type: raw === "auto" || raw === "photo" ? raw : "auto",
-                            repottedAt: c.startDate || new Date().toISOString().slice(0, 10),
-                        };
-                    } else if (!raw || typeof raw !== "object") {
-                        c.plantTypes[p] = { type: "auto", repottedAt: c.startDate || new Date().toISOString().slice(0, 10) };
-                    } else {
-                        if (raw.type !== "auto" && raw.type !== "photo") raw.type = "auto";
-                        if (!raw.repottedAt) raw.repottedAt = c.startDate || new Date().toISOString().slice(0, 10);
-                    }
-                });
-            });
-            localStorage.setItem("grow_cycles", JSON.stringify(parsed));
-            localStorage.setItem("grow_version", String(STORAGE_VERSION));
-            return parsed;
-        }
-    } catch (e) {}
-    // Fresh seed
-    const cycles = seedCycles.map((c) => ({
-        ...c,
-        plants: Array.isArray(c.plants) ? [...c.plants] : [...DEFAULT_PLANTS],
-        plantTypes: c.plantTypes && typeof c.plantTypes === "object" ? { ...c.plantTypes } : {},
-        entries: [...c.entries],
-    }));
-    // Seed plants also get the new shape
-    cycles.forEach((c) => {
-        c.plants.forEach((p) => {
-            const raw = c.plantTypes[p];
-            if (typeof raw === "string") {
-                c.plantTypes[p] = { type: raw, repottedAt: c.startDate };
-            } else if (!raw) {
-                c.plantTypes[p] = { type: "auto", repottedAt: c.startDate };
-            }
-        });
-    });
+    const raw = localStorage.getItem("grow_cycles");
+    if (!raw) return seed();
+
+    let cycles = JSON.parse(raw);
+    const version = parseInt(localStorage.getItem("grow_version") || "1", 10);
+
+    // version is 1-indexed, so the v1→v2 migration is migrations[version - 1].
+    for (let i = version - 1; i < migrations.length; i++) {
+        cycles = migrations[i](cycles);
+    }
+
     localStorage.setItem("grow_cycles", JSON.stringify(cycles));
     localStorage.setItem("grow_version", String(STORAGE_VERSION));
     return cycles;
@@ -63,7 +64,6 @@ export function saveCycles(cycles) {
 
 export function loadActiveCycleId(cycles) {
     const stored = localStorage.getItem("active_cycle_id");
-    // Fall back to last cycle if stored id not found
     if (stored && cycles.find((c) => c.id === stored)) return stored;
     return cycles[cycles.length - 1].id;
 }

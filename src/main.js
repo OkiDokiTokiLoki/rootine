@@ -285,7 +285,7 @@ function renderPlantList() {
             <div class="plant-manage-name">${escapeHtml(p)}</div>
             <div class="plant-manage-actions">
                 <span class="${badgeClass}" onclick="togglePlantType(${i})" title="Click to toggle type">${badgeLabel}</span>
-                <button class="settings-btn edit-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.08" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
+                <button class="settings-btn edit-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.08" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
                 <button class="settings-btn delete-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
             </div>
         `;
@@ -365,7 +365,8 @@ function renamePlant(index) {
     const cycle = activeCycle();
     if (!cycle) return;
     const oldName = cycle.plants[index];
-    const existingType = (cycle.plantTypes || {})[oldName] || "auto";
+    const rawType = (cycle.plantTypes || {})[oldName];
+    const existingType = (typeof rawType === "object" ? rawType?.type : rawType) || "auto";
     document.getElementById("rename-plant-input").value = oldName;
     pendingRenamePlantType = existingType;
     selectPlantType("rename", existingType);
@@ -389,18 +390,9 @@ function confirmRenamePlant() {
     const oldName = modal._oldName;
     const newType = pendingRenamePlantType;
 
-    // The user can confirm to change: name only, type only, or both.
-    // Only short-circuit if the trimmed name is empty.
     if (!newNameRaw) {
         alert("Plant name can't be empty.");
         return;
-    }
-
-    // Make sure plantTypes exists; every plant should be in it (auto or photo).
-    if (!cycle.plantTypes[newName] || typeof cycle.plantTypes[newName] !== "object") {
-        cycle.plantTypes[newName] = { type: newType, repottedAt: cycle.startDate };
-    } else {
-        cycle.plantTypes[newName].type = newType;
     }
 
     // Decide the final name. If the user didn't change it, keep the old name.
@@ -439,7 +431,10 @@ function confirmRenamePlant() {
 
     // Always persist the type — even if the name didn't change, the toggle
     // selection needs to be saved.
-    cycle.plantTypes[newName] = newType;
+    cycle.plantTypes[newName] = {
+        type: newType,
+        repottedAt: cycle.plantTypes[newName]?.repottedAt || cycle.startDate,
+    };
 
     saveCycles(cycles);
     modal.style.display = "none";
