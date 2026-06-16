@@ -125,6 +125,26 @@
 
                     <div class="section-title">All observations</div>
                     <div id="obs-list"></div>
+
+                    <div class="section-title" style="margin-top: 24px">Settings</div>
+                    <div class="form-section" style="margin-bottom: 14px">
+                        <div style="display: flex; align-items: center; justify-content: space-between">
+                            <div>
+                                <div style="font-size: 13px; font-weight: 500">Export backup</div>
+                                <div style="font-size: 12px; color: var(--muted); margin-top: 2px">Downloads all cycles &amp; entries as JSON</div>
+                            </div>
+                            <button class="settings-btn" onclick="exportBackup()" style="padding: 8px 14px; font-size: 13px; border-radius: 8px; background: var(--surface2); border: 0.5px solid var(--border2); color: var(--text); cursor: pointer; white-space: nowrap">Export</button>
+                        </div>
+                        <div style="border-top: 0.5px solid var(--border2); margin: 12px 0"></div>
+                        <div style="display: flex; align-items: center; justify-content: space-between">
+                            <div>
+                                <div style="font-size: 13px; font-weight: 500">Import backup</div>
+                                <div style="font-size: 12px; color: var(--muted); margin-top: 2px">Restore cycles &amp; entries from a JSON file</div>
+                            </div>
+                            <input type="file" id="import-backup-input" accept=".json" style="display: none" onchange="importBackup(event)" />
+                            <button class="settings-btn" onclick="document.getElementById('import-backup-input').click()" style="padding: 8px 14px; font-size: 13px; border-radius: 8px; background: var(--surface2); border: 0.5px solid var(--border2); color: var(--text); cursor: pointer; white-space: nowrap">Import</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

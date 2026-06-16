@@ -609,14 +609,15 @@ textarea.form-input {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border: none;
     border-radius: 6px;
     cursor: pointer;
 }
 
+.entry-card:not(.open) .duplicate-entry-btn,
 .entry-card:not(.open) .delete-entry-btn,
 .entry-card:not(.open) .edit-entry-btn {
     display: none;
@@ -634,6 +635,11 @@ textarea.form-input {
 .delete-entry-btn {
     background-color: var(--red-bg);
     color: var(--red);
+}
+
+.duplicate-entry-btn {
+    background-color: var(--green-bg);
+    color: var(--green);
 }
 
 .cycle-header.collapsed .settings-btn,

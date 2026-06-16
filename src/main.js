@@ -26,6 +26,7 @@ window.toggleWeek = toggleWeek;
 window.toggleCycle = toggleCycle;
 window.toggleEntry = toggleEntry;
 window.deleteEntry = deleteEntry;
+window.duplicateEntry = duplicateEntry;
 window.editEntry = editEntry;
 window.cancelEdit = cancelEdit;
 window.saveEntry = saveEntry;
@@ -49,6 +50,8 @@ window.confirmRenamePlant = confirmRenamePlant;
 window.deletePlant = deletePlant;
 window.selectPlantType = selectPlantType;
 window.togglePlantType = togglePlantType;
+window.exportBackup = exportBackup;
+window.importBackup = importBackup;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
@@ -872,6 +875,22 @@ function cancelEdit() {
     showTab("log");
 }
 
+// ── Duplicate entry ───────────────────────────────────────────────────────────
+function duplicateEntry(id) {
+    for (const cycle of cycles) {
+        const entry = cycle.entries.find((e) => e.id === id);
+        if (entry) {
+            const copy = JSON.parse(JSON.stringify(entry));
+            copy.id = uid();
+
+            cycle.entries.unshift(copy);
+            saveCycles(cycles);
+            renderAll();
+            return;
+        }
+    }
+}
+
 // ── Delete entry ──────────────────────────────────────────────────────────────
 function deleteEntry(id) {
     if (!confirm("Delete this entry?")) return;
@@ -896,6 +915,40 @@ function deleteCycle(id) {
     updateGrowAge();
     renderAddForm();
     renderAll();
+}
+
+// ── Export backup ────────────────────────────────────────────────────────────
+function exportBackup() {
+    const data = JSON.stringify(cycles, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const date = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `rootine-backup-${date}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ── Import backup ────────────────────────────────────────────────────────────
+function importBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (!Array.isArray(imported)) throw new Error("Invalid format");
+            if (!confirm(`Import ${imported.length} cycle(s)? This will replace all current data.`)) return;
+            localStorage.setItem("grow_cycles", JSON.stringify(imported));
+            localStorage.setItem("grow_version", "3"); // keep in sync with storage.js STORAGE_VERSION
+            location.reload();
+        } catch {
+            alert("Invalid backup file.");
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
 }
 
 // ── Render all ────────────────────────────────────────────────────────────────
