@@ -27,6 +27,15 @@ const migrations = [
             });
             return { ...c, plantTypes };
         }),
+
+    // v3 → v4: ensure every cycle has a favourites array. Plants the user
+    // starred before this migration ran don't exist; users can re-star after
+    // upgrade. We start empty rather than guessing.
+    (cycles) =>
+        cycles.map((c) => ({
+            ...c,
+            favourites: c.favourites || [],
+        })),
 ];
 
 const STORAGE_VERSION = migrations.length + 1;
@@ -86,6 +95,14 @@ export function loadCollapsedWeeks() {
 
 export function saveCollapsedWeeks(set) {
     localStorage.setItem("collapsed_weeks", JSON.stringify([...set]));
+}
+
+export function loadCollapsedObs() {
+    return localStorage.getItem("collapsed_obs") === "1";
+}
+
+export function saveCollapsedObs(state) {
+    localStorage.setItem("collapsed_obs", state ? "1" : "0");
 }
 
 export function loadLightDefaults(cycleId) {

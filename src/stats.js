@@ -1,4 +1,5 @@
 import { fmtDate, fmtTime, getWeekNum, entryType } from "./utils.js";
+import { saveCollapsedObs } from "./storage.js";
 
 let statsMode = "active";
 
@@ -12,6 +13,28 @@ export function setStatsMode(mode) {
 
 export function getStatsMode() {
     return statsMode;
+}
+
+let collapsedObs = false;
+
+export function initObsCollapsed(state) {
+    collapsedObs = !!state;
+    applyObsCollapsedClasses();
+}
+
+export function toggleObs() {
+    collapsedObs = !collapsedObs;
+    saveCollapsedObs(collapsedObs);
+    applyObsCollapsedClasses();
+}
+
+function applyObsCollapsedClasses() {
+    const list = document.getElementById("obs-list");
+    const chev = document.getElementById("obs-chev");
+    const header = document.getElementById("obs-section-header");
+    if (list) list.classList.toggle("collapsed", collapsedObs);
+    if (chev) chev.classList.toggle("collapsed", collapsedObs);
+    if (header) header.classList.toggle("collapsed", collapsedObs);
 }
 
 function ageInDays(repottedAt, asOf) {
@@ -134,8 +157,10 @@ export function renderStats(cycles, activeCycleId) {
             return;
         }
 
+        const favSet = new Set(cycle.favourites || []);
+        const sortedCyclePlants = [...cyclePlants].sort((a, b) => (favSet.has(a) ? 0 : 1) - (favSet.has(b) ? 0 : 1));
         plantsHtml += `<div class="stats-cycle-block">`;
-        cyclePlants.forEach((p) => {
+        sortedCyclePlants.forEach((p) => {
             const meta = plantType(cycle, p);
             const t = cycleTotals[p] || { fish: 0, grow: 0, bloom: 0, water: 0 };
             plantsHtml += renderPlantCard(p, t, meta.type, meta.repottedAt);

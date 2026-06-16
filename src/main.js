@@ -1,8 +1,8 @@
 import "./style.css";
 import { uid, cycleUid, fmtDate, fmtTime } from "./utils.js";
-import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadLightDefaults, saveLightDefaults } from "./storage.js";
+import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs, loadLightDefaults, saveLightDefaults } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
-import { initStats, renderStats, setStatsMode, getStatsMode } from "./stats.js";
+import { initStats, renderStats, setStatsMode, getStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { registerServiceWorker } from "./sw.js";
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -10,6 +10,7 @@ let cycles = loadCycles();
 let activeCycleId = loadActiveCycleId(cycles);
 const collapsedCycles = loadCollapsedCycles();
 const collapsedWeeks = loadCollapsedWeeks();
+const collapsedObs = loadCollapsedObs();
 let editingEntryId = null;
 let pendingAddPlantType = "auto";
 let pendingRenamePlantType = "auto";
@@ -20,6 +21,7 @@ try {
 
 initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
+initObsCollapsed(collapsedObs);
 
 // ── Expose globals ────────────────────────────────────────────────────────────
 window.toggleWeek = toggleWeek;
@@ -50,6 +52,8 @@ window.confirmRenamePlant = confirmRenamePlant;
 window.deletePlant = deletePlant;
 window.selectPlantType = selectPlantType;
 window.togglePlantType = togglePlantType;
+window.toggleFavourite = toggleFavourite;
+window.toggleObs = toggleObs;
 window.exportBackup = exportBackup;
 window.importBackup = importBackup;
 
@@ -72,6 +76,16 @@ function cyclePlants() {
 // ── Render add form (dynamic plants) ─────────────────────────────────────────
 function renderAddForm() {
     const plants = cyclePlants();
+    const cycle = activeCycle();
+
+    const sortedPlants =
+        plants.length === 0
+            ? []
+            : [...plants].sort((a, b) => {
+                  const aFav = isFavourite(cycle, a) ? 0 : 1;
+                  const bFav = isFavourite(cycle, b) ? 0 : 1;
+                  return aFav - bFav;
+              });
 
     // Plant tabs
     const tabsContainer = document.getElementById("plant-tabs");
@@ -82,7 +96,7 @@ function renderAddForm() {
         empty.textContent = 'No plants yet for this grow cycle yet. Tap "Plants" above to add some.';
         tabsContainer.appendChild(empty);
     } else {
-        plants.forEach((p, i) => {
+        sortedPlants.forEach((p, i) => {
             const tab = document.createElement("div");
             tab.className = "plant-tab" + (i === 0 ? " active" : "");
             tab.textContent = p;
@@ -95,7 +109,7 @@ function renderAddForm() {
     // Plant panels
     const panelsContainer = document.getElementById("plant-panels");
     panelsContainer.innerHTML = "";
-    plants.forEach((p, i) => {
+    sortedPlants.forEach((p, i) => {
         const panel = document.createElement("div");
         panel.className = "plant-panel" + (i === 0 ? " active" : "");
         panel.id = "panel-" + p;
@@ -118,7 +132,7 @@ function renderAddForm() {
             list.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available.</div>';
             return;
         }
-        plants.forEach((p) => {
+        sortedPlants.forEach((p) => {
             const label = document.createElement("label");
             label.className = "plant-picker-opt";
             label.innerHTML = `<input type="checkbox" class="${action}-plant" value="${escapeHtml(p)}" /> ${escapeHtml(p)}`;
@@ -288,8 +302,9 @@ function renderPlantList() {
             <div class="plant-manage-name">${escapeHtml(p)}</div>
             <div class="plant-manage-actions">
                 <span class="${badgeClass}" onclick="togglePlantType(${i})" title="Click to toggle type">${badgeLabel}</span>
-                <button class="settings-btn edit-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.08" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
-                <button class="settings-btn delete-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                <button class="settings-btn edit-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.08" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
+                <button class="settings-btn delete-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                <button class="settings-btn favourite-btn ${isFavourite(cycle, p) ? "is-favourite" : ""}" onclick="toggleFavourite(${i})" aria-label="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"} ${escapeHtml(p)}" title="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"}"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;${isFavourite(cycle, p) ? "fill:var(--amber);stroke:var(--amber)" : "fill:none;stroke:var(--muted)"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
             </div>
         `;
         list.appendChild(row);
@@ -328,6 +343,23 @@ function togglePlantType(index) {
     cycle.plantTypes[name].type = current === "auto" ? "photo" : "auto";
     saveCycles(cycles);
     renderPlantList();
+}
+
+function toggleFavourite(index) {
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const name = cycle.plants[index];
+    if (!Array.isArray(cycle.favourites)) cycle.favourites = [];
+    const idx = cycle.favourites.indexOf(name);
+    if (idx >= 0) {
+        cycle.favourites.splice(idx, 1);
+    } else {
+        cycle.favourites.push(name);
+    }
+    saveCycles(cycles);
+    renderPlantList();
+    renderAddForm();
+    renderStats(cycles, activeCycleId);
 }
 
 function confirmAddPlant() {
@@ -468,6 +500,10 @@ function getPlantMeta(cycle, name) {
     if (!raw) return { type: "photo", repottedAt: cycle?.startDate };
     if (typeof raw === "string") return { type: raw, repottedAt: cycle?.startDate };
     return { type: raw.type || "photo", repottedAt: raw.repottedAt || cycle?.startDate };
+}
+
+function isFavourite(cycle, name) {
+    return Array.isArray(cycle.favourites) && cycle.favourites.includes(name);
 }
 
 window.openPlantDetail = function (name) {
@@ -941,7 +977,7 @@ function importBackup(event) {
             if (!Array.isArray(imported)) throw new Error("Invalid format");
             if (!confirm(`Import ${imported.length} cycle(s)? This will replace all current data.`)) return;
             localStorage.setItem("grow_cycles", JSON.stringify(imported));
-            localStorage.setItem("grow_version", "3"); // keep in sync with storage.js STORAGE_VERSION
+            localStorage.setItem("grow_version", "4"); // keep in sync with storage.js STORAGE_VERSION
             location.reload();
         } catch {
             alert("Invalid backup file.");
@@ -975,5 +1011,9 @@ updateLightStatus();
 setDateDefault();
 _loadLightDefaults();
 renderAddForm();
-renderAll();
+try {
+    renderAll();
+} catch (err) {
+    console.error("Initial render failed:", err);
+}
 registerServiceWorker();
