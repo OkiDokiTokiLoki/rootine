@@ -99,7 +99,12 @@ function renderAddForm() {
         sortedPlants.forEach((p, i) => {
             const tab = document.createElement("div");
             tab.className = "plant-tab" + (i === 0 ? " active" : "");
-            tab.textContent = p;
+            if (isFavourite(cycle, p)) {
+                const star = document.createElement("span");
+                star.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                tab.appendChild(star.firstChild);
+            }
+            tab.appendChild(document.createTextNode(p));
             tab.dataset.plant = p;
             tab.onclick = () => switchPlant(p);
             tabsContainer.appendChild(tab);
@@ -135,7 +140,17 @@ function renderAddForm() {
         sortedPlants.forEach((p) => {
             const label = document.createElement("label");
             label.className = "plant-picker-opt";
-            label.innerHTML = `<input type="checkbox" class="${action}-plant" value="${escapeHtml(p)}" /> ${escapeHtml(p)}`;
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.className = `${action}-plant`;
+            cb.value = p;
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(p));
+            if (isFavourite(cycle, p)) {
+                const starWrap = document.createElement("span");
+                starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                label.appendChild(starWrap.firstChild);
+            }
             list.appendChild(label);
         });
     });
@@ -535,8 +550,12 @@ function renderPlantDetailModal(cycle, name) {
     const t = { fish: 0, grow: 0, bloom: 0, water: 0 };
     let lastFeed = null;
     let lastWater = null;
+    let lastLst = null;
+    let lastDefoliate = null;
     let feedCount = 0;
     let waterCount = 0;
+    let lstCount = 0;
+    let defoliateCount = 0;
     cycle.entries.forEach((e) => {
         const pd = e.plants?.[name];
         if (!pd) return;
@@ -554,6 +573,31 @@ function renderPlantDetailModal(cycle, name) {
             waterCount++;
             if (!lastWater || new Date(e.dt) > new Date(lastWater)) lastWater = e.dt;
         }
+        // Count LST / Defoliate occurrences where this plant was named.
+        // Action strings look like "LST (Plant A, Plant B)" or
+        // "Defoliate (Plant A)". If no plant list was attached, count it
+        // as a single action for this entry (best-effort — there's no way
+        // to know which plant it targeted).
+        (e.actions || []).forEach((a) => {
+            const m = a.match(/^(LST|Defoliate)\s*(?:\(([^)]*)\))?\s*$/);
+            if (!m) return;
+            const kind = m[1];
+            const items = m[2]
+                ? m[2]
+                      .split(", ")
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                : [];
+            if (items.length > 0 && !items.includes(name)) return;
+            const entryDt = new Date(e.dt);
+            if (kind === "LST") {
+                lstCount++;
+                if (!lastLst || entryDt > new Date(lastLst)) lastLst = e.dt;
+            } else {
+                defoliateCount++;
+                if (!lastDefoliate || entryDt > new Date(lastDefoliate)) lastDefoliate = e.dt;
+            }
+        });
     });
 
     const repottedAt = meta.repottedAt || cycle.startDate;
@@ -561,7 +605,15 @@ function renderPlantDetailModal(cycle, name) {
     const ageDays = Math.max(0, Math.floor((new Date() - repottedDate) / (24 * 60 * 60 * 1000)));
     const ageWeeks = Math.max(1, Math.ceil(ageDays / 7));
 
-    document.getElementById("plant-detail-name").textContent = name;
+    const nameEl = document.getElementById("plant-detail-name");
+    nameEl.innerHTML = "";
+    if (isFavourite(cycle, name)) {
+        const starWrap = document.createElement("span");
+        starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:6px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+        nameEl.appendChild(starWrap.firstChild);
+    }
+    nameEl.appendChild(document.createTextNode(name));
+
     const typeEl = document.getElementById("plant-detail-type");
     typeEl.className = typeBadgeClass;
     typeEl.textContent = typeLabel;
@@ -600,7 +652,7 @@ function renderPlantDetailModal(cycle, name) {
             <div class="plant-detail-label">Water</div>
             <div class="plant-detail-value" style="color:var(--blue)">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
         </div>
-        <div class="plant-detail-divider"></div>
+                <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Activity</div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Feed sessions</div>
@@ -611,12 +663,29 @@ function renderPlantDetailModal(cycle, name) {
             <div class="plant-detail-value">${waterCount}</div>
         </div>
         <div class="plant-detail-row">
+            <div class="plant-detail-label">Times LST'd</div>
+            <div class="plant-detail-value">${lstCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times defoliated</div>
+            <div class="plant-detail-value">${defoliateCount}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-row">
             <div class="plant-detail-label">Last fed</div>
             <div class="plant-detail-value">${fmtStamp(lastFeed)}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Last watered</div>
             <div class="plant-detail-value">${fmtStamp(lastWater)}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last LST'd</div>
+            <div class="plant-detail-value">${fmtStamp(lastLst)}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last defoliated</div>
+            <div class="plant-detail-value">${fmtStamp(lastDefoliate)}</div>
         </div>
     `;
 

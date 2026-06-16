@@ -72,15 +72,17 @@ function plantType(cycle, name) {
     return { type: t.type || "photo", repottedAt: t.repottedAt || cycle?.startDate };
 }
 
-function renderPlantCard(name, totals, type, repottedAt) {
+function renderPlantCard(name, totals, type, repottedAt, isFav) {
+    const starSvg = isFav ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;fill:var(--amber);stroke:var(--amber);flex-shrink:0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
     const safeName = name.replace(/'/g, "\\'");
     const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
     const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
 
     return `
     <div class="plant-stat-row plant-stat-row-clickable" onclick="openPlantDetail('${safeName}')">
-        <div style="display:flex;align-items:center;gap:8px;flex:1">
+        <div style="display:flex;align-items:center;gap:6px;flex:1">
             <span style="font-weight:600">${name}</span>
+            ${starSvg}
             <span class="${badgeClass}" style="font-size:10px;padding:2px 6px">${typeBadge}</span>
         </div>
         <span style="font-size:12px;color:var(--muted)">
@@ -163,7 +165,7 @@ export function renderStats(cycles, activeCycleId) {
         sortedCyclePlants.forEach((p) => {
             const meta = plantType(cycle, p);
             const t = cycleTotals[p] || { fish: 0, grow: 0, bloom: 0, water: 0 };
-            plantsHtml += renderPlantCard(p, t, meta.type, meta.repottedAt);
+            plantsHtml += renderPlantCard(p, t, meta.type, meta.repottedAt, favSet.has(p));
         });
         plantsHtml += `</div>`;
     });

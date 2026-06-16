@@ -431,12 +431,20 @@ body {
     color: var(--muted);
     cursor: pointer;
     text-align: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .plant-tab.active {
     background: var(--green-bg);
     color: var(--green);
     border-color: transparent;
+}
+
+#plant-detail-name {
+    display: flex;
+    align-items: center;
 }
 
 .plant-panel {
@@ -625,8 +633,10 @@ textarea.form-input {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: fit-content;
+    min-width: 28px;
+    height: fit-content;
+    min-height: 28px;
     padding: 0;
     border: none;
     border-radius: 6px;
