@@ -2,10 +2,9 @@ import "./style.css";
 import { uid, cycleUid, fmtDate, fmtTime } from "./utils.js";
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs, loadLightDefaults, saveLightDefaults } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
-import { initStats, renderStats, setStatsMode, getStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
+import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { registerServiceWorker } from "./sw.js";
 
-// ── State ─────────────────────────────────────────────────────────────────────
 let cycles = loadCycles();
 let activeCycleId = loadActiveCycleId(cycles);
 const collapsedCycles = loadCollapsedCycles();
@@ -23,7 +22,6 @@ initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
 initObsCollapsed(collapsedObs);
 
-// ── Expose globals ────────────────────────────────────────────────────────────
 window.toggleWeek = toggleWeek;
 window.toggleCycle = toggleCycle;
 window.toggleEntry = toggleEntry;
@@ -46,7 +44,6 @@ window.openAddPlant = openAddPlant;
 window.confirmAddPlant = confirmAddPlant;
 window.renamePlant = renamePlant;
 window.cancelAddPlant = cancelAddPlant;
-window.confirmAddPlant = confirmAddPlant;
 window.cancelRenamePlant = cancelRenamePlant;
 window.confirmRenamePlant = confirmRenamePlant;
 window.deletePlant = deletePlant;
@@ -57,10 +54,8 @@ window.toggleObs = toggleObs;
 window.exportBackup = exportBackup;
 window.importBackup = importBackup;
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function activeCycle() {
     return cycles.find((c) => c.id === activeCycleId);
 }
@@ -73,7 +68,6 @@ function cyclePlants() {
     return activeCycle()?.plants || [];
 }
 
-// ── Render add form (dynamic plants) ─────────────────────────────────────────
 function renderAddForm() {
     const plants = cyclePlants();
     const cycle = activeCycle();
@@ -87,7 +81,6 @@ function renderAddForm() {
                   return aFav - bFav;
               });
 
-    // Plant tabs
     const tabsContainer = document.getElementById("plant-tabs");
     tabsContainer.innerHTML = "";
     if (plants.length === 0) {
@@ -99,19 +92,18 @@ function renderAddForm() {
         sortedPlants.forEach((p, i) => {
             const tab = document.createElement("div");
             tab.className = "plant-tab" + (i === 0 ? " active" : "");
+            tab.appendChild(document.createTextNode(p));
+            tab.dataset.plant = p;
+            tab.onclick = () => switchPlant(p);
+            tabsContainer.appendChild(tab);
             if (isFavourite(cycle, p)) {
                 const star = document.createElement("span");
                 star.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
                 tab.appendChild(star.firstChild);
             }
-            tab.appendChild(document.createTextNode(p));
-            tab.dataset.plant = p;
-            tab.onclick = () => switchPlant(p);
-            tabsContainer.appendChild(tab);
         });
     }
 
-    // Plant panels
     const panelsContainer = document.getElementById("plant-panels");
     panelsContainer.innerHTML = "";
     sortedPlants.forEach((p, i) => {
@@ -127,7 +119,6 @@ function renderAddForm() {
         panelsContainer.appendChild(panel);
     });
 
-    // Plant pickers (LST, Defoliate, Repot)
     ["lst", "def", "repot"].forEach((action) => {
         const picker = document.getElementById(action + "-plants");
         const list = picker.querySelector(".plant-picker-list");
@@ -156,7 +147,6 @@ function renderAddForm() {
     });
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
 function showTab(name) {
     ["log", "add", "stats"].forEach((t) => {
         document.getElementById("section-" + t).classList.toggle("active", t === name);
@@ -190,7 +180,6 @@ function resetAddForm() {
     document.getElementById("new-obs").value = "";
 }
 
-// ── Grow age header ───────────────────────────────────────────────────────────
 function updateGrowAge() {
     const cycle = activeCycle();
     if (!cycle) {
@@ -203,20 +192,17 @@ function updateGrowAge() {
     document.getElementById("grow-age").textContent = `${cycle.name} · Day ${days} · Week ${week}`;
 }
 
-// ── Date default ──────────────────────────────────────────────────────────────
 function setDateDefault() {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     document.getElementById("new-dt").value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
-// ── Plant tabs ────────────────────────────────────────────────────────────────
 function switchPlant(p) {
     document.querySelectorAll(".plant-tab").forEach((el) => el.classList.toggle("active", (el.dataset.plant || el.textContent) === p));
     document.querySelectorAll(".plant-panel").forEach((el) => el.classList.toggle("active", el.id === "panel-" + p));
 }
 
-// ── Actions helpers ───────────────────────────────────────────────────────────
 function togglePlantPicker(action) {
     const checked = document.getElementById("ck-" + action).checked;
     document.getElementById(action + "-plants").style.display = checked ? "block" : "none";
@@ -243,7 +229,6 @@ function updateLightStatus() {
         const onH = Math.round(onMins / 60);
         const offH = 24 - onH;
 
-        // Check if lights are currently on
         const now = new Date();
         const nowMins = now.getHours() * 60 + now.getMinutes();
         const startMins = sh * 60 + sm;
@@ -283,7 +268,6 @@ function _loadLightDefaults() {
     if (d.end) document.getElementById("light-end").value = d.end;
 }
 
-// ── Plant management ──────────────────────────────────────────────────────────
 function openPlantManager() {
     renderPlantList();
     document.getElementById("plant-manage-modal").style.display = "flex";
@@ -697,7 +681,6 @@ window.closePlantDetail = function () {
     document.getElementById("plant-detail-modal").style.display = "none";
 };
 
-// ── New cycle modal ───────────────────────────────────────────────────────────
 function newCycle() {
     const defaultName = `Grow #${cycles.length + 1}`;
     document.getElementById("new-cycle-input").value = defaultName;
@@ -767,13 +750,11 @@ window.confirmRenameCycle = function () {
     modal.style.display = "none";
 };
 
-// ── Stats cycle toggle ────────────────────────────────────────────────────────
 function setStatsCycle(id) {
     setStatsMode(id === "all" ? "all" : id);
     renderStats(cycles, activeCycleId);
 }
 
-// ── Edit entry ────────────────────────────────────────────────────────────────
 function editEntry(id) {
     let entry = null;
     let entryCycle = null;
@@ -795,7 +776,6 @@ function editEntry(id) {
 
     editingEntryId = id;
 
-    // Load date/time
     document.getElementById("new-dt").value = entry.dt;
 
     // Load plants — only those that exist on the current cycle.
@@ -810,14 +790,12 @@ function editEntry(id) {
         }
     });
 
-    // Load actions
     const actions = entry.actions || [];
     document.getElementById("ck-lst").checked = actions.some((a) => a.startsWith("LST"));
     document.getElementById("ck-def").checked = actions.some((a) => a.startsWith("Defoliate"));
     document.getElementById("ck-light").checked = actions.some((a) => a.startsWith("Light adjusted"));
     document.getElementById("ck-repot").checked = actions.some((a) => a.startsWith("Repot / transplant"));
 
-    // Handle LST plants
     if (document.getElementById("ck-lst").checked) {
         const lstAction = actions.find((a) => a.startsWith("LST"));
         const lstMatch = lstAction && lstAction.match(/\((.*?)\)/);
@@ -832,7 +810,6 @@ function editEntry(id) {
         document.getElementById("lst-plants").style.display = "none";
     }
 
-    // Handle Defoliate plants
     if (document.getElementById("ck-def").checked) {
         const defAction = actions.find((a) => a.startsWith("Defoliate"));
         const defMatch = defAction && defAction.match(/\((.*?)\)/);
@@ -847,7 +824,6 @@ function editEntry(id) {
         document.getElementById("def-plants").style.display = "none";
     }
 
-    // Handle Repot plants
     if (document.getElementById("ck-repot").checked) {
         const repotAction = actions.find((a) => a.startsWith("Repot / transplant"));
         const repotMatch = repotAction && repotAction.match(/\((.*?)\)/);
@@ -862,7 +838,6 @@ function editEntry(id) {
         document.getElementById("repot-plants").style.display = "none";
     }
 
-    // Handle light inputs
     if (document.getElementById("ck-light").checked) {
         const lightAction = actions.find((a) => a.startsWith("Light adjusted"));
         const lightMatch = lightAction && lightAction.match(/\((.*?)\)/);
@@ -881,13 +856,11 @@ function editEntry(id) {
         document.getElementById("light-inputs").style.display = "none";
     }
 
-    // Load observations
     document.getElementById("new-obs").value = entry.obs || "";
 
     showTab("add");
 }
 
-// ── Save entry ────────────────────────────────────────────────────────────────
 function saveEntry() {
     const dt = document.getElementById("new-dt").value;
     if (!dt) {
@@ -948,7 +921,6 @@ function saveEntry() {
     const obs = document.getElementById("new-obs").value.trim();
 
     if (editingEntryId) {
-        // Update existing entry
         const entry = cycle.entries.find((e) => e.id === editingEntryId);
         if (entry) {
             entry.dt = dt;
@@ -961,7 +933,6 @@ function saveEntry() {
         }
         editingEntryId = null;
     } else {
-        // Create new entry
         cycle.entries.unshift({ id: uid(), dt, plants, actions, obs: obs || undefined });
     }
 
@@ -972,7 +943,6 @@ function saveEntry() {
     showTab("log");
 }
 
-// ── Cancel edit ───────────────────────────────────────────────────────────────
 function cancelEdit() {
     editingEntryId = null;
     resetAddForm();
@@ -980,7 +950,6 @@ function cancelEdit() {
     showTab("log");
 }
 
-// ── Duplicate entry ───────────────────────────────────────────────────────────
 function duplicateEntry(id) {
     for (const cycle of cycles) {
         const entry = cycle.entries.find((e) => e.id === id);
@@ -996,7 +965,6 @@ function duplicateEntry(id) {
     }
 }
 
-// ── Delete entry ──────────────────────────────────────────────────────────────
 function deleteEntry(id) {
     if (!confirm("Delete this entry?")) return;
     cycles.forEach((c) => {
@@ -1006,7 +974,6 @@ function deleteEntry(id) {
     renderAll();
 }
 
-// ── Delete cycle ──────────────────────────────────────────────────────────────
 function deleteCycle(id) {
     const cycle = cycles.find((c) => c.id === id);
     if (!cycle) return;
@@ -1022,7 +989,6 @@ function deleteCycle(id) {
     renderAll();
 }
 
-// ── Export backup ────────────────────────────────────────────────────────────
 function exportBackup() {
     const data = JSON.stringify(cycles, null, 2);
     const blob = new Blob([data], { type: "application/json" });
@@ -1035,7 +1001,6 @@ function exportBackup() {
     URL.revokeObjectURL(url);
 }
 
-// ── Import backup ────────────────────────────────────────────────────────────
 function importBackup(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1056,7 +1021,6 @@ function importBackup(event) {
     event.target.value = "";
 }
 
-// ── Render all ────────────────────────────────────────────────────────────────
 function renderAll() {
     renderLog(cycles, activeCycleId);
     renderStats(cycles, activeCycleId);
@@ -1072,9 +1036,6 @@ function refreshOpenPlantDetail() {
     if (cycle) renderPlantDetailModal(cycle, name);
 }
 
-// localStorage.removeItem("collapsed_actions");
-
-// ── Init ──────────────────────────────────────────────────────────────────────
 updateGrowAge();
 updateLightStatus();
 setDateDefault();

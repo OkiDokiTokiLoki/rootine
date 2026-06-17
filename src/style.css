@@ -129,10 +129,6 @@ body {
     user-select: none;
 }
 
-.week-header.first {
-    padding-top: 4px;
-}
-
 .section-title.collapsible-section {
     display: flex;
     align-items: center;
@@ -319,26 +315,6 @@ body {
     flex-wrap: wrap;
     gap: 4px;
     margin-top: 8px;
-}
-
-.action-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-    cursor: pointer;
-    user-select: none;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
-}
-
-.action-chevron {
-    transition: transform 0.2s ease;
-}
-
-.action-chevron.collapsed {
-    transform: rotate(-90deg);
 }
 
 .action-tag {
@@ -668,9 +644,7 @@ textarea.form-input {
     color: var(--green);
 }
 
-.cycle-header.collapsed .settings-btn,
-.entry-card:not(.open) .delete-entry-btn,
-.entry-card:not(.open) .edit-entry-btn {
+.cycle-header.collapsed .settings-btn {
     opacity: 0.25;
     pointer-events: none;
 }

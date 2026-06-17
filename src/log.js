@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, entryType } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 
 let collapsedWeeks;
@@ -46,7 +46,6 @@ function renderEntriesForCycle(cycle) {
     sorted.forEach((e) => {
         const wk = getWeekNum(e.dt, cycle.startDate);
         const key = weekKey(cycle.id, wk);
-        const safeKey = key.replace(":", "\\:"); // for getElementById, not CSS.escape
 
         if (wk !== lastWk) {
             if (lastWk !== null) html += `</div>`;

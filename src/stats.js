@@ -37,13 +37,6 @@ function applyObsCollapsedClasses() {
     if (header) header.classList.toggle("collapsed", collapsedObs);
 }
 
-function ageInDays(repottedAt, asOf) {
-    if (!repottedAt) return 0;
-    const start = new Date(repottedAt);
-    const end = asOf ? new Date(asOf) : new Date();
-    return Math.max(0, Math.floor((end - start) / (24 * 60 * 60 * 1000)));
-}
-
 function computeStats(entries) {
     let feeds = 0,
         waters = 0,
@@ -72,7 +65,7 @@ function plantType(cycle, name) {
     return { type: t.type || "photo", repottedAt: t.repottedAt || cycle?.startDate };
 }
 
-function renderPlantCard(name, totals, type, repottedAt, isFav) {
+function renderPlantCard(name, totals, type, isFav) {
     const starSvg = isFav ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;fill:var(--amber);stroke:var(--amber);flex-shrink:0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
     const safeName = name.replace(/'/g, "\\'");
     const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
@@ -165,7 +158,7 @@ export function renderStats(cycles, activeCycleId) {
         sortedCyclePlants.forEach((p) => {
             const meta = plantType(cycle, p);
             const t = cycleTotals[p] || { fish: 0, grow: 0, bloom: 0, water: 0 };
-            plantsHtml += renderPlantCard(p, t, meta.type, meta.repottedAt, favSet.has(p));
+            plantsHtml += renderPlantCard(p, t, meta.type, favSet.has(p));
         });
         plantsHtml += `</div>`;
     });
