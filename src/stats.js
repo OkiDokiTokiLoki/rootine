@@ -1,6 +1,10 @@
 import { fmtDate, fmtTime, getWeekNum, entryType } from "./utils.js";
 import { saveCollapsedObs } from "./storage.js";
 
+function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 let statsMode = "active";
 
 export function initStats(initialMode) {
@@ -45,9 +49,12 @@ function computeStats(entries) {
     const obsEntries = [];
 
     entries.forEach((e) => {
-        const t = entryType(e);
-        if (t === "feed") feeds++;
-        if (t === "water") waters++;
+        const vals = Object.values(e.plants || {});
+        // A single entry can be both a feed and a water session — check each
+        // independently so logging "fed A, watered B" in one entry increments
+        // both counters (per-plant the totals are still correct).
+        if (vals.some((p) => p.fish || p.grow || p.bloom)) feeds++;
+        if (vals.some((p) => p.water)) waters++;
         if (e.obs) {
             issues++;
             obsEntries.push(e);
@@ -107,7 +114,8 @@ export function renderStats(cycles, activeCycleId) {
     // plants listed; for a single cycle we want just that one.
     let targetCycles;
     if (statsMode === "all") {
-        targetCycles = cycles;
+        // Newest cycle first — matches the order used in the log section.
+        targetCycles = [...cycles].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
     } else {
         const targetId = statsMode === "active" ? activeCycleId : statsMode;
         const cycle = cycles.find((c) => c.id === targetId) || cycles.find((c) => c.id === activeCycleId);
@@ -127,7 +135,8 @@ export function renderStats(cycles, activeCycleId) {
     document.getElementById("stats-cycle-toggle-container").innerHTML = toggleHtml;
 
     // Per-cycle plant list. Each cycle is its own block, with that cycle's
-    // plants listed even if they have no entries yet.
+    // plants listed even if they have no entries yet. In "all" mode each
+    // block is labelled with the cycle name so plants can be told apart.
     let plantsHtml = "";
     targetCycles.forEach((cycle) => {
         const cycleTotals = (() => {
@@ -145,16 +154,27 @@ export function renderStats(cycles, activeCycleId) {
         })();
 
         const cyclePlants = cycle.plants || [];
+        const showLabel = statsMode === "all";
+        const isActive = cycle.id === activeCycleId;
+        const activePill = isActive ? `<span class="cycle-active-badge">Active</span>` : "";
+        const blockStyle = showLabel ? ' style="margin-bottom: 14px"' : "";
+
         if (cyclePlants.length === 0) {
-            plantsHtml += `<div class="stats-cycle-block">
-                <div style="color:var(--muted);font-size:13px">No plants in this cycle yet.</div>
-            </div>`;
+            plantsHtml += `<div class="stats-cycle-block"${blockStyle}>`;
+            if (showLabel) {
+                plantsHtml += `<div class="stats-cycle-block-label"><span>${escapeHtml(cycle.name)}</span>${activePill}</div>`;
+            }
+            plantsHtml += `<div style="color:var(--muted);font-size:13px">No plants in this cycle yet.</div>`;
+            plantsHtml += `</div>`;
             return;
         }
 
         const favSet = new Set(cycle.favourites || []);
         const sortedCyclePlants = [...cyclePlants].sort((a, b) => (favSet.has(a) ? 0 : 1) - (favSet.has(b) ? 0 : 1));
-        plantsHtml += `<div class="stats-cycle-block">`;
+        plantsHtml += `<div class="stats-cycle-block"${blockStyle}>`;
+        if (showLabel) {
+            plantsHtml += `<div class="stats-cycle-block-label"><span>${escapeHtml(cycle.name)}</span>${activePill}</div>`;
+        }
         sortedCyclePlants.forEach((p) => {
             const meta = plantType(cycle, p);
             const t = cycleTotals[p] || { fish: 0, grow: 0, bloom: 0, water: 0 };

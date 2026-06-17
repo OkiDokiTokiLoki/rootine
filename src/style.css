@@ -855,6 +855,18 @@ input[type="datetime-local"] {
     margin-bottom: 14px;
 }
 
+.stats-cycle-block-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .plant-detail-row {
     display: flex;
     justify-content: space-between;

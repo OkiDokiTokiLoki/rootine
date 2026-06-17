@@ -86,7 +86,7 @@ function renderAddForm() {
     if (plants.length === 0) {
         const empty = document.createElement("div");
         empty.style.cssText = "padding: 14px; color: var(--muted); font-size: 13px; text-align: center; background: var(--surface2); border: 0.5px dashed var(--border2); border-radius: 10px;";
-        empty.textContent = 'No plants yet for this grow cycle yet. Tap "Plants" above to add some.';
+        empty.innerHTML = 'No plants yet for this grow cycle. Tap <span onclick="openPlantManager()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.';
         tabsContainer.appendChild(empty);
     } else {
         sortedPlants.forEach((p, i) => {
@@ -128,6 +128,26 @@ function renderAddForm() {
             list.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available.</div>';
             return;
         }
+        // "All plants" master checkbox. When checked, ticks every plant and
+        // disables the individual checkboxes so it's obvious what's applied.
+        // When unchecked, restores the per-plant state to whatever the user
+        // had set (or unchecks all if the user only ever had "all" on).
+        const allWrap = document.createElement("label");
+        allWrap.className = "plant-picker-opt plant-picker-opt-all";
+        const allCb = document.createElement("input");
+        allCb.type = "checkbox";
+        allCb.className = `${action}-plant-all`;
+        allCb.onchange = () => {
+            const individual = list.querySelectorAll(`.${action}-plant`);
+            individual.forEach((cb) => {
+                cb.checked = allCb.checked;
+                cb.disabled = allCb.checked;
+            });
+        };
+        allWrap.appendChild(allCb);
+        allWrap.appendChild(document.createTextNode("All plants"));
+        list.appendChild(allWrap);
+
         sortedPlants.forEach((p) => {
             const label = document.createElement("label");
             label.className = "plant-picker-opt";
@@ -147,7 +167,7 @@ function renderAddForm() {
     });
 }
 
-function showTab(name) {
+function showTab(name, resetScroll = false) {
     ["log", "add", "stats"].forEach((t) => {
         document.getElementById("section-" + t).classList.toggle("active", t === name);
         document.getElementById("tab-" + t).classList.toggle("active", t === name);
@@ -155,6 +175,14 @@ function showTab(name) {
     if (name === "add" && !editingEntryId) {
         resetAddForm();
         setDateDefault();
+    }
+    if (resetScroll) {
+        // #content is the actual scroller in this layout (the body never
+        // scrolls because the header/tabs frame it). Reset both, so it
+        // works regardless of how the CSS ends up.
+        const content = document.getElementById("content");
+        if (content) content.scrollTop = 0;
+        window.scrollTo(0, 0);
     }
 }
 
@@ -171,6 +199,8 @@ function resetAddForm() {
         if (el) el.checked = false;
     });
     document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.checked = false));
+    document.querySelectorAll(".lst-plant-all, .def-plant-all, .repot-plant-all").forEach((el) => (el.checked = false));
+    document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.disabled = false));
     document.getElementById("lst-plants").style.display = "none";
     document.getElementById("def-plants").style.display = "none";
     document.getElementById("repot-plants").style.display = "none";
@@ -713,7 +743,7 @@ window.confirmNewCycle = function () {
     resetAddForm();
     setDateDefault();
     updateLightStatus();
-    showTab("log");
+    showTab("log", true);
 };
 
 window.cancelNewCycle = function () {
@@ -806,6 +836,14 @@ function editEntry(id) {
             });
         }
         document.getElementById("lst-plants").style.display = "block";
+        // If every plant in the cycle is checked, light up the "All plants"
+        // master and disable the individual boxes to match.
+        const allCb = document.querySelector(`.lst-plant-all`);
+        const individual = document.querySelectorAll(`.lst-plant`);
+        if (allCb && individual.length && [...individual].every((cb) => cb.checked)) {
+            allCb.checked = true;
+            individual.forEach((cb) => (cb.disabled = true));
+        }
     } else {
         document.getElementById("lst-plants").style.display = "none";
     }
@@ -870,14 +908,20 @@ function saveEntry() {
 
     const cycle = activeCycle();
 
+    // Build action strings. When the action targets every plant in the cycle,
+    // store it as "(All plants)" so the log view reads naturally and the
+    // edit form re-hydrates cleanly. Otherwise list the targeted plants.
+    const totalPlantCount = cyclePlants().length;
     const actions = [];
     if (document.getElementById("ck-lst").checked) {
         const plants = [...document.querySelectorAll(".lst-plant:checked")].map((el) => el.value);
-        actions.push("LST" + (plants.length ? " (" + plants.join(", ") + ")" : ""));
+        const label = plants.length === totalPlantCount ? "All plants" : plants.join(", ");
+        actions.push("LST" + (label ? " (" + label + ")" : ""));
     }
     if (document.getElementById("ck-def").checked) {
         const plants = [...document.querySelectorAll(".def-plant:checked")].map((el) => el.value);
-        actions.push("Defoliate" + (plants.length ? " (" + plants.join(", ") + ")" : ""));
+        const label = plants.length === totalPlantCount ? "All plants" : plants.join(", ");
+        actions.push("Defoliate" + (label ? " (" + label + ")" : ""));
     }
     if (document.getElementById("ck-light").checked) {
         const lux = document.getElementById("light-lux").value;
@@ -891,7 +935,8 @@ function saveEntry() {
     }
     if (document.getElementById("ck-repot").checked) {
         const repottedPlants = [...document.querySelectorAll(".repot-plant:checked")].map((el) => el.value);
-        actions.push("Repot / transplant" + (repottedPlants.length ? " (" + repottedPlants.join(", ") + ")" : ""));
+        const label = repottedPlants.length === totalPlantCount ? "All plants" : repottedPlants.join(", ");
+        actions.push("Repot / transplant" + (label ? " (" + label + ")" : ""));
 
         const repotDate = dt.slice(0, 10);
         repottedPlants.forEach((name) => {
@@ -940,14 +985,14 @@ function saveEntry() {
     renderAll();
 
     resetAddForm();
-    showTab("log");
+    showTab("log", true);
 }
 
 function cancelEdit() {
     editingEntryId = null;
     resetAddForm();
     setDateDefault();
-    showTab("log");
+    showTab("log", true);
 }
 
 function duplicateEntry(id) {
