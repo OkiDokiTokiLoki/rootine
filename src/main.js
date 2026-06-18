@@ -892,19 +892,19 @@ function renderPlantDetailModal(cycle, name) {
         <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Fish</div>
-            <div class="plant-detail-value" style="color:#d0d34e">${t.fish.toFixed(1)} cup${t.fish === 1 ? "" : "s"}</div>
+            <div class="plant-detail-value nutrient--fish">${t.fish.toFixed(1)} cup${t.fish === 1 ? "" : "s"}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Grow</div>
-            <div class="plant-detail-value" style="color:#6ecf6e">${t.grow.toFixed(1)} cup${t.grow === 1 ? "" : "s"}</div>
+            <div class="plant-detail-value nutrient--grow">${t.grow.toFixed(1)} cup${t.grow === 1 ? "" : "s"}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Bloom</div>
-            <div class="plant-detail-value" style="color:#c07df0">${t.bloom.toFixed(1)} cup${t.bloom === 1 ? "" : "s"}</div>
+            <div class="plant-detail-value nutrient--bloom">${t.bloom.toFixed(1)} cup${t.bloom === 1 ? "" : "s"}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Water</div>
-            <div class="plant-detail-value" style="color:var(--blue)">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
+            <div class="plant-detail-value nutrient--water">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
         </div>
                 <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Activity</div>

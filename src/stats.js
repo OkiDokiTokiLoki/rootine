@@ -98,11 +98,11 @@ function renderPlantCard(name, totals, type, isFav, noteCount) {
             <span class="${badgeClass}" style="font-size:10px;padding:2px 6px">${typeBadge}</span>
             ${notePill}
         </div>
-        <span style="font-size:12px;color:var(--muted);flex-shrink:0">
-            <span style="color:#d0d34e">F ${totals.fish.toFixed(1)}</span> &nbsp;
-            <span style="color:#6ecf6e">G ${totals.grow.toFixed(1)}</span> &nbsp;
-            <span style="color:#c07df0">B ${totals.bloom.toFixed(1)}</span> &nbsp;
-            <span style="color:var(--blue)">W ${totals.water.toFixed(1)}</span>
+        <span class="nutrient-totals">
+            <span class="nutrient-totals__item nutrient-totals__item--fish">F ${totals.fish.toFixed(1)}</span>
+            <span class="nutrient-totals__item nutrient-totals__item--grow">G ${totals.grow.toFixed(1)}</span>
+            <span class="nutrient-totals__item nutrient-totals__item--bloom">B ${totals.bloom.toFixed(1)}</span>
+            <span class="nutrient-totals__item nutrient-totals__item--water">W ${totals.water.toFixed(1)}</span>
         </span>
     </div>`;
 }
