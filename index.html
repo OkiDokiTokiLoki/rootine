@@ -8,23 +8,23 @@
         <meta name="apple-mobile-web-app-title" content="Rootine - Grow Journal" />
         <meta name="theme-color" content="#1a1a1a" />
         <title>Rootine</title>
-      <script type="module" crossorigin src="/rootine/assets/index-DGwMekkz.js"></script>
-      <link rel="stylesheet" crossorigin href="/rootine/assets/index-Dop6gWNW.css">
+      <script type="module" crossorigin src="/rootine/assets/index-BhDBE3OO.js"></script>
+      <link rel="stylesheet" crossorigin href="/rootine/assets/index-pYxNnf36.css">
     </head>
     <body>
         <div id="app">
             <div id="header">
                 <div class="header-row">
                     <h1>🌱 Rootine</h1>
-                    <div>
-                        <button class="new-cycle-btn" onclick="newCycle()">+ New Cycle</button>
-                        <button class="add-plant-btn" onclick="openPlantManager()">+ Plants</button>
+                    <div class="header-actions">
+                        <button class="btn-pill new-cycle-btn" onclick="newCycle()">+ New Cycle</button>
+                        <button class="btn-pill add-plant-btn" onclick="openPlantManager()">+ Plants</button>
                     </div>
                 </div>
                 <div class="subtitle-row">
                     <div class="subtitle" id="grow-age"></div>
-                    <div id="light-status" style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); margin-top: 5px">
-                        <svg id="light-status-bulb" viewBox="0 0 24 24" style="width: 13px; height: 13px; stroke: var(--amber); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.6-1.4 4.9-3.5 6.2V17a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-1.8A7 7 0 0 1 5 9a7 7 0 0 1 7-7z" /></svg>
+                    <div id="light-status" class="light-status">
+                        <svg id="light-status-bulb" viewBox="0 0 24 24" class="light-status-bulb"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.6-1.4 4.9-3.5 6.2V17a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-1.8A7 7 0 0 1 5 9a7 7 0 0 1 7-7z" /></svg>
                         <span id="light-status-text"></span>
                     </div>
                 </div>
@@ -48,45 +48,57 @@
 
                     <div class="form-section">
                         <div class="form-section-title">Actions</div>
-                        <div class="checkbox-row" style="flex-wrap: wrap; cursor: default">
-                            <label style="display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer"> <input type="checkbox" id="ck-lst" onchange="togglePlantPicker('lst')" /> LST </label>
-                            <div id="lst-plants" style="display: none; width: 100%; padding: 8px 0 10px 30px">
-                                <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px">Which plants?</div>
+                        <div class="checkbox-row checkbox-row--block">
+                            <label class="checkbox-row__label">
+                                <input type="checkbox" id="ck-lst" onchange="togglePlantPicker('lst')" />
+                                LST
+                            </label>
+                            <div id="lst-plants" class="plant-picker-wrap">
+                                <div class="plant-picker-hint">Which plants?</div>
                                 <div class="plant-picker-list"></div>
                             </div>
                         </div>
-                        <div class="checkbox-row" style="flex-wrap: wrap; cursor: default">
-                            <label style="display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer"> <input type="checkbox" id="ck-def" onchange="togglePlantPicker('def')" /> Defoliate </label>
-                            <div id="def-plants" style="display: none; width: 100%; padding: 8px 0 10px 30px">
-                                <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px">Which plants?</div>
+                        <div class="checkbox-row checkbox-row--block">
+                            <label class="checkbox-row__label">
+                                <input type="checkbox" id="ck-def" onchange="togglePlantPicker('def')" />
+                                Defoliate
+                            </label>
+                            <div id="def-plants" class="plant-picker-wrap">
+                                <div class="plant-picker-hint">Which plants?</div>
                                 <div class="plant-picker-list"></div>
                             </div>
                         </div>
-                        <div class="checkbox-row" style="flex-wrap: wrap; cursor: default">
-                            <label style="display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer"> <input type="checkbox" id="ck-repot" onchange="togglePlantPicker('repot')" /> Repot / transplant </label>
-                            <div id="repot-plants" style="display: none; width: 100%; padding: 8px 0 10px 30px">
-                                <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px">Which plants?</div>
+                        <div class="checkbox-row checkbox-row--block">
+                            <label class="checkbox-row__label">
+                                <input type="checkbox" id="ck-repot" onchange="togglePlantPicker('repot')" />
+                                Repot / transplant
+                            </label>
+                            <div id="repot-plants" class="plant-picker-wrap">
+                                <div class="plant-picker-hint">Which plants?</div>
                                 <div class="plant-picker-list"></div>
                             </div>
                         </div>
-                        <div class="checkbox-row" style="flex-wrap: wrap; cursor: default" id="light-row">
-                            <label style="display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer"> <input type="checkbox" id="ck-light" onchange="toggleLightInputs()" /> Light adjusted </label>
-                            <div id="light-inputs" style="display: none; width: 100%; padding: 10px 0 4px 30px">
-                                <div class="form-row" style="margin-bottom: 8px">
-                                    <label class="form-label" style="font-size: 13px; color: var(--muted)">Lux</label>
-                                    <input class="form-input" type="number" min="0" step="2" id="light-lux" placeholder="0" style="width: 100px" oninput="saveLightDefaults()" />
+                        <div class="checkbox-row checkbox-row--block" id="light-row">
+                            <label class="checkbox-row__label">
+                                <input type="checkbox" id="ck-light" onchange="toggleLightInputs()" />
+                                Light adjusted
+                            </label>
+                            <div id="light-inputs" class="light-inputs-wrap">
+                                <div class="form-row">
+                                    <label class="form-label light-label">Lux</label>
+                                    <input class="form-input" type="number" min="0" step="2" id="light-lux" placeholder="0" oninput="saveLightDefaults()" />
                                 </div>
-                                <div class="form-row" style="margin-bottom: 8px">
-                                    <label class="form-label" style="font-size: 13px; color: var(--muted)">Distance (cm)</label>
-                                    <input class="form-input" type="number" min="0" step="1" id="light-dist" placeholder="0" style="width: 100px" oninput="saveLightDefaults()" />
+                                <div class="form-row">
+                                    <label class="form-label light-label">Distance (cm)</label>
+                                    <input class="form-input" type="number" min="0" step="1" id="light-dist" placeholder="0" oninput="saveLightDefaults()" />
                                 </div>
-                                <div class="form-row" style="margin-bottom: 8px">
-                                    <label class="form-label" style="font-size: 13px; color: var(--muted)">Lights on</label>
-                                    <input class="form-input" type="time" id="light-start" style="width: 100px" oninput="saveLightDefaults()" />
+                                <div class="form-row">
+                                    <label class="form-label light-label">Lights on</label>
+                                    <input class="form-input" type="time" id="light-start" oninput="saveLightDefaults()" />
                                 </div>
-                                <div class="form-row" style="margin-bottom: 0">
-                                    <label class="form-label" style="font-size: 13px; color: var(--muted)">Lights off</label>
-                                    <input class="form-input" type="time" id="light-end" style="width: 100px" oninput="saveLightDefaults()" />
+                                <div class="form-row form-row--last">
+                                    <label class="form-label light-label">Lights off</label>
+                                    <input class="form-input" type="time" id="light-end" oninput="saveLightDefaults()" />
                                 </div>
                             </div>
                         </div>
@@ -94,10 +106,18 @@
 
                     <div class="form-section">
                         <div class="form-section-title">Observations</div>
-                        <textarea class="form-input" id="new-obs" placeholder="Nute burn, yellowing, pests, smell, stretch…"></textarea>
+                        <textarea class="form-input form-input-full" id="new-obs" placeholder="Nute burn, yellowing, pests, smell, stretch…"></textarea>
                     </div>
 
-                    <button class="submit-btn" onclick="saveEntry()">Save entry</button>
+                    <div class="form-section">
+                        <div class="form-section-title">Plant notes</div>
+                        <div id="plant-obs-list" class="plant-obs-list"></div>
+                        <div class="plant-obs-tabs" id="plant-obs-tabs"></div>
+                        <textarea id="plant-obs-input" class="form-input plant-obs-input" rows="1" placeholder="Note about the selected plant (e.g. yellow tips, light stretch)"></textarea>
+                        <button class="plant-obs-add-btn" type="button" onclick="addPlantObs()">+ Add note</button>
+                    </div>
+
+                    <button class="btn-primary submit-btn" onclick="saveEntry()">Save entry</button>
                 </div>
 
                 <div id="section-stats" class="section">
@@ -122,33 +142,31 @@
                     </div>
 
                     <div class="section-title">Plants</div>
-                    <div class="form-section" id="stats-plants" style="margin-bottom: 14px"></div>
+                    <div class="form-section" id="stats-plants"></div>
 
                     <div class="section-title collapsible-section" id="obs-section-header" onclick="toggleObs()">
                         <span>All observations</span>
-                        <svg id="obs-chev" class="section-chev" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-left: 5px">
-                            <polyline points="6 9 12 15 18 9" />
-                        </svg>
+                        <svg id="obs-chev" class="section-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" /></svg>
                     </div>
                     <div id="obs-list"></div>
 
-                    <div class="section-title" style="margin-top: 24px">Settings</div>
-                    <div class="form-section" style="margin-bottom: 14px">
-                        <div style="display: flex; align-items: center; justify-content: space-between">
-                            <div>
-                                <div style="font-size: 13px; font-weight: 500">Export backup</div>
-                                <div style="font-size: 12px; color: var(--muted); margin-top: 2px">Downloads all cycles &amp; entries as JSON</div>
+                    <div class="section-title section-title--spaced">Settings</div>
+                    <div class="form-section">
+                        <div class="settings-row">
+                            <div class="settings-row__label">
+                                <div class="settings-row__title">Export backup</div>
+                                <div class="settings-row__desc">Downloads all cycles &amp; entries as JSON</div>
                             </div>
-                            <button class="settings-btn" onclick="exportBackup()" style="padding: 8px 14px; font-size: 13px; border-radius: 8px; background: var(--surface2); border: 0.5px solid var(--border2); color: var(--text); cursor: pointer; white-space: nowrap">Export</button>
+                            <button class="btn btn-secondary btn-secondary--sm" onclick="exportBackup()">Export</button>
                         </div>
-                        <div style="border-top: 0.5px solid var(--border2); margin: 12px 0"></div>
-                        <div style="display: flex; align-items: center; justify-content: space-between">
-                            <div>
-                                <div style="font-size: 13px; font-weight: 500">Import backup</div>
-                                <div style="font-size: 12px; color: var(--muted); margin-top: 2px">Restore cycles &amp; entries from a JSON file</div>
+                        <div class="modal-divider"></div>
+                        <div class="settings-row">
+                            <div class="settings-row__label">
+                                <div class="settings-row__title">Import backup</div>
+                                <div class="settings-row__desc">Restore cycles &amp; entries from a JSON file</div>
                             </div>
-                            <input type="file" id="import-backup-input" accept=".json" style="display: none" onchange="importBackup(event)" />
-                            <button class="settings-btn" onclick="document.getElementById('import-backup-input').click()" style="padding: 8px 14px; font-size: 13px; border-radius: 8px; background: var(--surface2); border: 0.5px solid var(--border2); color: var(--text); cursor: pointer; white-space: nowrap">Import</button>
+                            <input type="file" id="import-backup-input" accept=".json" class="hidden-input" onchange="importBackup(event)" />
+                            <button class="btn btn-secondary btn-secondary--sm" onclick="document.getElementById('import-backup-input').click()">Import</button>
                         </div>
                     </div>
                 </div>
@@ -183,86 +201,88 @@
             </div>
         </div>
 
-        <div id="new-cycle-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 100; align-items: center; justify-content: center; padding: 24px">
-            <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: 320px">
-                <div style="font-size: 15px; font-weight: 600; margin-bottom: 14px">New Grow Cycle</div>
+        <!-- New cycle modal -->
+        <div id="new-cycle-modal" class="modal-overlay" style="display: none">
+            <div class="modal-content">
+                <div class="modal-title">New Grow Cycle</div>
                 <input id="new-cycle-input" type="text" class="form-input form-input-full" placeholder="Grow #2" style="margin-bottom: 14px" />
-                <div style="display: flex; gap: 8px">
-                    <button onclick="cancelNewCycle()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Cancel</button>
-                    <button onclick="confirmNewCycle()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">Start Cycle</button>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="cancelNewCycle()">Cancel</button>
+                    <button class="btn-confirm" onclick="confirmNewCycle()">Start Cycle</button>
                 </div>
             </div>
         </div>
 
-        <div id="rename-cycle-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 100; align-items: center; justify-content: center; padding: 24px">
-            <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: 320px">
-                <div style="font-size: 15px; font-weight: 600; margin-bottom: 14px">Rename Cycle</div>
+        <!-- Rename cycle modal -->
+        <div id="rename-cycle-modal" class="modal-overlay" style="display: none">
+            <div class="modal-content">
+                <div class="modal-title">Rename Cycle</div>
                 <input id="rename-cycle-input" type="text" class="form-input form-input-full" style="margin-bottom: 14px" />
-                <div style="display: flex; gap: 8px">
-                    <button onclick="cancelRenameCycle()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Cancel</button>
-                    <button onclick="confirmRenameCycle()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">Rename</button>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="cancelRenameCycle()">Cancel</button>
+                    <button class="btn-confirm" onclick="confirmRenameCycle()">Rename</button>
                 </div>
             </div>
         </div>
 
         <!-- Add plant modal -->
-        <div id="add-plant-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 110; align-items: center; justify-content: center; padding: 24px">
-            <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: 320px">
-                <div style="font-size: 15px; font-weight: 600; margin-bottom: 14px">Add Plant</div>
+        <div id="add-plant-modal" class="modal-overlay modal-overlay--higher" style="display: none">
+            <div class="modal-content">
+                <div class="modal-title">Add Plant</div>
                 <input id="new-plant-name" type="text" class="form-input form-input-full" placeholder="e.g. Plant A" style="margin-bottom: 14px" />
-                <div style="font-size: 12px; color: var(--muted); margin: -8px 0 14px">Letters, numbers, spaces, dashes, underscores.</div>
-                <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px">Type</div>
+                <div class="modal-hint">Letters, numbers, spaces, dashes, underscores.</div>
+                <div class="modal-label">Type</div>
                 <div class="type-toggle" id="add-plant-type-toggle">
                     <button type="button" class="type-toggle-opt active" data-type="auto" onclick="selectPlantType('add', 'auto')">Auto</button>
                     <button type="button" class="type-toggle-opt" data-type="photo" onclick="selectPlantType('add', 'photo')">Photo</button>
                 </div>
-                <div style="display: flex; gap: 8px">
-                    <button onclick="cancelAddPlant()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Cancel</button>
-                    <button onclick="confirmAddPlant()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">Add</button>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="cancelAddPlant()">Cancel</button>
+                    <button class="btn-confirm" onclick="confirmAddPlant()">Add</button>
                 </div>
             </div>
         </div>
 
         <!-- Rename plant modal -->
-        <div id="rename-plant-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 110; align-items: center; justify-content: center; padding: 24px">
-            <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: 320px">
-                <div style="font-size: 15px; font-weight: 600; margin-bottom: 14px">Rename Plant</div>
+        <div id="rename-plant-modal" class="modal-overlay modal-overlay--higher" style="display: none">
+            <div class="modal-content">
+                <div class="modal-title">Rename Plant</div>
                 <input id="rename-plant-input" type="text" class="form-input form-input-full" style="margin-bottom: 14px" />
-                <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px">Type</div>
+                <div class="modal-label">Type</div>
                 <div class="type-toggle" id="rename-plant-type-toggle">
                     <button type="button" class="type-toggle-opt active" data-type="auto" onclick="selectPlantType('rename', 'auto')">Autoflower</button>
                     <button type="button" class="type-toggle-opt" data-type="photo" onclick="selectPlantType('rename', 'photo')">Photoperiod</button>
                 </div>
-                <div style="display: flex; gap: 8px">
-                    <button onclick="cancelRenamePlant()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Cancel</button>
-                    <button onclick="confirmRenamePlant()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">Save</button>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="cancelRenamePlant()">Cancel</button>
+                    <button class="btn-confirm" onclick="confirmRenamePlant()">Save</button>
                 </div>
             </div>
         </div>
 
         <!-- Plant manage modal -->
-        <div id="plant-manage-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 100; align-items: center; justify-content: center; padding: 24px">
-            <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: 360px; max-height: 80vh; display: flex; flex-direction: column">
-                <div style="font-size: 15px; font-weight: 600; margin-bottom: 4px">Manage Plants</div>
-                <div style="font-size: 12px; color: var(--muted); margin-bottom: 12px">Plants for the current grow cycle.</div>
-                <div id="plant-list" style="flex: 1; overflow-y: auto; margin-bottom: 14px"></div>
-                <div style="display: flex; gap: 8px">
-                    <button onclick="closePlantManager()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Close</button>
-                    <button onclick="openAddPlant()" style="flex: 1; padding: 11px; background: var(--green); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer">+ Add Plant</button>
+        <div id="plant-manage-modal" class="modal-overlay" style="display: none">
+            <div class="modal-content modal-content--wide modal-content--tall">
+                <div class="modal-title">Manage Plants</div>
+                <div class="modal-subtitle">Plants for the current grow cycle.</div>
+                <div id="plant-list" class="modal-scroll"></div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closePlantManager()">Close</button>
+                    <button class="btn-confirm" onclick="openAddPlant()">+ Add Plant</button>
                 </div>
             </div>
         </div>
 
         <!-- Plant detail modal -->
-        <div id="plant-detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 105; align-items: center; justify-content: center; padding: 24px">
-            <div style="background: var(--surface); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; width: 100%; max-width: min(400px, calc(100% - 3rem)); max-height: 80vh; display: flex; flex-direction: column">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px">
-                    <div id="plant-detail-name" style="font-size: 16px; font-weight: 600"></div>
+        <div id="plant-detail-modal" class="modal-overlay modal-overlay--mid" style="display: none">
+            <div class="modal-content modal-content--detail modal-content--tall">
+                <div class="modal-detail-header">
+                    <div id="plant-detail-name"></div>
                     <span id="plant-detail-type" class="plant-type-badge photo">PHOTO</span>
                 </div>
-                <div id="plant-detail-stats" style="flex: 1; overflow-y: auto"></div>
-                <div style="display: flex; gap: 8px; margin-top: 14px">
-                    <button onclick="closePlantDetail()" style="flex: 1; padding: 11px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer">Close</button>
+                <div id="plant-detail-stats" class="modal-scroll"></div>
+                <div class="modal-actions modal-actions--single">
+                    <button class="btn-cancel" onclick="closePlantDetail()">Close</button>
                 </div>
             </div>
         </div>
