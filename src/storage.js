@@ -36,6 +36,19 @@ const migrations = [
             ...c,
             favourites: c.favourites || [],
         })),
+
+    // v4 → v5: entries can carry observations tagged to specific plants
+    // (entry.plantObs is a { "Plant Name": "note text" } map). Initialize
+    // the field as an empty object on every entry so the rest of the code
+    // can read it without checking for undefined.
+    (cycles) =>
+        cycles.map((c) => ({
+            ...c,
+            entries: (c.entries || []).map((e) => ({
+                ...e,
+                plantObs: e.plantObs && typeof e.plantObs === "object" ? e.plantObs : {},
+            })),
+        })),
 ];
 
 const STORAGE_VERSION = migrations.length + 1;

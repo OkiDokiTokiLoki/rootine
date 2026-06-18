@@ -13,6 +13,11 @@ const collapsedObs = loadCollapsedObs();
 let editingEntryId = null;
 let pendingAddPlantType = "auto";
 let pendingRenamePlantType = "auto";
+// Plant-specific observations being staged in the Add form for the current
+// entry. An array (not a map) so the user can add several notes for the
+// same plant in a single entry if they want — duplicates are coalesced on
+// save so each plant ends up with one stored note per entry.
+let pendingPlantObs = [];
 
 try {
     localStorage.removeItem("light_defaults");
@@ -51,6 +56,8 @@ window.selectPlantType = selectPlantType;
 window.togglePlantType = togglePlantType;
 window.toggleFavourite = toggleFavourite;
 window.toggleObs = toggleObs;
+window.addPlantObs = addPlantObs;
+window.removePlantObs = removePlantObs;
 window.exportBackup = exportBackup;
 window.importBackup = importBackup;
 
@@ -98,7 +105,7 @@ function renderAddForm() {
             tabsContainer.appendChild(tab);
             if (isFavourite(cycle, p)) {
                 const star = document.createElement("span");
-                star.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                star.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
                 tab.appendChild(star.firstChild);
             }
         });
@@ -159,12 +166,101 @@ function renderAddForm() {
             label.appendChild(document.createTextNode(p));
             if (isFavourite(cycle, p)) {
                 const starWrap = document.createElement("span");
-                starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
                 label.appendChild(starWrap.firstChild);
             }
             list.appendChild(label);
         });
     });
+
+    // Plant-notes section in the Add form. Populate the plant dropdown and
+    // re-render the staged list of plant observations.
+    populatePlantObsSelect();
+    renderPlantObsList();
+}
+
+function populatePlantObsSelect() {
+    const select = document.getElementById("plant-obs-select");
+    if (!select) return;
+    const cycle = activeCycle();
+    const plants = cyclePlants();
+    const sortedPlants = plants.length === 0 ? [] : [...plants].sort((a, b) => (isFavourite(cycle, a) ? 0 : 1) - (isFavourite(cycle, b) ? 0 : 1));
+    if (sortedPlants.length === 0) {
+        select.innerHTML = '<option value="">No plants yet</option>';
+        select.disabled = true;
+    } else {
+        // Each plant can only hold one note per entry, so already-tagged
+        // plants are hidden from the dropdown. Removing the existing note
+        // (via the × button on the list) brings the plant back.
+        const tagged = new Set(pendingPlantObs.map((o) => o.plant));
+        const available = sortedPlants.filter((p) => !tagged.has(p));
+        if (available.length === 0) {
+            select.innerHTML = '<option value="">All plants already have a note</option>';
+            select.disabled = true;
+        } else {
+            select.innerHTML = '<option value="">Choose a plant…</option>' + available.map((p) => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+            select.disabled = false;
+        }
+    }
+}
+
+function renderPlantObsList() {
+    const list = document.getElementById("plant-obs-list");
+    if (!list) return;
+    if (pendingPlantObs.length === 0) {
+        list.innerHTML = "";
+        return;
+    }
+    list.innerHTML = pendingPlantObs
+        .map(
+            (o, i) => `
+        <div class="plant-obs-item">
+            <div class="plant-obs-item-header">
+                <span class="plant-obs-item-name">${escapeHtml(o.plant)}</span>
+                <button class="plant-obs-item-remove" type="button" onclick="removePlantObs(${i})" title="Remove note" aria-label="Remove note for ${escapeHtml(o.plant)}">×</button>
+            </div>
+            <div class="plant-obs-item-text">${escapeHtml(o.text)}</div>
+        </div>`
+        )
+        .join("");
+    // The list of available plants in the dropdown changes whenever a note
+    // is added or removed, so re-populate after every render.
+    populatePlantObsSelect();
+}
+
+function addPlantObs() {
+    const selectEl = document.getElementById("plant-obs-select");
+    const inputEl = document.getElementById("plant-obs-input");
+    if (!selectEl || !inputEl) return;
+    const plant = selectEl.value;
+    const text = inputEl.value.trim();
+    if (!plant) {
+        // Select is disabled in the empty state, but guard anyway.
+        return;
+    }
+    if (!text) {
+        inputEl.focus();
+        return;
+    }
+    // Each plant can only have one note per entry. If the user tries to add
+    // a second, replace the existing one after asking.
+    const existingIdx = pendingPlantObs.findIndex((o) => o.plant === plant);
+    if (existingIdx >= 0) {
+        if (!confirm(`"${plant}" already has a note for this entry. Replace it?`)) return;
+        pendingPlantObs[existingIdx].text = text;
+    } else {
+        pendingPlantObs.push({ plant, text });
+    }
+    inputEl.value = "";
+    renderPlantObsList();
+    inputEl.focus();
+}
+
+function removePlantObs(index) {
+    pendingPlantObs.splice(index, 1);
+    renderPlantObsList();
+    const inputEl = document.getElementById("plant-obs-input");
+    if (inputEl) inputEl.focus();
 }
 
 function showTab(name, resetScroll = false) {
@@ -208,6 +304,11 @@ function resetAddForm() {
     document.getElementById("light-inputs").style.display = "none";
     _loadLightDefaults();
     document.getElementById("new-obs").value = "";
+    // Clear any staged plant notes.
+    pendingPlantObs = [];
+    const plantObsInput = document.getElementById("plant-obs-input");
+    if (plantObsInput) plantObsInput.value = "";
+    renderPlantObsList();
 }
 
 function updateGrowAge() {
@@ -333,7 +434,7 @@ function renderPlantList() {
                 <span class="${badgeClass}" onclick="togglePlantType(${i})" title="Click to toggle type">${badgeLabel}</span>
                 <button class="settings-btn edit-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.08" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
                 <button class="settings-btn delete-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
-                <button class="settings-btn favourite-btn ${isFavourite(cycle, p) ? "is-favourite" : ""}" onclick="toggleFavourite(${i})" aria-label="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"} ${escapeHtml(p)}" title="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"}"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;${isFavourite(cycle, p) ? "fill:var(--amber);stroke:var(--amber)" : "fill:none;stroke:var(--muted)"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+                <button class="settings-btn favourite-btn ${isFavourite(cycle, p) ? "is-favourite" : ""}" onclick="toggleFavourite(${i})" aria-label="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"} ${escapeHtml(p)}" title="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"}"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;${isFavourite(cycle, p) ? "fill:var(--amber);stroke:var(--amber)" : "fill:none;stroke:var(--muted)"}" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
             </div>
         `;
         list.appendChild(row);
@@ -490,6 +591,12 @@ function confirmRenamePlant() {
                     return `${prefix} (${items.join(", ")})`;
                 });
             }
+            // Migrate plant-tagged observations too, so the renamed plant's
+            // historical notes still belong to it in the plant detail view.
+            if (e.plantObs && typeof e.plantObs === "object" && e.plantObs[oldName]) {
+                e.plantObs[newName] = e.plantObs[oldName];
+                delete e.plantObs[oldName];
+            }
         });
     }
 
@@ -570,9 +677,20 @@ function renderPlantDetailModal(cycle, name) {
     let waterCount = 0;
     let lstCount = 0;
     let defoliateCount = 0;
+    // Plant-specific observations are collected separately for the Notes
+    // section at the bottom of the modal.
+    const plantObsItems = [];
     cycle.entries.forEach((e) => {
         const pd = e.plants?.[name];
-        if (!pd) return;
+        if (!pd) {
+            // The plant might still have a tagged note in this entry even
+            // though it has no feed/water data — don't skip in that case.
+            const note = e.plantObs?.[name];
+            if (note && note.trim()) {
+                plantObsItems.push({ dt: e.dt, text: note });
+            }
+            return;
+        }
         t.fish += pd.fish || 0;
         t.grow += pd.grow || 0;
         t.bloom += pd.bloom || 0;
@@ -586,6 +704,9 @@ function renderPlantDetailModal(cycle, name) {
         if (isWater) {
             waterCount++;
             if (!lastWater || new Date(e.dt) > new Date(lastWater)) lastWater = e.dt;
+        }
+        if (e.plantObs && e.plantObs[name] && e.plantObs[name].trim()) {
+            plantObsItems.push({ dt: e.dt, text: e.plantObs[name] });
         }
         // Count LST / Defoliate occurrences where this plant was named.
         // Action strings look like "LST (Plant A, Plant B)" or
@@ -613,6 +734,8 @@ function renderPlantDetailModal(cycle, name) {
             }
         });
     });
+    // Newest first — matches the order elsewhere in the app.
+    plantObsItems.sort((a, b) => new Date(b.dt) - new Date(a.dt));
 
     const repottedAt = meta.repottedAt || cycle.startDate;
     const repottedDate = repottedAt ? new Date(repottedAt) : new Date(cycle.startDate);
@@ -634,6 +757,19 @@ function renderPlantDetailModal(cycle, name) {
 
     const fmtStamp = (s) => (s ? `${fmtDate(s)} · ${fmtTime(s)}` : "—");
     const repottedFmt = repottedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+    const notesHtml =
+        plantObsItems.length === 0
+            ? '<div class="plant-detail-empty">No plant-specific notes yet.</div>'
+            : plantObsItems
+                  .map(
+                      (o) => `
+        <div class="plant-detail-obs">
+            <div class="plant-detail-obs-date">${fmtStamp(o.dt)}</div>
+            <div class="plant-detail-obs-text">${escapeHtml(o.text)}</div>
+        </div>`
+                  )
+                  .join("");
 
     const statsHtml = `
         <div class="plant-detail-row">
@@ -701,6 +837,9 @@ function renderPlantDetailModal(cycle, name) {
             <div class="plant-detail-label">Last defoliated</div>
             <div class="plant-detail-value">${fmtStamp(lastDefoliate)}</div>
         </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Notes</div>
+        ${notesHtml}
     `;
 
     document.getElementById("plant-detail-stats").innerHTML = statsHtml;
@@ -896,6 +1035,29 @@ function editEntry(id) {
 
     document.getElementById("new-obs").value = entry.obs || "";
 
+    // Hydrate staged plant notes from the entry, then re-render the list
+    // (which also rebuilds the dropdown to exclude already-tagged plants).
+    pendingPlantObs = [];
+    if (entry.plantObs && typeof entry.plantObs === "object") {
+        // Iterate the plant list in cycle order so the staged list mirrors
+        // the order plants appear in the add-form tabs. Plants that were
+        // tagged but no longer exist in the cycle (renamed away, deleted)
+        // are appended at the end so the user can still see/edit them.
+        const cyclePlantSet = new Set(cyclePlants());
+        cyclePlants().forEach((p) => {
+            const text = entry.plantObs[p];
+            if (text && text.trim()) pendingPlantObs.push({ plant: p, text });
+        });
+        Object.entries(entry.plantObs).forEach(([p, text]) => {
+            if (!cyclePlantSet.has(p) && text && text.trim()) {
+                pendingPlantObs.push({ plant: p, text });
+            }
+        });
+    }
+    const plantObsInput = document.getElementById("plant-obs-input");
+    if (plantObsInput) plantObsInput.value = "";
+    renderPlantObsList();
+
     showTab("add");
 }
 
@@ -963,6 +1125,17 @@ function saveEntry() {
         }
     });
 
+    // Coalesce the staged plant notes into the entry's plantObs map. Each
+    // plant gets exactly one note per entry — if the user added two stages
+    // for the same plant (rare, but possible by re-adding after a remove),
+    // the last one wins.
+    const plantObs = {};
+    pendingPlantObs.forEach((o) => {
+        if (o.plant && o.text && o.text.trim()) {
+            plantObs[o.plant] = o.text.trim();
+        }
+    });
+
     const obs = document.getElementById("new-obs").value.trim();
 
     if (editingEntryId) {
@@ -972,13 +1145,21 @@ function saveEntry() {
             entry.plants = plants;
             entry.actions = actions;
             entry.obs = obs || undefined;
+            entry.plantObs = Object.keys(plantObs).length ? plantObs : {};
         } else {
             alert("Couldn't find the entry to update. Please try editing it again.");
             return;
         }
         editingEntryId = null;
     } else {
-        cycle.entries.unshift({ id: uid(), dt, plants, actions, obs: obs || undefined });
+        cycle.entries.unshift({
+            id: uid(),
+            dt,
+            plants,
+            actions,
+            obs: obs || undefined,
+            plantObs: Object.keys(plantObs).length ? plantObs : {},
+        });
     }
 
     saveCycles(cycles);
@@ -1056,7 +1237,7 @@ function importBackup(event) {
             if (!Array.isArray(imported)) throw new Error("Invalid format");
             if (!confirm(`Import ${imported.length} cycle(s)? This will replace all current data.`)) return;
             localStorage.setItem("grow_cycles", JSON.stringify(imported));
-            localStorage.setItem("grow_version", "4"); // keep in sync with storage.js STORAGE_VERSION
+            localStorage.setItem("grow_version", "5"); // keep in sync with storage.js STORAGE_VERSION
             location.reload();
         } catch {
             alert("Invalid backup file.");

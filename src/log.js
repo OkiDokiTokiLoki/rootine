@@ -38,6 +38,10 @@ export function toggleEntry(id) {
     document.getElementById("card-" + id).classList.toggle("open");
 }
 
+function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 function renderEntriesForCycle(cycle) {
     const sorted = [...cycle.entries].sort((a, b) => new Date(b.dt) - new Date(a.dt));
     let html = "";
@@ -68,6 +72,11 @@ function renderEntriesForCycle(cycle) {
     return html || '<div class="empty" style="padding:20px 0">No entries yet. <span onclick="document.querySelectorAll(\'#tabs button\')[1].click()" style="color:var(--green);cursor:pointer;text-decoration:underline">Change that.</span></div>';
 }
 
+function hasPlantObs(e) {
+    if (!e.plantObs || typeof e.plantObs !== "object") return false;
+    return Object.values(e.plantObs).some((t) => t && String(t).trim());
+}
+
 function renderEntryCard(e) {
     // Check for feed, water, light, and other actions
     const vals = Object.values(e.plants || {});
@@ -75,7 +84,10 @@ function renderEntryCard(e) {
     const hasWater = vals.some((p) => p.water);
     const hasLight = (e.actions || []).some((a) => a.startsWith("Light adjusted"));
     const hasNonLightAction = (e.actions || []).some((a) => a.startsWith("LST") || a.startsWith("Defoliate") || a.startsWith("Repot / transplant"));
-    const hasObs = !!(e.obs && e.obs.trim());
+    // An entry counts as having a note if it has a general observation OR
+    // any plant-tagged observation. The badge doesn't distinguish the two
+    // — the expanded body shows the details.
+    const hasObs = !!(e.obs && e.obs.trim()) || hasPlantObs(e);
 
     // Build badge HTML — append one badge per thing the entry contains
     let badgeHtml = "";
@@ -110,14 +122,23 @@ function renderEntryCard(e) {
             if (d.grow) pills += `<span class="pill pill-grow">Grow - ${d.grow} cup(s)</span>`;
             if (d.bloom) pills += `<span class="pill pill-bloom">Bloom - ${d.bloom} cup(s)</span>`;
             if (d.water) pills += `<span class="pill pill-water">Water - ${d.water} cup(s)</span>`;
-            body += `<div class="plant-row"><span class="pname">${p}</span><div class="pills">${pills || "—"}</div></div>`;
+            body += `<div class="plant-row"><span class="pname">${escapeHtml(p)}</span><div class="pills">${pills || "—"}</div></div>`;
         });
         body += "</div>";
     }
     if (e.actions && e.actions.length) {
-        body += `<div class="action-list">` + e.actions.map((a) => `<span class="action-tag">${a}</span>`).join("") + "</div>";
+        body += `<div class="action-list">` + e.actions.map((a) => `<span class="action-tag">${escapeHtml(a)}</span>`).join("") + "</div>";
     }
-    if (e.obs) body += `<div class="obs-box">${e.obs}</div>`;
+    if (e.obs) body += `<div class="obs-box">${escapeHtml(e.obs)}</div>`;
+    // Plant-tagged observations render as their own labelled boxes so the
+    // reader can see at a glance which plant the note was about. Same
+    // styling as a regular obs-box with a small plant name on top.
+    if (hasPlantObs(e)) {
+        Object.entries(e.plantObs).forEach(([p, text]) => {
+            if (!text || !text.trim()) return;
+            body += `<div class="obs-box obs-box-plant"><div class="obs-box-plant-name">${escapeHtml(p)}</div><div>${escapeHtml(text)}</div></div>`;
+        });
+    }
 
     return `
     <div class="entry-card" id="card-${e.id}">
@@ -153,7 +174,7 @@ export function renderLog(cycles, activeCycleId) {
       <div class="cycle-block">
         <div class="cycle-header${isCollapsed ? " collapsed" : ""}" id="cycle-header-${cycle.id}" onclick="toggleCycle('${cycle.id}')">
           <div class="cycle-header-left">
-            <span class="cycle-name">${cycle.name}</span>
+            <span class="cycle-name">${escapeHtml(cycle.name)}</span>
             ${activePill}
             <span class="cycle-start">${startFmt}</span>
             <button class="settings-btn edit-cycle-btn" onclick="event.stopPropagation();editCycleName('${cycle.id}', '${cycle.name.replace(/'/g, "\\\'")}')" title="Edit cycle name">

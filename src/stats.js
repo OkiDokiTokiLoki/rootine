@@ -72,20 +72,33 @@ function plantType(cycle, name) {
     return { type: t.type || "photo", repottedAt: t.repottedAt || cycle?.startDate };
 }
 
-function renderPlantCard(name, totals, type, isFav) {
-    const starSvg = isFav ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;fill:var(--amber);stroke:var(--amber);flex-shrink:0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
+function countPlantNotes(cycle, name) {
+    let n = 0;
+    (cycle.entries || []).forEach((e) => {
+        const t = e.plantObs?.[name];
+        if (t && String(t).trim()) n++;
+    });
+    return n;
+}
+
+function renderPlantCard(name, totals, type, isFav, noteCount) {
+    const starSvg = isFav ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;fill:var(--amber);stroke:var(--amber);flex-shrink:0" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
     const safeName = name.replace(/'/g, "\\'");
     const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
     const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
+    // A small pill showing the number of plant-tagged notes. Hidden when
+    // there are none — the row would look cluttered otherwise.
+    const notePill = noteCount > 0 ? `<span class="plant-note-count" title="${noteCount} plant note${noteCount === 1 ? "" : "s"}"><svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 2 L18 2 L18 22 L6 22 L6 8 Z"/><path d="M6 8 L9 2 L9 8 Z"/></svg>${noteCount}</span>` : "";
 
     return `
     <div class="plant-stat-row plant-stat-row-clickable" onclick="openPlantDetail('${safeName}')">
-        <div style="display:flex;align-items:center;gap:6px;flex:1">
-            <span style="font-weight:600">${name}</span>
+        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+            <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span>
             ${starSvg}
             <span class="${badgeClass}" style="font-size:10px;padding:2px 6px">${typeBadge}</span>
+            ${notePill}
         </div>
-        <span style="font-size:12px;color:var(--muted)">
+        <span style="font-size:12px;color:var(--muted);flex-shrink:0">
             <span style="color:#d0d34e">F ${totals.fish.toFixed(1)}</span> &nbsp;
             <span style="color:#6ecf6e">G ${totals.grow.toFixed(1)}</span> &nbsp;
             <span style="color:#c07df0">B ${totals.bloom.toFixed(1)}</span> &nbsp;
@@ -103,7 +116,7 @@ export function renderStats(cycles, activeCycleId) {
         <button
           class="stats-cycle-btn${statsMode === c.id || (statsMode === "active" && c.id === activeCycleId) ? " active" : ""}"
           onclick="setStatsCycle('${c.id}')"
-        >${c.name}</button>
+        >${escapeHtml(c.name)}</button>
       `
           )
           .join("")}
@@ -178,7 +191,8 @@ export function renderStats(cycles, activeCycleId) {
         sortedCyclePlants.forEach((p) => {
             const meta = plantType(cycle, p);
             const t = cycleTotals[p] || { fish: 0, grow: 0, bloom: 0, water: 0 };
-            plantsHtml += renderPlantCard(p, t, meta.type, favSet.has(p));
+            const noteCount = countPlantNotes(cycle, p);
+            plantsHtml += renderPlantCard(p, t, meta.type, favSet.has(p), noteCount);
         });
         plantsHtml += `</div>`;
     });
@@ -195,7 +209,7 @@ export function renderStats(cycles, activeCycleId) {
         const wk = cycleStartDate ? `· Week ${getWeekNum(e.dt, cycleStartDate)}` : "";
         obsHtml += `<div class="obs-entry">
       <div class="obs-entry-date">${fmtDate(e.dt)} · ${fmtTime(e.dt)} ${wk}</div>
-      <div class="obs-entry-text">${e.obs}</div>
+      <div class="obs-entry-text">${escapeHtml(e.obs)}</div>
     </div>`;
     });
     document.getElementById("obs-list").innerHTML = obsHtml || '<div class="empty" style="padding:20px 0">No observations logged yet.</div>';
