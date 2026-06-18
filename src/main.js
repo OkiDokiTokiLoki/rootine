@@ -1,6 +1,6 @@
 import "./style.css";
 import { uid, cycleUid, fmtDate, fmtTime } from "./utils.js";
-import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs, loadLightDefaults, saveLightDefaults } from "./storage.js";
+import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { registerServiceWorker } from "./sw.js";
@@ -18,10 +18,11 @@ let pendingRenamePlantType = "auto";
 // same plant in a single entry if they want — duplicates are coalesced on
 // save so each plant ends up with one stored note per entry.
 let pendingPlantObs = [];
-
-try {
-    localStorage.removeItem("light_defaults");
-} catch (e) {}
+// Which plant tab is currently selected in the Plant notes section. This
+// is a transient draft state — it's reset whenever the tab strip
+// re-renders and after every successful add, so it can't accidentally
+// carry over between entries.
+let selectedPlantObsTab = null;
 
 initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
@@ -73,6 +74,31 @@ function escapeHtml(s) {
 
 function cyclePlants() {
     return activeCycle()?.plants || [];
+}
+
+// ─── Plant notes draft state ───────────────────────────────────────
+//
+// pendingPlantObs is the array of staged plant-tagged notes for the
+// entry being authored in the Add form. selectedPlantObsTab is which
+// plant the user has highlighted in the tab strip and is transient —
+// it's cleared on every re-render of the tab strip and after every
+// successful add.
+//
+// resetPlantNotesDraft is the single place to wipe both back to a
+// neutral state along with the textarea. The optional `seed` argument
+// lets callers (editEntry) populate the draft from an entry in one
+// call instead of duplicating the clear-then-render dance.
+//
+// We copy the seed rather than aliasing it so later mutations to
+// pendingPlantObs (push, splice) can't bleed back into the caller's
+// local array — particularly relevant for editEntry, where the caller
+// might still be holding a reference.
+function resetPlantNotesDraft(seed) {
+    pendingPlantObs = Array.isArray(seed) ? [...seed] : [];
+    selectedPlantObsTab = null;
+    const plantObsInput = document.getElementById("plant-obs-input");
+    if (plantObsInput) plantObsInput.value = "";
+    renderPlantObsList();
 }
 
 function renderAddForm() {
@@ -173,35 +199,62 @@ function renderAddForm() {
         });
     });
 
-    // Plant-notes section in the Add form. Populate the plant dropdown and
+    // Plant-notes section in the Add form. Populate the plant tabs and
     // re-render the staged list of plant observations.
-    populatePlantObsSelect();
+    populatePlantObsTabs();
     renderPlantObsList();
 }
 
-function populatePlantObsSelect() {
-    const select = document.getElementById("plant-obs-select");
-    if (!select) return;
+function populatePlantObsTabs() {
+    const tabs = document.getElementById("plant-obs-tabs");
+    if (!tabs) return;
     const cycle = activeCycle();
     const plants = cyclePlants();
-    const sortedPlants = plants.length === 0 ? [] : [...plants].sort((a, b) => (isFavourite(cycle, a) ? 0 : 1) - (isFavourite(cycle, b) ? 0 : 1));
-    if (sortedPlants.length === 0) {
-        select.innerHTML = '<option value="">No plants yet</option>';
-        select.disabled = true;
-    } else {
-        // Each plant can only hold one note per entry, so already-tagged
-        // plants are hidden from the dropdown. Removing the existing note
-        // (via the × button on the list) brings the plant back.
-        const tagged = new Set(pendingPlantObs.map((o) => o.plant));
-        const available = sortedPlants.filter((p) => !tagged.has(p));
-        if (available.length === 0) {
-            select.innerHTML = '<option value="">All plants already have a note</option>';
-            select.disabled = true;
-        } else {
-            select.innerHTML = '<option value="">Choose a plant…</option>' + available.map((p) => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
-            select.disabled = false;
-        }
+    if (plants.length === 0) {
+        tabs.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px 2px">No plants yet — add some via the Plants modal.</div>';
+        // The input and add button are useless without plants. Disable
+        // them so it's obvious they're not actionable.
+        const input = document.getElementById("plant-obs-input");
+        const addBtn = document.querySelector(".plant-obs-add-btn");
+        if (input) input.disabled = true;
+        if (addBtn) addBtn.disabled = true;
+        return;
     }
+    const input = document.getElementById("plant-obs-input");
+    const addBtn = document.querySelector(".plant-obs-add-btn");
+    if (input) input.disabled = false;
+    if (addBtn) addBtn.disabled = false;
+
+    const sortedPlants = [...plants].sort((a, b) => (isFavourite(cycle, a) ? 0 : 1) - (isFavourite(cycle, b) ? 0 : 1));
+    const tagged = new Set(pendingPlantObs.map((o) => o.plant));
+
+    tabs.innerHTML = sortedPlants
+        .map((p) => {
+            const used = tagged.has(p);
+            // "Used" tabs are rendered but disabled — keeping them visible
+            // tells the user the plant already has a note in this entry
+            // without hiding the row entirely.
+            const cls = "plant-obs-tab" + (used ? " used" : "");
+            const starSvg = isFavourite(cycle, p) ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
+            return `<button type="button" class="${cls}" data-plant="${escapeHtml(p)}"${used ? " disabled" : ""}>${starSvg}${escapeHtml(p)}</button>`;
+        })
+        .join("");
+
+    // Selection is local to each "pick plant → type → add" cycle. Reset it
+    // every time the tab strip re-renders so a previously clicked plant
+    // doesn't stay highlighted and accidentally get tagged when the user
+    // types a note and hits add.
+    selectedPlantObsTab = null;
+
+    tabs.querySelectorAll(".plant-obs-tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+            if (tab.disabled) return;
+            selectedPlantObsTab = tab.dataset.plant;
+            tabs.querySelectorAll(".plant-obs-tab").forEach((t) => t.classList.toggle("active", t.dataset.plant === selectedPlantObsTab));
+            const inp = document.getElementById("plant-obs-input");
+            if (inp) inp.focus();
+        });
+    });
 }
 
 function renderPlantObsList() {
@@ -209,11 +262,10 @@ function renderPlantObsList() {
     if (!list) return;
     if (pendingPlantObs.length === 0) {
         list.innerHTML = "";
-        return;
-    }
-    list.innerHTML = pendingPlantObs
-        .map(
-            (o, i) => `
+    } else {
+        list.innerHTML = pendingPlantObs
+            .map(
+                (o, i) => `
         <div class="plant-obs-item">
             <div class="plant-obs-item-header">
                 <span class="plant-obs-item-name">${escapeHtml(o.plant)}</span>
@@ -221,21 +273,28 @@ function renderPlantObsList() {
             </div>
             <div class="plant-obs-item-text">${escapeHtml(o.text)}</div>
         </div>`
-        )
-        .join("");
-    // The list of available plants in the dropdown changes whenever a note
-    // is added or removed, so re-populate after every render.
-    populatePlantObsSelect();
+            )
+            .join("");
+    }
+    // The list of available plants in the tab strip changes whenever a
+    // note is added or removed, so re-populate after every render.
+    populatePlantObsTabs();
 }
 
 function addPlantObs() {
-    const selectEl = document.getElementById("plant-obs-select");
     const inputEl = document.getElementById("plant-obs-input");
-    if (!selectEl || !inputEl) return;
-    const plant = selectEl.value;
+    if (!inputEl) return;
+    const plant = selectedPlantObsTab;
     const text = inputEl.value.trim();
     if (!plant) {
-        // Select is disabled in the empty state, but guard anyway.
+        // No tab selected. Focus the tab strip so the user can pick one.
+        const tabs = document.getElementById("plant-obs-tabs");
+        if (tabs) tabs.focus();
+        // Nudge them visually with a brief flash on the tab strip.
+        if (tabs) {
+            tabs.classList.add("plant-obs-tabs-shake");
+            setTimeout(() => tabs.classList.remove("plant-obs-tabs-shake"), 350);
+        }
         return;
     }
     if (!text) {
@@ -243,7 +302,8 @@ function addPlantObs() {
         return;
     }
     // Each plant can only have one note per entry. If the user tries to add
-    // a second, replace the existing one after asking.
+    // a second, replace the existing one after asking. The tab is also
+    // disabled after this point, so this branch is mostly a safety net.
     const existingIdx = pendingPlantObs.findIndex((o) => o.plant === plant);
     if (existingIdx >= 0) {
         if (!confirm(`"${plant}" already has a note for this entry. Replace it?`)) return;
@@ -252,6 +312,10 @@ function addPlantObs() {
         pendingPlantObs.push({ plant, text });
     }
     inputEl.value = "";
+    // Reset selection so the next note has to pick its plant again. This
+    // is what makes "tab strip + add" behave like a dropdown's lifecycle
+    // — you pick, type, add, and you're back to a neutral state.
+    selectedPlantObsTab = null;
     renderPlantObsList();
     inputEl.focus();
 }
@@ -264,6 +328,19 @@ function removePlantObs(index) {
 }
 
 function showTab(name, resetScroll = false) {
+    const current = ["log", "add", "stats"].find((t) => document.getElementById("section-" + t).classList.contains("active"));
+    // Leaving the Add tab cancels a new (in-progress) entry by clearing the
+    // form. The form is the draft, not a saved record, so it shouldn't
+    // persist across tab switches — there's no "Cancel" button and the act
+    // of leaving Add is the cancel gesture.
+    //
+    // Editing an existing entry is different: the form is bound to that
+    // entry's data, and the only way out of edit mode is Save or Cancel.
+    // Don't clobber it just because the user looked at the log briefly.
+    if (current === "add" && name !== "add" && !editingEntryId) {
+        resetAddForm();
+    }
+
     ["log", "add", "stats"].forEach((t) => {
         document.getElementById("section-" + t).classList.toggle("active", t === name);
         document.getElementById("tab-" + t).classList.toggle("active", t === name);
@@ -290,25 +367,37 @@ function resetAddForm() {
             if (el) el.value = "";
         })
     );
+    // Reset every action checkbox to off and re-enable individual plant
+    // checkboxes (the "All plants" master disables them when on). Hiding
+    // the picker lists collapses them so the form starts in a clean state.
     ["lst", "def", "repot"].forEach((id) => {
         const el = document.getElementById("ck-" + id);
         if (el) el.checked = false;
     });
-    document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.checked = false));
+    document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => {
+        el.checked = false;
+        el.disabled = false;
+    });
     document.querySelectorAll(".lst-plant-all, .def-plant-all, .repot-plant-all").forEach((el) => (el.checked = false));
-    document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((el) => (el.disabled = false));
     document.getElementById("lst-plants").style.display = "none";
     document.getElementById("def-plants").style.display = "none";
     document.getElementById("repot-plants").style.display = "none";
     document.getElementById("ck-light").checked = false;
     document.getElementById("light-inputs").style.display = "none";
+    // Light defaults are stored on the active cycle itself (cycle.lightDefaults),
+    // so they survive resets, tab switches, and full reloads. Reload them into
+    // the inputs so the form reflects the persisted state.
     _loadLightDefaults();
     document.getElementById("new-obs").value = "";
-    // Clear any staged plant notes.
-    pendingPlantObs = [];
-    const plantObsInput = document.getElementById("plant-obs-input");
-    if (plantObsInput) plantObsInput.value = "";
-    renderPlantObsList();
+    // Clear any staged plant notes and the tab selection. The tab strip
+    // re-renders without an active highlight so the next entry starts
+    // from a neutral state.
+    resetPlantNotesDraft();
+    // Reset the datetime field too. Without this, leaving Add and coming
+    // back would re-show the previously-entered time via setDateDefault,
+    // but the brief moment between tab switches would still display the
+    // stale value. Reset explicitly so the form is unambiguously empty.
+    setDateDefault();
 }
 
 function updateGrowAge() {
@@ -343,8 +432,14 @@ function toggleLightInputs() {
     document.getElementById("light-inputs").style.display = document.getElementById("ck-light").checked ? "block" : "none";
 }
 
+function getCycleLightDefaults() {
+    const cycle = activeCycle();
+    if (!cycle) return {};
+    return cycle.lightDefaults || {};
+}
+
 function updateLightStatus() {
-    const d = loadLightDefaults(activeCycleId);
+    const d = getCycleLightDefaults();
     const el = document.getElementById("light-status-text");
     const bulb = document.getElementById("light-status-bulb");
     if (!el) return;
@@ -387,16 +482,26 @@ function updateLightStatus() {
 }
 
 function _saveLightDefaults() {
-    saveLightDefaults(activeCycleId, document.getElementById("light-lux").value, document.getElementById("light-dist").value, document.getElementById("light-start").value, document.getElementById("light-end").value);
+    const cycle = activeCycle();
+    if (!cycle) return;
+    cycle.lightDefaults = {
+        lux: document.getElementById("light-lux").value,
+        dist: document.getElementById("light-dist").value,
+        start: document.getElementById("light-start").value,
+        end: document.getElementById("light-end").value,
+    };
+    // The cycle is already in the cycles array, so saveCycles(cycles) is
+    // enough — no separate light_defaults_<id> write needed.
+    saveCycles(cycles);
     updateLightStatus();
 }
 
 function _loadLightDefaults() {
-    const d = loadLightDefaults(activeCycleId);
-    if (d.lux) document.getElementById("light-lux").value = d.lux;
-    if (d.dist) document.getElementById("light-dist").value = d.dist;
-    if (d.start) document.getElementById("light-start").value = d.start;
-    if (d.end) document.getElementById("light-end").value = d.end;
+    const d = getCycleLightDefaults();
+    document.getElementById("light-lux").value = d.lux || "";
+    document.getElementById("light-dist").value = d.dist || "";
+    document.getElementById("light-start").value = d.start || "";
+    document.getElementById("light-end").value = d.end || "";
 }
 
 function openPlantManager() {
@@ -576,27 +681,30 @@ function confirmRenamePlant() {
         // Migrate the type key to the new name.
         delete cycle.plantTypes[oldName];
         // Migrate existing entry data so history stays consistent.
-        cycle.entries.forEach((e) => {
-            if (e.plants && e.plants[oldName]) {
-                e.plants[newName] = e.plants[oldName];
-                delete e.plants[oldName];
-            }
-            // Update action strings of the form "LST (COP, H)" → "LST (Plant1, H)".
-            if (Array.isArray(e.actions)) {
-                e.actions = e.actions.map((a) => {
-                    const m = a.match(/^(.*?)\s*\((.*?)\)\s*$/);
-                    if (!m) return a;
-                    const prefix = m[1];
-                    const items = m[2].split(", ").map((p) => (p === oldName ? newName : p));
-                    return `${prefix} (${items.join(", ")})`;
-                });
-            }
-            // Migrate plant-tagged observations too, so the renamed plant's
-            // historical notes still belong to it in the plant detail view.
-            if (e.plantObs && typeof e.plantObs === "object" && e.plantObs[oldName]) {
-                e.plantObs[newName] = e.plantObs[oldName];
-                delete e.plantObs[oldName];
-            }
+        cycles.forEach((c) => {
+            if (c.id !== cycle.id) return; // only migrate entries in the cycle the plant belongs to
+            c.entries.forEach((e) => {
+                if (e.plants && e.plants[oldName]) {
+                    e.plants[newName] = e.plants[oldName];
+                    delete e.plants[oldName];
+                }
+                // Update action strings of the form "LST (COP, H)" → "LST (Plant1, H)".
+                if (Array.isArray(e.actions)) {
+                    e.actions = e.actions.map((a) => {
+                        const m = a.match(/^(.*?)\s*\((.*?)\)\s*$/);
+                        if (!m) return a;
+                        const prefix = m[1];
+                        const items = m[2].split(", ").map((p) => (p === oldName ? newName : p));
+                        return `${prefix} (${items.join(", ")})`;
+                    });
+                }
+                // Migrate plant-tagged observations too, so the renamed plant's
+                // historical notes still belong to it in the plant detail view.
+                if (e.plantObs && typeof e.plantObs === "object" && e.plantObs[oldName]) {
+                    e.plantObs[newName] = e.plantObs[oldName];
+                    delete e.plantObs[oldName];
+                }
+            });
         });
     }
 
@@ -682,29 +790,24 @@ function renderPlantDetailModal(cycle, name) {
     const plantObsItems = [];
     cycle.entries.forEach((e) => {
         const pd = e.plants?.[name];
-        if (!pd) {
-            // The plant might still have a tagged note in this entry even
-            // though it has no feed/water data — don't skip in that case.
-            const note = e.plantObs?.[name];
-            if (note && note.trim()) {
-                plantObsItems.push({ dt: e.dt, text: note });
+        if (pd) {
+            t.fish += pd.fish || 0;
+            t.grow += pd.grow || 0;
+            t.bloom += pd.bloom || 0;
+            t.water += pd.water || 0;
+            const isFeed = pd.fish || pd.grow || pd.bloom;
+            const isWater = pd.water;
+            if (isFeed) {
+                feedCount++;
+                if (!lastFeed || new Date(e.dt) > new Date(lastFeed)) lastFeed = e.dt;
             }
-            return;
+            if (isWater) {
+                waterCount++;
+                if (!lastWater || new Date(e.dt) > new Date(lastWater)) lastWater = e.dt;
+            }
         }
-        t.fish += pd.fish || 0;
-        t.grow += pd.grow || 0;
-        t.bloom += pd.bloom || 0;
-        t.water += pd.water || 0;
-        const isFeed = pd.fish || pd.grow || pd.bloom;
-        const isWater = pd.water;
-        if (isFeed) {
-            feedCount++;
-            if (!lastFeed || new Date(e.dt) > new Date(lastFeed)) lastFeed = e.dt;
-        }
-        if (isWater) {
-            waterCount++;
-            if (!lastWater || new Date(e.dt) > new Date(lastWater)) lastWater = e.dt;
-        }
+        // Tagged notes are pushed regardless of whether the entry had any
+        // feed/water data — a note-only entry should still surface here.
         if (e.plantObs && e.plantObs[name] && e.plantObs[name].trim()) {
             plantObsItems.push({ dt: e.dt, text: e.plantObs[name] });
         }
@@ -734,6 +837,7 @@ function renderPlantDetailModal(cycle, name) {
             }
         });
     });
+
     // Newest first — matches the order elsewhere in the app.
     plantObsItems.sort((a, b) => new Date(b.dt) - new Date(a.dt));
 
@@ -869,8 +973,9 @@ window.confirmNewCycle = function () {
     const startDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
     // New cycles start with no plants — the user adds them via the Plants modal.
-    const newC = { id: cycleUid(), name, startDate, plants: [], plantTypes: {}, entries: [] };
+    const newC = { id: cycleUid(), name, startDate, plants: [], plantTypes: {}, entries: [], lightDefaults: {} };
     cycles.push(newC);
+
     activeCycleId = newC.id;
 
     saveCycles(cycles);
@@ -1035,28 +1140,25 @@ function editEntry(id) {
 
     document.getElementById("new-obs").value = entry.obs || "";
 
-    // Hydrate staged plant notes from the entry, then re-render the list
-    // (which also rebuilds the dropdown to exclude already-tagged plants).
-    pendingPlantObs = [];
+    // Hydrate staged plant notes from the entry. Build the populated array
+    // locally first, then hand it to resetPlantNotesDraft so the helper
+    // owns the clear-then-render dance in one place. Plants that were
+    // tagged but no longer exist in the cycle (renamed away, deleted)
+    // are appended at the end so the user can still see/edit them.
+    const cyclePlantSet = new Set(cyclePlants());
+    const staged = [];
+    cyclePlants().forEach((p) => {
+        const text = entry.plantObs?.[p];
+        if (text && text.trim()) staged.push({ plant: p, text });
+    });
     if (entry.plantObs && typeof entry.plantObs === "object") {
-        // Iterate the plant list in cycle order so the staged list mirrors
-        // the order plants appear in the add-form tabs. Plants that were
-        // tagged but no longer exist in the cycle (renamed away, deleted)
-        // are appended at the end so the user can still see/edit them.
-        const cyclePlantSet = new Set(cyclePlants());
-        cyclePlants().forEach((p) => {
-            const text = entry.plantObs[p];
-            if (text && text.trim()) pendingPlantObs.push({ plant: p, text });
-        });
         Object.entries(entry.plantObs).forEach(([p, text]) => {
             if (!cyclePlantSet.has(p) && text && text.trim()) {
-                pendingPlantObs.push({ plant: p, text });
+                staged.push({ plant: p, text });
             }
         });
     }
-    const plantObsInput = document.getElementById("plant-obs-input");
-    if (plantObsInput) plantObsInput.value = "";
-    renderPlantObsList();
+    resetPlantNotesDraft(staged);
 
     showTab("add");
 }
@@ -1128,10 +1230,12 @@ function saveEntry() {
     // Coalesce the staged plant notes into the entry's plantObs map. Each
     // plant gets exactly one note per entry — if the user added two stages
     // for the same plant (rare, but possible by re-adding after a remove),
-    // the last one wins.
+    // the last one wins. Drop notes for plants that no longer exist in the
+    // cycle so we don't accumulate orphan keys.
+    const validPlants = new Set(cyclePlants());
     const plantObs = {};
     pendingPlantObs.forEach((o) => {
-        if (o.plant && o.text && o.text.trim()) {
+        if (o.plant && validPlants.has(o.plant) && o.text && o.text.trim()) {
             plantObs[o.plant] = o.text.trim();
         }
     });
@@ -1237,7 +1341,7 @@ function importBackup(event) {
             if (!Array.isArray(imported)) throw new Error("Invalid format");
             if (!confirm(`Import ${imported.length} cycle(s)? This will replace all current data.`)) return;
             localStorage.setItem("grow_cycles", JSON.stringify(imported));
-            localStorage.setItem("grow_version", "5"); // keep in sync with storage.js STORAGE_VERSION
+            localStorage.setItem("grow_version", "6"); // keep in sync with storage.js STORAGE_VERSION
             location.reload();
         } catch {
             alert("Invalid backup file.");

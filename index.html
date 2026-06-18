@@ -99,11 +99,9 @@
                     <div class="form-section">
                         <div class="form-section-title">Plant notes</div>
                         <div id="plant-obs-list" class="plant-obs-list"></div>
-                        <div class="plant-obs-add">
-                            <select id="plant-obs-select" class="form-input plant-obs-select" aria-label="Plant"></select>
-                            <textarea id="plant-obs-input" class="form-input plant-obs-input" rows="1" placeholder="Note about this plant (e.g. yellow tips, light stretch)"></textarea>
-                            <button class="plant-obs-add-btn" type="button" onclick="addPlantObs()">+ Add note</button>
-                        </div>
+                        <div class="plant-obs-tabs" id="plant-obs-tabs"></div>
+                        <textarea id="plant-obs-input" class="form-input plant-obs-input" rows="1" placeholder="Note about the selected plant (e.g. yellow tips, light stretch)"></textarea>
+                        <button class="plant-obs-add-btn" type="button" onclick="addPlantObs()">+ Add note</button>
                     </div>
 
                     <button class="submit-btn" onclick="saveEntry()">Save entry</button>

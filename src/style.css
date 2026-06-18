@@ -964,16 +964,6 @@ input[type="datetime-local"] {
     word-wrap: break-word;
 }
 
-.plant-obs-add {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.plant-obs-select {
-    font-size: 14px;
-}
-
 .plant-obs-input {
     min-height: 60px;
     resize: vertical;
@@ -1049,4 +1039,132 @@ input[type="datetime-local"] {
     border: 0.5px solid rgba(110, 207, 110, 0.3);
     margin-left: 2px;
     line-height: 1;
+}
+
+.plant-obs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.plant-obs-item {
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 10px;
+    padding: 9px 10px;
+}
+
+.plant-obs-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.plant-obs-item-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: 0.2px;
+}
+
+.plant-obs-item-remove {
+    background: none;
+    border: none;
+    color: var(--red);
+    font-size: 20px;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+}
+
+.plant-obs-item-text {
+    font-size: 13px;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.plant-obs-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.plant-obs-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 999px;
+    color: var(--text);
+    cursor: pointer;
+    transition:
+        background 0.12s ease,
+        border-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.plant-obs-tab.active {
+    background: rgba(110, 207, 110, 0.16);
+    border-color: var(--green);
+    color: var(--green);
+    font-weight: 600;
+}
+
+.plant-obs-tab.used,
+.plant-obs-tab[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.plant-obs-input {
+    min-height: 60px;
+    resize: vertical;
+    font-family: inherit;
+    margin-bottom: 8px;
+}
+
+.plant-obs-add-btn {
+    align-self: flex-start;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 8px;
+    color: var(--green);
+    cursor: pointer;
+}
+
+.plant-obs-add-btn:active {
+    background: var(--border2);
+}
+
+.plant-obs-add-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@keyframes plant-obs-tabs-shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-3px);
+    }
+    75% {
+        transform: translateX(3px);
+    }
+}
+
+.plant-obs-tabs-shake {
+    animation: plant-obs-tabs-shake 0.3s ease;
 }

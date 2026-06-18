@@ -49,6 +49,42 @@ const migrations = [
                 plantObs: e.plantObs && typeof e.plantObs === "object" ? e.plantObs : {},
             })),
         })),
+
+    // v5 → v6: light defaults (lux / distance / lights-on / lights-off) used
+    // to live under the localStorage key `light_defaults_<cycleId>`. They now
+    // belong inside the cycle object itself so they round-trip through
+    // export/import and don't depend on which tab is active when the user
+    // types. The old keys are read once during migration and then dropped.
+    (cycles) => {
+        const stored = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("light_defaults_")) {
+                const cycleId = key.slice("light_defaults_".length);
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(key) || "{}");
+                    if (parsed && typeof parsed === "object") stored[cycleId] = parsed;
+                } catch (e) {
+                    // Ignore malformed legacy values; the cycle will simply
+                    // start with no defaults.
+                }
+                localStorage.removeItem(key);
+            }
+        }
+        return cycles.map((c) => {
+            // Don't clobber an existing lightDefaults with the legacy key —
+            // if the cycle was already migrated forward and has its own
+            // value, keep that.
+            const legacy = stored[c.id];
+            if (c.lightDefaults && Object.keys(c.lightDefaults).length) {
+                return c;
+            }
+            if (legacy && Object.keys(legacy).length) {
+                return { ...c, lightDefaults: legacy };
+            }
+            return c;
+        });
+    },
 ];
 
 const STORAGE_VERSION = migrations.length + 1;
@@ -116,18 +152,4 @@ export function loadCollapsedObs() {
 
 export function saveCollapsedObs(state) {
     localStorage.setItem("collapsed_obs", state ? "1" : "0");
-}
-
-export function loadLightDefaults(cycleId) {
-    try {
-        if (!cycleId) return {};
-        return JSON.parse(localStorage.getItem("light_defaults_" + cycleId) || "{}");
-    } catch (e) {
-        return {};
-    }
-}
-
-export function saveLightDefaults(cycleId, lux, dist, start, end) {
-    if (!cycleId) return;
-    localStorage.setItem("light_defaults_" + cycleId, JSON.stringify({ lux, dist, start, end }));
 }
