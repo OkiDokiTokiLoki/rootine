@@ -1,9 +1,5 @@
-import { fmtDate, fmtTime, getWeekNum, entryType } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta } from "./utils.js";
 import { saveCollapsedObs } from "./storage.js";
-
-function escapeHtml(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
 
 let statsMode = "active";
 
@@ -65,13 +61,6 @@ function computeStats(entries) {
     return { feeds, waters, issues, days, obsEntries };
 }
 
-function plantType(cycle, name) {
-    const t = cycle?.plantTypes?.[name];
-    if (!t) return { type: "photo", repottedAt: cycle?.startDate };
-    if (typeof t === "string") return { type: t, repottedAt: cycle?.startDate };
-    return { type: t.type || "photo", repottedAt: t.repottedAt || cycle?.startDate };
-}
-
 function countPlantNotes(cycle, name) {
     let n = 0;
     (cycle.entries || []).forEach((e) => {
@@ -82,7 +71,7 @@ function countPlantNotes(cycle, name) {
 }
 
 function renderPlantCard(name, totals, type, isFav, noteCount) {
-    const starSvg = isFav ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;fill:var(--amber);stroke:var(--amber);flex-shrink:0" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
+    const starSvg = isFav ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;fill:var(--amber);stroke:var(--amber);flex-shrink:0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
     const safeName = name.replace(/'/g, "\\'");
     const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
     const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
@@ -189,7 +178,7 @@ export function renderStats(cycles, activeCycleId) {
             plantsHtml += `<div class="stats-cycle-block-label"><span>${escapeHtml(cycle.name)}</span>${activePill}</div>`;
         }
         sortedCyclePlants.forEach((p) => {
-            const meta = plantType(cycle, p);
+            const meta = getPlantMeta(cycle, p);
             const t = cycleTotals[p] || { fish: 0, grow: 0, bloom: 0, water: 0 };
             const noteCount = countPlantNotes(cycle, p);
             plantsHtml += renderPlantCard(p, t, meta.type, favSet.has(p), noteCount);

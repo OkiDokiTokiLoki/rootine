@@ -27,3 +27,14 @@ export function uid() {
 export function cycleUid() {
     return "cycle-" + Date.now();
 }
+
+export function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+export function getPlantMeta(cycle, name) {
+    const raw = cycle?.plantTypes?.[name];
+    if (!raw) return { type: "photo", repottedAt: cycle?.startDate };
+    if (typeof raw === "string") return { type: raw, repottedAt: cycle?.startDate };
+    return { type: raw.type || "photo", repottedAt: raw.repottedAt || cycle?.startDate };
+}

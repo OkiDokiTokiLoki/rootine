@@ -322,6 +322,7 @@ input[type="datetime-local"] {
     border-left: 2px solid var(--green);
     padding-left: 10px;
     background: var(--surface2);
+    color: var(--muted);
 }
 
 .obs-box-plant-name {
@@ -827,9 +828,9 @@ textarea.form-input {
     background: none;
     border: none;
     color: var(--red);
+    padding: 2px 4px;
     font-size: 20px;
     line-height: 1;
-    padding: 0 4px;
     cursor: pointer;
 }
 
@@ -838,6 +839,23 @@ textarea.form-input {
     color: var(--text);
     white-space: pre-wrap;
     word-wrap: break-word;
+}
+
+.plant-obs-item-edit {
+    background: none;
+    border: none;
+    color: var(--blue);
+    padding: 2px 4px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.plant-obs-item.editing {
+    outline: 1.5px solid var(--blue);
+    outline-offset: -1px;
+    background: var(--surface2);
+    border-radius: 10px;
 }
 
 .plant-obs-tabs {

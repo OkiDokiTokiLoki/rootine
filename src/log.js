@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, escapeHtml } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 
 let collapsedWeeks;
@@ -36,10 +36,6 @@ export function toggleEntry(id) {
     document.getElementById("body-" + id).classList.toggle("open");
     document.getElementById("chev-" + id).classList.toggle("open");
     document.getElementById("card-" + id).classList.toggle("open");
-}
-
-function escapeHtml(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function renderEntriesForCycle(cycle) {
