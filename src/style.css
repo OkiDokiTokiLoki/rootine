@@ -208,7 +208,7 @@ input[type="datetime-local"] {
 .week-chevron {
     width: 14px;
     height: 14px;
-    stroke-width: 2.5;
+    stroke-width: 2;
 }
 
 .week-chevron.collapsed,
@@ -1031,7 +1031,7 @@ textarea.form-input {
     height: var(--icon-md);
     fill: none;
     stroke: currentColor;
-    stroke-width: 1.8;
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
@@ -1087,7 +1087,7 @@ textarea.form-input {
     height: var(--icon-lg);
     stroke: currentColor;
     fill: none;
-    stroke-width: 1.8;
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
@@ -1157,7 +1157,7 @@ textarea.form-input {
     height: var(--icon-sm);
     fill: none;
     stroke: currentColor;
-    stroke-width: 1.8;
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
@@ -1231,6 +1231,9 @@ textarea.form-input {
 
 .plant-type-badge {
     /* === chip--clickable with auto/photo variants */
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
     font-size: 10px;
     padding: 4px 9px;
     border-radius: var(--r-sm);
@@ -1546,7 +1549,7 @@ textarea.form-input {
     height: 13px;
     stroke: var(--amber);
     fill: none;
-    stroke-width: 1.8;
+    stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
     flex-shrink: 0;

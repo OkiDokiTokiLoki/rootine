@@ -93,15 +93,15 @@ function renderEntryCard(e) {
     let badgeHtml = "";
 
     if (hasFeed) {
-        badgeHtml += `<span class="badge badge-feed" style="margin-left:0"><svg viewBox="0 0 24 28" style="width:13px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 2L6.5 12a6 6 0 1 0 11 0L12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"/><line x1="12" y1="2" x2="12" y2="27" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>`;
+        badgeHtml += `<span class="badge badge-feed" style="margin-left:0"><svg viewBox="0 0 24 28" style="width:13px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 2L6.5 12a6 6 0 1 0 11 0L12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"/><line x1="12" y1="2" x2="12" y2="27" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`;
     }
 
     if (hasWater) {
-        badgeHtml += `<span class="badge badge-water" style="margin-left:0"><svg viewBox="0 0 24 28" style="width:13px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 2L6.5 12a6 6 0 1 0 11 0L12 2z"/></svg></span>`;
+        badgeHtml += `<span class="badge badge-water" style="margin-left:0"><svg viewBox="0 0 24 20" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 2L6.5 12a6 6 0 1 0 11 0L12 2z"/></svg></span>`;
     }
 
     if (hasLight) {
-        badgeHtml += `<span class="badge badge-light" style="margin-left:0;"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.6-1.4 4.9-3.5 6.2V17a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-1.8A7 7 0 0 1 5 9a7 7 0 0 1 7-7z"/></svg></span>`;
+        badgeHtml += `<span class="badge badge-light" style="margin-left:0;"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.6-1.4 4.9-3.5 6.2V17a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-1.8A7 7 0 0 1 5 9a7 7 0 0 1 7-7z"/></svg></span>`;
     }
 
     if (hasNonLightAction) {
@@ -109,7 +109,7 @@ function renderEntryCard(e) {
     }
 
     if (hasObs) {
-        badgeHtml += `<span class="badge badge-note" style="margin-left:0;" title="Has observation"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 2 L18 2 L18 22 L6 22 L6 8 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"/><path d="M6 8 L9 2 L9 8 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin:round"/></svg></span>`;
+        badgeHtml += `<span class="badge badge-note" style="margin-left:0;" title="Has observation"><svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 2 L18 2 L18 22 L6 22 L6 8 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"/><path d="M6 8 L9 2 L9 8 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"/></svg></span>`;
     }
 
     const plants = Object.entries(e.plants || {});
@@ -148,7 +148,7 @@ function renderEntryCard(e) {
           <div class="entry-time">${fmtTime(e.dt)}</div>
         </div>
         <div style="display:flex;gap:6px">
-            <button class="settings-btn edit-entry-btn" onclick="editEntry('${e.id}')" title="Edit entry"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" style="width:18px;height:18px"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
+            <button class="settings-btn edit-entry-btn" onclick="editEntry('${e.id}')" title="Edit entry"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" style="width:18px;height:18px"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
             <button class="settings-btn delete-entry-btn" onclick="deleteEntry('${e.id}')" title="Delete entry"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
             <button class="settings-btn duplicate-entry-btn" onclick="duplicateEntry('${e.id}')" title="Duplicate entry"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
         </div>
@@ -178,7 +178,7 @@ export function renderLog(cycles, activeCycleId) {
                     ${activePill}
                     <span class="cycle-start">${startFmt}</span>
                     <button class="settings-btn edit-cycle-btn" onclick="event.stopPropagation();editCycleName('${cycle.id}', '${cycle.name.replace(/'/g, "\\\'")}')" title="Edit cycle name">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" style="width:18px;height:18px"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" style="width:18px;height:18px"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg>
                     </button>
                     <button class="settings-btn delete-cycle-btn" onclick="event.stopPropagation();deleteCycle('${cycle.id}')" title="Delete cycle">
                         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
