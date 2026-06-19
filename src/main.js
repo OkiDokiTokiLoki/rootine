@@ -94,35 +94,61 @@ function renderAddForm() {
                   return aFav - bFav;
               });
 
-    const tabsContainer = document.getElementById("plant-tabs");
     syncHeaderActions();
-    tabsContainer.innerHTML = "";
-    if (cycles.length === 0) {
-        const empty = document.createElement("div");
-        empty.style.cssText = "padding: 14px; color: var(--muted); font-size: 13px; text-align: center; background: var(--surface2); border: 0.5px dashed var(--border2); border-radius: 10px;";
-        empty.innerHTML = 'No grow cycles yet. Tap <span onclick="newCycle()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ New Cycle</span> to start one.';
-        tabsContainer.appendChild(empty);
-    } else if (plants.length === 0) {
-        const empty = document.createElement("div");
-        empty.style.cssText = "padding: 14px; color: var(--muted); font-size: 13px; text-align: center; background: var(--surface2); border: 0.5px dashed var(--border2); border-radius: 10px;";
-        empty.innerHTML = 'No plants yet for this grow cycle. Tap <span onclick="openPlantManager()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.';
-        tabsContainer.appendChild(empty);
-    }
 
-    const panelsContainer = document.getElementById("plant-panels");
-    panelsContainer.innerHTML = "";
-    sortedPlants.forEach((p, i) => {
-        const panel = document.createElement("div");
-        panel.className = "plant-panel" + (i === 0 ? " active" : "");
-        panel.id = "panel-" + p;
-        panel.innerHTML = `
-            <div class="form-row"><label class="form-label">Fish (cups)</label><input class="form-input" type="number" min="0" step="0.5" placeholder="0" id="${p}-fish" /></div>
-            <div class="form-row"><label class="form-label">Grow (cups)</label><input class="form-input" type="number" min="0" step="0.5" placeholder="0" id="${p}-grow" /></div>
-            <div class="form-row"><label class="form-label">Bloom (cups)</label><input class="form-input" type="number" min="0" step="0.5" placeholder="0" id="${p}-bloom" /></div>
-            <div class="form-row"><label class="form-label">Water (cups)</label><input class="form-input" type="number" min="0" step="0.5" placeholder="0" id="${p}-water" /></div>
-        `;
-        panelsContainer.appendChild(panel);
-    });
+    const nutrientList = document.getElementById("nutrient-plants-list");
+    const nutrientInputs = document.getElementById("nutrient-inputs");
+    if (nutrientList) {
+        nutrientList.innerHTML = "";
+        if (cycles.length === 0) {
+            if (nutrientInputs) nutrientInputs.style.display = "none";
+            const empty = document.createElement("div");
+            empty.style.cssText = "font-size: 12px; color: var(--muted); padding: 4px 0";
+            empty.innerHTML = 'No grow cycles yet. Tap <span onclick="newCycle()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ New Cycle</span> to start one.';
+            nutrientList.appendChild(empty);
+        } else if (plants.length === 0) {
+            if (nutrientInputs) nutrientInputs.style.display = "none";
+            const empty = document.createElement("div");
+            empty.style.cssText = "font-size: 12px; color: var(--muted); padding: 4px 0";
+            empty.innerHTML = 'No plants yet. Tap <span onclick="openPlantManager()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.';
+            nutrientList.appendChild(empty);
+        } else {
+            if (nutrientInputs) nutrientInputs.style.display = "block";
+
+            const allWrap = document.createElement("label");
+            allWrap.className = "plant-picker-opt plant-picker-opt-all";
+            const allCb = document.createElement("input");
+            allCb.type = "checkbox";
+            allCb.className = "nutrient-plant-all";
+            allCb.onchange = () => {
+                const individual = nutrientList.querySelectorAll(".nutrient-plant");
+                individual.forEach((cb) => {
+                    cb.checked = allCb.checked;
+                });
+            };
+            allWrap.appendChild(allCb);
+            allWrap.appendChild(document.createTextNode("All plants"));
+            nutrientList.appendChild(allWrap);
+
+            sortedPlants.forEach((p) => {
+                const label = document.createElement("label");
+                label.className = "plant-picker-opt";
+                const cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.className = "nutrient-plant";
+                cb.value = p;
+                cb.onchange = updateNutrientAllToggle;
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(p));
+                if (isFavourite(cycle, p)) {
+                    const starWrap = document.createElement("span");
+                    starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                    label.appendChild(starWrap.firstChild);
+                }
+                nutrientList.appendChild(label);
+            });
+        }
+    }
 
     ["lst", "def", "repot"].forEach((action) => {
         const picker = document.getElementById(action + "-plants");
@@ -333,13 +359,12 @@ function showTab(name, resetScroll = false) {
 }
 
 function resetAddForm() {
-    const plants = cyclePlants();
-    plants.forEach((p) =>
-        ["fish", "grow", "bloom", "water"].forEach((n) => {
-            const el = document.getElementById(p + "-" + n);
-            if (el) el.value = "";
-        })
-    );
+    document.querySelectorAll(".nutrient-plant, .nutrient-plant-all").forEach((el) => (el.checked = false));
+    ["fish", "grow", "bloom", "water"].forEach((n) => {
+        const el = document.getElementById("nutrient-" + n);
+        if (el) el.value = "";
+    });
+
     ["lst", "def", "repot"].forEach((id) => {
         const el = document.getElementById("ck-" + id);
         if (el) el.checked = false;
@@ -396,6 +421,17 @@ function getCycleLightDefaults() {
     const cycle = activeCycle();
     if (!cycle) return {};
     return cycle.lightDefaults || {};
+}
+
+function updateNutrientAllToggle() {
+    const allCb = document.querySelector(".nutrient-plant-all");
+    if (!allCb) return;
+    const individual = document.querySelectorAll(".nutrient-plant");
+    if (individual.length === 0) {
+        allCb.checked = false;
+        return;
+    }
+    allCb.checked = [...individual].every((cb) => cb.checked);
 }
 
 function updateLightStatus() {
@@ -1001,15 +1037,34 @@ function editEntry(id) {
 
     document.getElementById("new-dt").value = entry.dt;
 
-    const plants = cyclePlants();
-    plants.forEach((p) => {
-        const pdata = entry.plants && entry.plants[p];
-        if (pdata) {
-            if (pdata.fish) document.getElementById(p + "-fish").value = pdata.fish;
-            if (pdata.grow) document.getElementById(p + "-grow").value = pdata.grow;
-            if (pdata.bloom) document.getElementById(p + "-bloom").value = pdata.bloom;
-            if (pdata.water) document.getElementById(p + "-water").value = pdata.water;
+    const currentPlants = new Set(cyclePlants());
+    const plantsWithData = Object.entries(entry.plants || {}).filter(([p, d]) => currentPlants.has(p) && d && (d.fish || d.grow || d.bloom || d.water));
+
+    document.querySelectorAll(".nutrient-plant").forEach((cb) => {
+        cb.checked = plantsWithData.some(([p]) => p === cb.value);
+    });
+    updateNutrientAllToggle();
+
+    let commonVals = null;
+    let allSame = plantsWithData.length > 0;
+    for (const [, d] of plantsWithData) {
+        const vals = {
+            fish: d.fish || 0,
+            grow: d.grow || 0,
+            bloom: d.bloom || 0,
+            water: d.water || 0,
+        };
+        if (!commonVals) {
+            commonVals = vals;
+        } else if (vals.fish !== commonVals.fish || vals.grow !== commonVals.grow || vals.bloom !== commonVals.bloom || vals.water !== commonVals.water) {
+            allSame = false;
+            break;
         }
+    }
+
+    ["fish", "grow", "bloom", "water"].forEach((n) => {
+        const el = document.getElementById("nutrient-" + n);
+        if (el) el.value = allSame && commonVals ? commonVals[n] || "" : "";
     });
 
     const actions = entry.actions || [];
@@ -1151,19 +1206,20 @@ function saveEntry() {
     }
 
     const plants = {};
-    cyclePlants().forEach((p) => {
-        const fish = parseFloat(document.getElementById(p + "-fish").value) || 0;
-        const grow = parseFloat(document.getElementById(p + "-grow").value) || 0;
-        const bloom = parseFloat(document.getElementById(p + "-bloom").value) || 0;
-        const water = parseFloat(document.getElementById(p + "-water").value) || 0;
-        if (fish || grow || bloom || water) {
+    const selectedNutrientPlants = [...document.querySelectorAll(".nutrient-plant:checked")].map((el) => el.value);
+    const fish = parseFloat(document.getElementById("nutrient-fish").value) || 0;
+    const grow = parseFloat(document.getElementById("nutrient-grow").value) || 0;
+    const bloom = parseFloat(document.getElementById("nutrient-bloom").value) || 0;
+    const water = parseFloat(document.getElementById("nutrient-water").value) || 0;
+    if (fish || grow || bloom || water) {
+        selectedNutrientPlants.forEach((p) => {
             plants[p] = {};
             if (fish) plants[p].fish = fish;
             if (grow) plants[p].grow = grow;
             if (bloom) plants[p].bloom = bloom;
             if (water) plants[p].water = water;
-        }
-    });
+        });
+    }
 
     const validPlants = new Set(cyclePlants());
     const plantObs = {};
