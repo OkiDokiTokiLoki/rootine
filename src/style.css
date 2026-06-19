@@ -735,6 +735,13 @@ textarea.form-input {
     border-bottom: none;
 }
 
+.plant-detail-rel {
+    color: var(--muted);
+    font-size: 12px;
+    margin-left: 4px;
+    font-weight: 400;
+}
+
 .plant-detail-label {
     color: var(--muted);
     font-size: 12px;

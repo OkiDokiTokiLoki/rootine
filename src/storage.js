@@ -1,5 +1,3 @@
-import { seedCycles } from "./data.js";
-
 // Each migration takes cycles, returns cycles. Migrations[0] is v1→v2, [1] is
 // v2→v3, etc. To bump the version: write a function, append it. That's it.
 const migrations = [
@@ -90,13 +88,13 @@ const migrations = [
 const STORAGE_VERSION = migrations.length + 1;
 
 function seed() {
-    // Fresh install: deep-copy the seed and stamp the current version. The
-    // seed is assumed to be authored in the current shape, so no migrations
-    // run against it.
-    const cycles = JSON.parse(JSON.stringify(seedCycles));
-    localStorage.setItem("grow_cycles", JSON.stringify(cycles));
+    // Fresh install starts empty. The user creates their first grow cycle
+    // through the "+ New Cycle" modal, or restores from a JSON backup via
+    // the Import button in Stats. No bundled sample data — the export/import
+    // flow is the canonical way to seed an install with prior history.
+    localStorage.setItem("grow_cycles", "[]");
     localStorage.setItem("grow_version", String(STORAGE_VERSION));
-    return cycles;
+    return [];
 }
 
 export function loadCycles() {
@@ -121,13 +119,21 @@ export function saveCycles(cycles) {
 }
 
 export function loadActiveCycleId(cycles) {
+    // No cycles yet (fresh install, or last one just got deleted) — no
+    // active cycle to point at. The UI handles null gracefully; the user
+    // just needs to tap "+ New Cycle".
+    if (!cycles.length) return null;
     const stored = localStorage.getItem("active_cycle_id");
     if (stored && cycles.find((c) => c.id === stored)) return stored;
     return cycles[cycles.length - 1].id;
 }
 
 export function saveActiveCycleId(id) {
-    localStorage.setItem("active_cycle_id", id);
+    if (id == null) {
+        localStorage.removeItem("active_cycle_id");
+    } else {
+        localStorage.setItem("active_cycle_id", id);
+    }
 }
 
 export function loadCollapsedCycles() {

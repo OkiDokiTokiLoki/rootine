@@ -75,6 +75,12 @@ function resetPlantNotesDraft(seed) {
     renderPlantObsList();
 }
 
+function syncHeaderActions() {
+    const btn = document.getElementById("header-add-plants-btn");
+    if (!btn) return;
+    btn.style.display = cycles.length === 0 ? "none" : "";
+}
+
 function renderAddForm() {
     const plants = cyclePlants();
     const cycle = activeCycle();
@@ -89,26 +95,18 @@ function renderAddForm() {
               });
 
     const tabsContainer = document.getElementById("plant-tabs");
+    syncHeaderActions();
     tabsContainer.innerHTML = "";
-    if (plants.length === 0) {
+    if (cycles.length === 0) {
+        const empty = document.createElement("div");
+        empty.style.cssText = "padding: 14px; color: var(--muted); font-size: 13px; text-align: center; background: var(--surface2); border: 0.5px dashed var(--border2); border-radius: 10px;";
+        empty.innerHTML = 'No grow cycles yet. Tap <span onclick="newCycle()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ New Cycle</span> to start one.';
+        tabsContainer.appendChild(empty);
+    } else if (plants.length === 0) {
         const empty = document.createElement("div");
         empty.style.cssText = "padding: 14px; color: var(--muted); font-size: 13px; text-align: center; background: var(--surface2); border: 0.5px dashed var(--border2); border-radius: 10px;";
         empty.innerHTML = 'No plants yet for this grow cycle. Tap <span onclick="openPlantManager()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.';
         tabsContainer.appendChild(empty);
-    } else {
-        sortedPlants.forEach((p, i) => {
-            const tab = document.createElement("div");
-            tab.className = "plant-tab" + (i === 0 ? " active" : "");
-            tab.appendChild(document.createTextNode(p));
-            tab.dataset.plant = p;
-            tab.onclick = () => switchPlant(p);
-            tabsContainer.appendChild(tab);
-            if (isFavourite(cycle, p)) {
-                const star = document.createElement("span");
-                star.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-                tab.appendChild(star.firstChild);
-            }
-        });
     }
 
     const panelsContainer = document.getElementById("plant-panels");
@@ -783,7 +781,34 @@ function renderPlantDetailModal(cycle, name) {
     typeEl.className = typeBadgeClass;
     typeEl.textContent = typeLabel;
 
-    const fmtStamp = (s) => (s ? `${fmtDate(s)} · ${fmtTime(s)}` : "—");
+    const now = new Date();
+    const fmtStamp = (s, withRelative = false) => {
+        if (!s) return "—";
+        const abs = fmtDate(s);
+        if (!withRelative) return abs;
+        const then = new Date(s);
+        const diffMs = now - then;
+        const future = diffMs < 0;
+        const absMs = Math.abs(diffMs);
+        const mins = Math.round(absMs / 60000);
+        const hrs = Math.round(absMs / 3600000);
+        const days = Math.floor(absMs / 86400000);
+        let rel;
+        if (mins < 1) rel = "just now";
+        else if (mins < 60) rel = `${mins} min${mins === 1 ? "" : "s"} ago`;
+        else if (hrs < 24) rel = `${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+        else if (days < 30) rel = `${days} day${days === 1 ? "" : "s"} ago`;
+        else {
+            const months = Math.floor(days / 30);
+            rel = future ? `in ${months} mo` : `${months} mo ago`;
+        }
+        if (future) {
+            const flipped = rel.replace(/^in /, "").replace(/ ago$/, "");
+            return `${abs} <span class="plant-detail-rel">in ${flipped}</span>`;
+        }
+        return `${abs} <span class="plant-detail-rel">${rel}</span>`;
+    };
+
     const repottedFmt = repottedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
     const notesHtml =
@@ -851,19 +876,19 @@ function renderPlantDetailModal(cycle, name) {
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Last fed</div>
-            <div class="plant-detail-value">${fmtStamp(lastFeed)}</div>
+            <div class="plant-detail-value">${fmtStamp(lastFeed, true)}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Last watered</div>
-            <div class="plant-detail-value">${fmtStamp(lastWater)}</div>
+            <div class="plant-detail-value">${fmtStamp(lastWater, true)}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Last LST'd</div>
-            <div class="plant-detail-value">${fmtStamp(lastLst)}</div>
+            <div class="plant-detail-value">${fmtStamp(lastLst, true)}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Last defoliated</div>
-            <div class="plant-detail-value">${fmtStamp(lastDefoliate)}</div>
+            <div class="plant-detail-value">${fmtStamp(lastDefoliate, true)}</div>
         </div>
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Notes</div>
@@ -907,6 +932,7 @@ window.confirmNewCycle = function () {
     updateGrowAge();
     renderAddForm();
     renderAll();
+    syncHeaderActions();
     resetAddForm();
     setDateDefault();
     updateLightStatus();

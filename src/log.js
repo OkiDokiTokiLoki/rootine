@@ -190,6 +190,6 @@ export function renderLog(cycles, activeCycleId) {
         </div>`;
     });
 
-    if (!html) html = '<div class="empty">No entries yet. Tap <span onclick="showTab(\'add\')" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging.</div>';
+    if (!html) html = '<div class="empty">No entries yet. Tap <span onclick="newCycle()" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging.</div>';
     document.getElementById("log-list").innerHTML = html;
 }
