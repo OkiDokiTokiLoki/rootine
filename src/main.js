@@ -438,6 +438,8 @@ function resetAddForm() {
     ["fish", "grow", "bloom", "water"].forEach((n) => {
         const el = document.getElementById("nutrient-" + n);
         if (el) el.value = "";
+        const concEl = document.getElementById("nutrient-" + n + "-conc");
+        if (concEl) concEl.value = "";
     });
 
     ["lst", "def", "repot"].forEach((id) => {
@@ -819,7 +821,7 @@ function renderPlantDetailModal(cycle, name) {
     const typeLabel = type === "auto" ? "AUTO" : "PHOTO";
     const typeBadgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
 
-    const t = { fish: 0, grow: 0, bloom: 0, water: 0 };
+    const t = { fish: 0, grow: 0, bloom: 0, water: 0, fishConc: null, growConc: null, bloomConc: null, waterConc: null, fishConcDate: null, growConcDate: null, bloomConcDate: null, waterConcDate: null };
     let lastFeed = null;
     let lastWater = null;
     let lastLst = null;
@@ -836,6 +838,18 @@ function renderPlantDetailModal(cycle, name) {
             t.grow += pd.grow || 0;
             t.bloom += pd.bloom || 0;
             t.water += pd.water || 0;
+            // Track the most recent non-zero concentration per nutrient,
+            // along with the date it was logged.
+            ["fish", "grow", "bloom", "water"].forEach((n) => {
+                const concKey = n + "Conc";
+                if (pd[concKey]) {
+                    const dateKey = concKey + "Date";
+                    if (!t[dateKey] || new Date(e.dt) > new Date(t[dateKey])) {
+                        t[concKey] = pd[concKey];
+                        t[dateKey] = e.dt;
+                    }
+                }
+            });
             const isFeed = pd.fish || pd.grow || pd.bloom;
             const isWater = pd.water;
             if (isFeed) {
@@ -874,6 +888,19 @@ function renderPlantDetailModal(cycle, name) {
 
     plantObsItems.sort((a, b) => new Date(b.dt) - new Date(a.dt));
 
+    // For each nutrient, count how many feed entries used the same value as
+    // the latest logged concentration (distinct from the cycle-wide cup total).
+    const concFeedCount = { fish: 0, grow: 0, bloom: 0, water: 0 };
+    ["fish", "grow", "bloom", "water"].forEach((n) => {
+        const concKey = n + "Conc";
+        const latest = t[concKey];
+        if (latest == null) return;
+        cycle.entries.forEach((e) => {
+            const pd = e.plants?.[name];
+            if (pd && pd[concKey] === latest) concFeedCount[n]++;
+        });
+    });
+
     const repottedAt = meta.repottedAt || cycle.startDate;
     const repottedDate = repottedAt ? new Date(repottedAt) : new Date(cycle.startDate);
     const ageDays = Math.max(0, Math.floor((new Date() - repottedDate) / (24 * 60 * 60 * 1000)));
@@ -893,10 +920,7 @@ function renderPlantDetailModal(cycle, name) {
     typeEl.textContent = typeLabel;
 
     const now = new Date();
-    const fmtStamp = (s, withRelative = false) => {
-        if (!s) return "—";
-        const abs = fmtDate(s);
-        if (!withRelative) return abs;
+    const relStr = (s) => {
         const then = new Date(s);
         const diffMs = now - then;
         const future = diffMs < 0;
@@ -915,12 +939,39 @@ function renderPlantDetailModal(cycle, name) {
         }
         if (future) {
             const flipped = rel.replace(/^in /, "").replace(/ ago$/, "");
-            return `${abs} <span class="plant-detail-rel">in ${flipped}</span>`;
+            return `in ${flipped}`;
         }
-        return `${abs} <span class="plant-detail-rel">${rel}</span>`;
+        return rel;
+    };
+    const fmtStamp = (s, withRelative = false) => {
+        if (!s) return "—";
+        const abs = fmtDate(s);
+        if (!withRelative) return abs;
+        return `<span class="plant-detail-rel">${relStr(s)}</span> ${abs}`;
     };
 
     const repottedFmt = repottedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+    const nutrientBlock = (label, nutrientClass, qty, concVal, concDate, feedsAtConc) => `
+        <div class="plant-detail-nutrient-block">
+            <div class="plant-detail-nutrient-name ${nutrientClass}">${label}</div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Latest concentration</div>
+                <div class="plant-detail-value">${concVal != null ? concVal + " ml/l" : "—"}</div>
+            </div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Date</div>
+                <div class="plant-detail-value">${concDate ? `<span class="plant-detail-rel">${relStr(concDate)}</span> ${fmtDate(concDate)}` : "—"}</div>
+            </div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Concentration total</div>
+                <div class="plant-detail-value">${feedsAtConc} feed${feedsAtConc === 1 ? "" : "s"}</div>
+            </div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Cycle total</div>
+                <div class="plant-detail-value ${nutrientClass}">${qty.toFixed(1)} cup${qty === 1 ? "" : "s"}</div>
+            </div>
+        </div>`;
 
     const notesHtml =
         plantObsItems.length === 0
@@ -946,26 +997,14 @@ function renderPlantDetailModal(cycle, name) {
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Age (since repot)</div>
-            <div class="plant-detail-value">${ageDays} days · ${ageWeeks} week${ageWeeks === 1 ? "" : "s"}</div>
+            <div class="plant-detail-value"><span class="plant-detail-rel">${ageWeeks} week${ageWeeks === 1 ? "" : "s"}</span> ${ageDays} day${ageDays === 1 ? "" : "s"}</div>
         </div>
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Fish</div>
-            <div class="plant-detail-value nutrient--fish">${t.fish.toFixed(1)} cup${t.fish === 1 ? "" : "s"}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Grow</div>
-            <div class="plant-detail-value nutrient--grow">${t.grow.toFixed(1)} cup${t.grow === 1 ? "" : "s"}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Bloom</div>
-            <div class="plant-detail-value nutrient--bloom">${t.bloom.toFixed(1)} cup${t.bloom === 1 ? "" : "s"}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Water</div>
-            <div class="plant-detail-value nutrient--water">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
-        </div>
+        ${nutrientBlock("Fish", "nutrient--fish", t.fish, t.fishConc, t.fishConcDate, concFeedCount.fish)}
+        ${nutrientBlock("Grow", "nutrient--grow", t.grow, t.growConc, t.growConcDate, concFeedCount.grow)}
+        ${nutrientBlock("Bloom", "nutrient--bloom", t.bloom, t.bloomConc, t.bloomConcDate, concFeedCount.bloom)}
+        ${nutrientBlock("Water", "nutrient--water", t.water, t.waterConc, t.waterConcDate, concFeedCount.water)}
                 <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Activity</div>
         <div class="plant-detail-row">
@@ -1113,7 +1152,7 @@ function editEntry(id) {
     document.getElementById("new-dt").value = entry.dt;
 
     const currentPlants = new Set(cyclePlants());
-    const plantsWithData = Object.entries(entry.plants || {}).filter(([p, d]) => currentPlants.has(p) && d && (d.fish || d.grow || d.bloom || d.water));
+    const plantsWithData = Object.entries(entry.plants || {}).filter(([p, d]) => currentPlants.has(p) && d && (d.fish || d.grow || d.bloom || d.water || d.fishConc || d.growConc || d.bloomConc || d.waterConc));
 
     document.querySelectorAll(".nutrient-plant").forEach((cb) => {
         cb.checked = plantsWithData.some(([p]) => p === cb.value);
@@ -1128,10 +1167,14 @@ function editEntry(id) {
             grow: d.grow || 0,
             bloom: d.bloom || 0,
             water: d.water || 0,
+            fishConc: d.fishConc || 0,
+            growConc: d.growConc || 0,
+            bloomConc: d.bloomConc || 0,
+            waterConc: d.waterConc || 0,
         };
         if (!commonVals) {
             commonVals = vals;
-        } else if (vals.fish !== commonVals.fish || vals.grow !== commonVals.grow || vals.bloom !== commonVals.bloom || vals.water !== commonVals.water) {
+        } else if (vals.fish !== commonVals.fish || vals.grow !== commonVals.grow || vals.bloom !== commonVals.bloom || vals.water !== commonVals.water || vals.fishConc !== commonVals.fishConc || vals.growConc !== commonVals.growConc || vals.bloomConc !== commonVals.bloomConc || vals.waterConc !== commonVals.waterConc) {
             allSame = false;
             break;
         }
@@ -1140,6 +1183,8 @@ function editEntry(id) {
     ["fish", "grow", "bloom", "water"].forEach((n) => {
         const el = document.getElementById("nutrient-" + n);
         if (el) el.value = allSame && commonVals ? commonVals[n] || "" : "";
+        const concEl = document.getElementById("nutrient-" + n + "-conc");
+        if (concEl) concEl.value = allSame && commonVals ? commonVals[n + "Conc"] || "" : "";
     });
 
     const actions = entry.actions || [];
@@ -1286,13 +1331,21 @@ function saveEntry() {
     const grow = parseFloat(document.getElementById("nutrient-grow").value) || 0;
     const bloom = parseFloat(document.getElementById("nutrient-bloom").value) || 0;
     const water = parseFloat(document.getElementById("nutrient-water").value) || 0;
-    if (fish || grow || bloom || water) {
+    const fishConc = parseFloat(document.getElementById("nutrient-fish-conc").value) || 0;
+    const growConc = parseFloat(document.getElementById("nutrient-grow-conc").value) || 0;
+    const bloomConc = parseFloat(document.getElementById("nutrient-bloom-conc").value) || 0;
+    const waterConc = parseFloat(document.getElementById("nutrient-water-conc").value) || 0;
+    if (fish || grow || bloom || water || fishConc || growConc || bloomConc || waterConc) {
         selectedNutrientPlants.forEach((p) => {
             plants[p] = {};
             if (fish) plants[p].fish = fish;
             if (grow) plants[p].grow = grow;
             if (bloom) plants[p].bloom = bloom;
             if (water) plants[p].water = water;
+            if (fishConc) plants[p].fishConc = fishConc;
+            if (growConc) plants[p].growConc = growConc;
+            if (bloomConc) plants[p].bloomConc = bloomConc;
+            if (waterConc) plants[p].waterConc = waterConc;
         });
     }
 

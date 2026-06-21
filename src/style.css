@@ -463,6 +463,21 @@ input[type="datetime-local"] {
     text-align: left;
 }
 
+.nutrient-input-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nutrient-input-group .form-input {
+    width: 64px;
+}
+
+.form-input--conc {
+    font-size: 13px;
+    color: var(--muted);
+}
+
 textarea.form-input {
     resize: vertical;
     min-height: 72px;
@@ -773,12 +788,17 @@ textarea.form-input {
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
+    flex-shrink: 0;
 }
 
 .plant-detail-value {
     font-weight: 600;
     font-size: 14px;
     text-align: right;
+    flex: 1;
+    min-width: 0;
+    margin-left: 12px;
+    word-break: break-word;
 }
 
 .plant-detail-divider {
@@ -794,6 +814,30 @@ textarea.form-input {
     letter-spacing: 0.5px;
     margin-bottom: 2px;
     padding: 0 2px;
+}
+
+.plant-detail-nutrient-block {
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--r-sm);
+}
+
+.plant-detail-nutrient-block:first-of-type {
+    margin-top: 6px;
+}
+
+.plant-detail-nutrient-name {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+}
+
+.plant-detail-nutrient-block .plant-detail-row {
+    padding: 5px 0;
 }
 
 .plant-detail-obs {

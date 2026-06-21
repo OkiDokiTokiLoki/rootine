@@ -75,9 +75,6 @@ function renderPlantCard(name, totals, type, isFav, noteCount) {
     const safeName = name.replace(/'/g, "\\'");
     const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
     const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
-    // A small pill showing the number of plant-tagged notes. Hidden when
-    // there are none — the row would look cluttered otherwise.
-    const notePill = noteCount > 0 ? `<span class="plant-note-count" title="${noteCount} plant note${noteCount === 1 ? "" : "s"}"><svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 2 L18 2 L18 22 L6 22 L6 8 Z"/><path d="M6 8 L9 2 L9 8 Z"/></svg>${noteCount}</span>` : "";
 
     return `
     <div class="plant-stat-row plant-stat-row-clickable" onclick="openPlantDetail('${safeName}')">
@@ -85,7 +82,6 @@ function renderPlantCard(name, totals, type, isFav, noteCount) {
             <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span>
             ${starSvg}
             <span class="${badgeClass}" style="font-size:10px;padding:2px 6px">${typeBadge}</span>
-            ${notePill}
         </div>
         <span class="nutrient-totals">
             <span class="nutrient-totals__item nutrient-totals__item--fish">F ${totals.fish.toFixed(1)}</span>
