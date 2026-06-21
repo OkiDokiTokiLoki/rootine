@@ -438,6 +438,8 @@ function resetAddForm() {
     ["fish", "grow", "bloom", "water"].forEach((n) => {
         const el = document.getElementById("nutrient-" + n);
         if (el) el.value = "";
+    });
+    ["fish", "grow", "bloom"].forEach((n) => {
         const concEl = document.getElementById("nutrient-" + n + "-conc");
         if (concEl) concEl.value = "";
     });
@@ -821,7 +823,7 @@ function renderPlantDetailModal(cycle, name) {
     const typeLabel = type === "auto" ? "AUTO" : "PHOTO";
     const typeBadgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
 
-    const t = { fish: 0, grow: 0, bloom: 0, water: 0, fishConc: null, growConc: null, bloomConc: null, waterConc: null, fishConcDate: null, growConcDate: null, bloomConcDate: null, waterConcDate: null };
+    const t = { fish: 0, grow: 0, bloom: 0, water: 0, fishConc: null, growConc: null, bloomConc: null, fishConcDate: null, growConcDate: null, bloomConcDate: null };
     let lastFeed = null;
     let lastWater = null;
     let lastLst = null;
@@ -839,8 +841,8 @@ function renderPlantDetailModal(cycle, name) {
             t.bloom += pd.bloom || 0;
             t.water += pd.water || 0;
             // Track the most recent non-zero concentration per nutrient,
-            // along with the date it was logged.
-            ["fish", "grow", "bloom", "water"].forEach((n) => {
+            // along with the date it was logged. Water has no concentration.
+            ["fish", "grow", "bloom"].forEach((n) => {
                 const concKey = n + "Conc";
                 if (pd[concKey]) {
                     const dateKey = concKey + "Date";
@@ -890,8 +892,8 @@ function renderPlantDetailModal(cycle, name) {
 
     // For each nutrient, count how many feed entries used the same value as
     // the latest logged concentration (distinct from the cycle-wide cup total).
-    const concFeedCount = { fish: 0, grow: 0, bloom: 0, water: 0 };
-    ["fish", "grow", "bloom", "water"].forEach((n) => {
+    const concFeedCount = { fish: 0, grow: 0, bloom: 0 };
+    ["fish", "grow", "bloom"].forEach((n) => {
         const concKey = n + "Conc";
         const latest = t[concKey];
         if (latest == null) return;
@@ -952,6 +954,10 @@ function renderPlantDetailModal(cycle, name) {
 
     const repottedFmt = repottedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
+    // Each nutrient gets its own labelled block: latest concentration, the
+    // date it's been in effect since (with the same relative-duration
+    // styling used by Last fed / Last watered below), how many feeds used
+    // that exact concentration, and the running cup total for the cycle.
     const nutrientBlock = (label, nutrientClass, qty, concVal, concDate, feedsAtConc) => `
         <div class="plant-detail-nutrient-block">
             <div class="plant-detail-nutrient-name ${nutrientClass}">${label}</div>
@@ -961,7 +967,7 @@ function renderPlantDetailModal(cycle, name) {
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Date</div>
-                <div class="plant-detail-value">${concDate ? `<span class="plant-detail-rel">${relStr(concDate)}</span> ${fmtDate(concDate)}` : "—"}</div>
+                <div class="plant-detail-value">${concDate ? `<span class="plant-detail-rel">${relStr(concDate)}</span> since ${fmtDate(concDate)}` : "—"}</div>
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Concentration total</div>
@@ -1004,7 +1010,10 @@ function renderPlantDetailModal(cycle, name) {
         ${nutrientBlock("Fish", "nutrient--fish", t.fish, t.fishConc, t.fishConcDate, concFeedCount.fish)}
         ${nutrientBlock("Grow", "nutrient--grow", t.grow, t.growConc, t.growConcDate, concFeedCount.grow)}
         ${nutrientBlock("Bloom", "nutrient--bloom", t.bloom, t.bloomConc, t.bloomConcDate, concFeedCount.bloom)}
-        ${nutrientBlock("Water", "nutrient--water", t.water, t.waterConc, t.waterConcDate, concFeedCount.water)}
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Total water</div>
+            <div class="plant-detail-value nutrient--water">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
+        </div>
                 <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Activity</div>
         <div class="plant-detail-row">
@@ -1152,7 +1161,7 @@ function editEntry(id) {
     document.getElementById("new-dt").value = entry.dt;
 
     const currentPlants = new Set(cyclePlants());
-    const plantsWithData = Object.entries(entry.plants || {}).filter(([p, d]) => currentPlants.has(p) && d && (d.fish || d.grow || d.bloom || d.water || d.fishConc || d.growConc || d.bloomConc || d.waterConc));
+    const plantsWithData = Object.entries(entry.plants || {}).filter(([p, d]) => currentPlants.has(p) && d && (d.fish || d.grow || d.bloom || d.water || d.fishConc || d.growConc || d.bloomConc));
 
     document.querySelectorAll(".nutrient-plant").forEach((cb) => {
         cb.checked = plantsWithData.some(([p]) => p === cb.value);
@@ -1170,11 +1179,10 @@ function editEntry(id) {
             fishConc: d.fishConc || 0,
             growConc: d.growConc || 0,
             bloomConc: d.bloomConc || 0,
-            waterConc: d.waterConc || 0,
         };
         if (!commonVals) {
             commonVals = vals;
-        } else if (vals.fish !== commonVals.fish || vals.grow !== commonVals.grow || vals.bloom !== commonVals.bloom || vals.water !== commonVals.water || vals.fishConc !== commonVals.fishConc || vals.growConc !== commonVals.growConc || vals.bloomConc !== commonVals.bloomConc || vals.waterConc !== commonVals.waterConc) {
+        } else if (vals.fish !== commonVals.fish || vals.grow !== commonVals.grow || vals.bloom !== commonVals.bloom || vals.water !== commonVals.water || vals.fishConc !== commonVals.fishConc || vals.growConc !== commonVals.growConc || vals.bloomConc !== commonVals.bloomConc) {
             allSame = false;
             break;
         }
@@ -1183,6 +1191,8 @@ function editEntry(id) {
     ["fish", "grow", "bloom", "water"].forEach((n) => {
         const el = document.getElementById("nutrient-" + n);
         if (el) el.value = allSame && commonVals ? commonVals[n] || "" : "";
+    });
+    ["fish", "grow", "bloom"].forEach((n) => {
         const concEl = document.getElementById("nutrient-" + n + "-conc");
         if (concEl) concEl.value = allSame && commonVals ? commonVals[n + "Conc"] || "" : "";
     });
@@ -1334,8 +1344,7 @@ function saveEntry() {
     const fishConc = parseFloat(document.getElementById("nutrient-fish-conc").value) || 0;
     const growConc = parseFloat(document.getElementById("nutrient-grow-conc").value) || 0;
     const bloomConc = parseFloat(document.getElementById("nutrient-bloom-conc").value) || 0;
-    const waterConc = parseFloat(document.getElementById("nutrient-water-conc").value) || 0;
-    if (fish || grow || bloom || water || fishConc || growConc || bloomConc || waterConc) {
+    if (fish || grow || bloom || water || fishConc || growConc || bloomConc) {
         selectedNutrientPlants.forEach((p) => {
             plants[p] = {};
             if (fish) plants[p].fish = fish;
@@ -1345,7 +1354,6 @@ function saveEntry() {
             if (fishConc) plants[p].fishConc = fishConc;
             if (growConc) plants[p].growConc = growConc;
             if (bloomConc) plants[p].bloomConc = bloomConc;
-            if (waterConc) plants[p].waterConc = waterConc;
         });
     }
 
