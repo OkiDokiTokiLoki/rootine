@@ -8,8 +8,8 @@
         <meta name="apple-mobile-web-app-title" content="Rootine - Grow Journal" />
         <meta name="theme-color" content="#1a1a1a" />
         <title>Rootine</title>
-      <script type="module" crossorigin src="/rootine/assets/index-CMCRvfp6.js"></script>
-      <link rel="stylesheet" crossorigin href="/rootine/assets/index-BtWgTqeZ.css">
+      <script type="module" crossorigin src="/rootine/assets/index-BhYw3X09.js"></script>
+      <link rel="stylesheet" crossorigin href="/rootine/assets/index-Dl_k8jaD.css">
     </head>
     <body>
         <div id="app">
@@ -17,8 +17,77 @@
                 <div class="header-row">
                     <h1>🌱 Rootine</h1>
                     <div class="header-actions">
-                        <button class="btn-pill new-cycle-btn" onclick="newCycle()">+ New Cycle</button>
-                        <button class="btn-pill add-plant-btn" id="header-add-plants-btn" onclick="openPlantManager()">+ Plants</button>
+                        <button class="header-menu-btn" id="header-menu-btn" onclick="toggleHeaderMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
+                                <line x1="4" y1="7" x2="20" y2="7" />
+                                <line x1="4" y1="12" x2="20" y2="12" />
+                                <line x1="4" y1="17" x2="20" y2="17" />
+                            </svg>
+                        </button>
+                        <div class="header-menu" id="header-menu">
+                            <button
+                                class="header-menu-item"
+                                id="header-add-plants-btn"
+                                onclick="
+                                    closeHeaderMenu();
+                                    newCycle();
+                                ">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                Start new cycle
+                            </button>
+                            <button
+                                class="header-menu-item"
+                                onclick="
+                                    closeHeaderMenu();
+                                    openPlantManager();
+                                ">
+                                <svg viewBox="0 0 24 20" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
+                                    <path d="M12 2L6.5 12a6 6 0 1 0 11 0L12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                    <line x1="12" y1="2" x2="12" y2="27" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                </svg>
+                                Plant manager
+                            </button>
+                            <button
+                                class="header-menu-item"
+                                onclick="
+                                    closeHeaderMenu();
+                                    openNutrientManager();
+                                ">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                Nutrient manager
+                            </button>
+                            <button
+                                class="header-menu-item"
+                                onclick="
+                                    closeHeaderMenu();
+                                    exportBackup();
+                                ">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                Export backup data
+                            </button>
+                            <input type="file" id="import-backup-input" accept=".json" class="hidden-input" onchange="importBackup(event)" />
+                            <button
+                                class="header-menu-item"
+                                onclick="
+                                    closeHeaderMenu();
+                                    document.getElementById('import-backup-input').click();
+                                ">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                Import backup data
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="subtitle-row">
@@ -157,7 +226,7 @@
                     <div id="obs-list"></div>
 
                     <div class="section-title section-title--spaced">Settings</div>
-                    <div class="form-section">
+                    <!-- <div class="form-section">
                         <div class="settings-row">
                             <div class="settings-row__label">
                                 <div class="settings-row__title">Export backup</div>
@@ -174,7 +243,7 @@
                             <input type="file" id="import-backup-input" accept=".json" class="hidden-input" onchange="importBackup(event)" />
                             <button class="btn btn-secondary btn-secondary--sm" onclick="document.getElementById('import-backup-input').click()">Import</button>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
 
@@ -266,10 +335,10 @@
             </div>
         </div>
 
-        <!-- Plant manage modal -->
+        <!-- Plant manager modal -->
         <div id="plant-manage-modal" class="modal-overlay" style="display: none">
             <div class="modal-content modal-content--wide modal-content--tall">
-                <div class="modal-title">Manage Plants</div>
+                <div class="modal-title">Plant Manager</div>
                 <div class="modal-subtitle">Plants for the current grow cycle.</div>
                 <div id="plant-list" class="modal-scroll"></div>
                 <div class="modal-actions">
