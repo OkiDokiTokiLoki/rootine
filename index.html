@@ -35,7 +35,7 @@
                                     <line x1="12" y1="5" x2="12" y2="19" />
                                     <line x1="5" y1="12" x2="19" y2="12" />
                                 </svg>
-                                Start New Cycle
+                                Start new cycle
                             </button>
                             <button
                                 class="header-menu-item"
@@ -43,25 +43,48 @@
                                     closeHeaderMenu();
                                     openPlantManager();
                                 ">
-                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
-                                    <line x1="12" y1="5" x2="12" y2="19" />
-                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                <svg viewBox="0 0 24 20" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
+                                    <path d="M12 2L6.5 12a6 6 0 1 0 11 0L12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                    <line x1="12" y1="2" x2="12" y2="27" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                                 </svg>
-                                Plant Manager
+                                Plant manager
                             </button>
-                            <button class="header-menu-item" onclick="exportBackup()">
+                            <button
+                                class="header-menu-item"
+                                onclick="
+                                    closeHeaderMenu();
+                                    openNutrientManager();
+                                ">
                                 <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
                                     <line x1="12" y1="5" x2="12" y2="19" />
                                     <line x1="5" y1="12" x2="19" y2="12" />
                                 </svg>
-                                Export Data
+                                Nutrient manager
                             </button>
-                            <button class="header-menu-item" onclick="document.getElementById('import-backup-input').click()">
+                            <button
+                                class="header-menu-item"
+                                onclick="
+                                    closeHeaderMenu();
+                                    exportBackup();
+                                ">
                                 <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
                                     <line x1="12" y1="5" x2="12" y2="19" />
                                     <line x1="5" y1="12" x2="19" y2="12" />
                                 </svg>
-                                Import Data
+                                Export backup data
+                            </button>
+                            <input type="file" id="import-backup-input" accept=".json" class="hidden-input" onchange="importBackup(event)" />
+                            <button
+                                class="header-menu-item"
+                                onclick="
+                                    closeHeaderMenu();
+                                    document.getElementById('import-backup-input').click();
+                                ">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                Import backup data
                             </button>
                         </div>
                     </div>

@@ -535,6 +535,32 @@ textarea.form-input {
     flex-wrap: wrap;
 }
 
+.plant-picker-list--scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin-right: -16px;
+    padding-right: 16px;
+    cursor: grab;
+    user-select: none;
+}
+
+.plant-picker-list--scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.plant-picker-list--scroll .plant-picker-opt {
+    flex-shrink: 0;
+}
+
+.plant-picker-list--scroll.dragging {
+    cursor: grabbing;
+}
+
 .plant-picker-opt {
     display: flex;
     align-items: center;
@@ -1125,6 +1151,32 @@ textarea.form-input {
     margin-bottom: 14px;
 }
 
+.stats-cycle-toggle--scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin-right: -16px;
+    padding-right: 16px;
+    cursor: grab;
+    user-select: none;
+}
+
+.stats-cycle-toggle--scroll.dragging {
+    cursor: grabbing;
+}
+
+.stats-cycle-toggle--scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.stats-cycle-toggle--scroll .stats-cycle-btn {
+    flex-shrink: 0;
+}
+
 .stats-cycle-btn {
     padding: 6px 14px;
     font-size: 12px;
@@ -1356,6 +1408,7 @@ textarea.form-input {
     color: var(--blue);
 }
 
+/* ----- Legacy class aliases (existing markup still works) ----- */
 .submit-btn {
     width: 100%;
     padding: 14px;
@@ -1390,7 +1443,7 @@ textarea.form-input {
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
-    min-width: 170px;
+    min-width: max-content;
     background: var(--surface2);
     border: 0.5px solid var(--border);
     border-radius: var(--r-md);
@@ -1420,6 +1473,10 @@ textarea.form-input {
     font-weight: 600;
     text-align: left;
     cursor: pointer;
+}
+
+.header-menu-item:active {
+    background: var(--surface3, rgba(255, 255, 255, 0.06));
 }
 
 .header-menu-item svg {

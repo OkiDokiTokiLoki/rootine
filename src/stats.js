@@ -97,8 +97,11 @@ function renderPlantCard(name, totals, type, isFav, noteCount) {
 }
 
 export function renderStats(cycles, activeCycleId) {
+    const CYCLE_TOGGLE_SCROLL_THRESHOLD = 0;
+    const useScroll = cycles.length + 1 > CYCLE_TOGGLE_SCROLL_THRESHOLD;
+
     const toggleHtml = `
-    <div class="stats-cycle-toggle">
+    <div class="stats-cycle-toggle${useScroll ? " stats-cycle-toggle--scroll" : ""}">
       ${cycles
           .map(
               (c) => `
@@ -109,7 +112,7 @@ export function renderStats(cycles, activeCycleId) {
       `
           )
           .join("")}
-      <button class="stats-cycle-btn${statsMode === "all" ? " active" : ""}" onclick="setStatsCycle('all')">All</button>
+      <button class="stats-cycle-btn${statsMode === "all" ? " active" : ""}" onclick="setStatsCycle('all')">All cycles</button>
     </div>`;
 
     // Determine which cycles feed the stats. For "all" we want every cycle's

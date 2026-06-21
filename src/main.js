@@ -81,6 +81,53 @@ document.addEventListener("click", (e) => {
     closeHeaderMenu();
 });
 
+(function initDragScroll() {
+    const SCROLL_SELECTOR = ".stats-cycle-toggle--scroll, .plant-picker-list--scroll";
+    let scroller = null;
+    let isDown = false;
+    let startX = 0;
+    let startScroll = 0;
+    let moved = false;
+
+    document.addEventListener("mousedown", (e) => {
+        scroller = e.target.closest(SCROLL_SELECTOR);
+        if (!scroller) return;
+        isDown = true;
+        moved = false;
+        startX = e.pageX;
+        startScroll = scroller.scrollLeft;
+        scroller.classList.add("dragging");
+    });
+
+    window.addEventListener("mousemove", (e) => {
+        if (!isDown || !scroller) return;
+        const dx = e.pageX - startX;
+        if (Math.abs(dx) > 4) moved = true;
+        scroller.scrollLeft = startScroll - dx;
+    });
+
+    function endDrag() {
+        if (scroller) scroller.classList.remove("dragging");
+        isDown = false;
+        scroller = null;
+    }
+    window.addEventListener("mouseup", endDrag);
+    window.addEventListener("mouseleave", endDrag);
+
+    document.addEventListener(
+        "click",
+        (e) => {
+            const target = e.target.closest(SCROLL_SELECTOR);
+            if (target && moved) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            moved = false;
+        },
+        true
+    );
+})();
+
 const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
 
 function activeCycle() {
@@ -139,6 +186,9 @@ function renderAddForm() {
             nutrientList.appendChild(empty);
         } else {
             if (nutrientInputs) nutrientInputs.style.display = "block";
+
+            const PLANT_LIST_SCROLL_THRESHOLD = 0;
+            nutrientList.classList.toggle("plant-picker-list--scroll", sortedPlants.length + 1 > PLANT_LIST_SCROLL_THRESHOLD);
 
             const allWrap = document.createElement("label");
             allWrap.className = "plant-picker-opt plant-picker-opt-all";
