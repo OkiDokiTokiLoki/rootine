@@ -55,6 +55,31 @@ window.addPlantObs = addPlantObs;
 window.removePlantObs = removePlantObs;
 window.exportBackup = exportBackup;
 window.importBackup = importBackup;
+window.toggleHeaderMenu = toggleHeaderMenu;
+window.closeHeaderMenu = closeHeaderMenu;
+
+function toggleHeaderMenu(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById("header-menu");
+    const btn = document.getElementById("header-menu-btn");
+    const isOpen = menu.classList.toggle("open");
+    btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
+function closeHeaderMenu() {
+    const menu = document.getElementById("header-menu");
+    const btn = document.getElementById("header-menu-btn");
+    menu.classList.remove("open");
+    btn.setAttribute("aria-expanded", "false");
+}
+
+document.addEventListener("click", (e) => {
+    const menu = document.getElementById("header-menu");
+    const btn = document.getElementById("header-menu-btn");
+    if (!menu || !menu.classList.contains("open")) return;
+    if (menu.contains(e.target) || btn.contains(e.target)) return;
+    closeHeaderMenu();
+});
 
 const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
 

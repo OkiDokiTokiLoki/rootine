@@ -1356,7 +1356,6 @@ textarea.form-input {
     color: var(--blue);
 }
 
-/* ----- Legacy class aliases (existing markup still works) ----- */
 .submit-btn {
     width: 100%;
     padding: 14px;
@@ -1374,17 +1373,58 @@ textarea.form-input {
     opacity: 0.85;
 }
 
-.new-cycle-btn,
-.add-plant-btn {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 6px 12px;
-    background: var(--green-bg);
+.header-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
     color: var(--green);
-    border: 0.5px solid var(--green);
-    border-radius: var(--r-pill);
+    border: none;
     cursor: pointer;
-    white-space: nowrap;
+}
+
+.header-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 170px;
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 50;
+}
+
+.header-menu.open {
+    display: flex;
+}
+
+.header-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    background: transparent;
+    border: none;
+    border-radius: var(--r-sm);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.header-menu-item svg {
+    flex-shrink: 0;
+    color: var(--green);
 }
 
 .settings-btn {
@@ -1557,6 +1597,7 @@ textarea.form-input {
     display: flex;
     gap: 8px;
     align-items: center;
+    position: relative;
 }
 
 /* Light status (header subtitle row) */
