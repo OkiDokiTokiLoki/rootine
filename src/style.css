@@ -470,7 +470,7 @@ input[type="datetime-local"] {
 }
 
 .nutrient-input-group .form-input {
-    width: 64px;
+    width: 70px;
 }
 
 .form-input--conc {
@@ -482,6 +482,93 @@ textarea.form-input {
     resize: vertical;
     min-height: 72px;
     line-height: 1.5;
+}
+
+.nutrient-plant-row {
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--r-md);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.nutrient-plant-row:last-child {
+    margin-bottom: 0;
+}
+
+.nutrient-plant-row-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 0.5px solid var(--border);
+}
+
+.nutrient-plant-row-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.nutrient-plant-row-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.nutrient-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 0;
+}
+
+.nutrient-field-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+    flex-shrink: 0;
+    min-width: 50px;
+}
+
+.nutrient-field-label--fish {
+    color: var(--fish);
+}
+.nutrient-field-label--grow {
+    color: var(--grow);
+}
+.nutrient-field-label--bloom {
+    color: var(--bloom);
+}
+.nutrient-field-label--water {
+    color: var(--blue);
+}
+
+.nutrient-field-inputs {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.nutrient-field-inputs .form-input {
+    width: 56px;
+    padding: 5px 8px;
+    font-size: 13px;
+    text-align: right;
+}
+
+.nutrient-field-inputs .form-input--conc {
+    width: 50px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.nutrient-empty {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 0;
 }
 
 .checkbox-row {
@@ -668,6 +755,69 @@ textarea.form-input {
 
 .week-entries.collapsed {
     display: none;
+}
+
+.nutrient-plant-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    gap: 6px;
+    padding-bottom: 2px;
+    margin: 0 -16px 12px;
+    padding-left: 16px;
+    padding-right: 16px;
+    cursor: grab;
+    user-select: none;
+}
+
+.nutrient-plant-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.nutrient-plant-tabs.dragging {
+    cursor: grabbing;
+}
+
+.nutrient-tab {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 13px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--r-sm);
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        background 0.12s ease,
+        border-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.nutrient-tab.active {
+    background: var(--green-bg);
+    border-color: var(--green);
+    color: var(--green);
+    font-weight: 600;
+}
+
+.nutrient-active-name {
+    font-size: 12px;
+    color: var(--muted);
+    margin: -6px 0 10px;
+}
+
+.nutrient-empty {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 0;
 }
 
 /* ===== Observation (stats page) ===== */

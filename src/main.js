@@ -16,6 +16,8 @@ let pendingRenamePlantType = "auto";
 let editingPlantObsIndex = null;
 let pendingPlantObs = [];
 let selectedPlantObsTab = null;
+let nutrientDrafts = {};
+let nutrientActiveTab = "__ALL__";
 
 initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
@@ -82,7 +84,7 @@ document.addEventListener("click", (e) => {
 });
 
 (function initDragScroll() {
-    const SCROLL_SELECTOR = ".stats-cycle-toggle--scroll, .plant-picker-list--scroll";
+    const SCROLL_SELECTOR = ".stats-cycle-toggle--scroll, .plant-picker-list--scroll, .nutrient-plant-tabs";
     let scroller = null;
     let isDown = false;
     let startX = 0;
@@ -130,6 +132,77 @@ document.addEventListener("click", (e) => {
 
 const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
 
+const NUTRIENT_FIELDS = [
+    ["fish", "nutrient-fish"],
+    ["grow", "nutrient-grow"],
+    ["bloom", "nutrient-bloom"],
+    ["water", "nutrient-water"],
+    ["fishConc", "nutrient-fish-conc"],
+    ["growConc", "nutrient-grow-conc"],
+    ["bloomConc", "nutrient-bloom-conc"],
+];
+
+function readNutrientInputs() {
+    const out = {};
+    NUTRIENT_FIELDS.forEach(([key, id]) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const raw = el.value;
+        if (raw.trim() === "") {
+            const previewHadValue = el.dataset.previewHadValue === "1";
+            if (previewHadValue) out[key] = null;
+            return;
+        }
+        const n = parseFloat(raw);
+        if (!isNaN(n)) out[key] = n;
+    });
+    return out;
+}
+
+function writeNutrientInputs(data) {
+    NUTRIENT_FIELDS.forEach(([key, id]) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const v = data ? data[key] : undefined;
+        const hasValue = v != null && v !== "";
+        el.value = hasValue ? String(v) : "";
+        if (hasValue) {
+            el.dataset.previewHadValue = "1";
+        } else {
+            delete el.dataset.previewHadValue;
+        }
+    });
+}
+
+function setNutrientTab(tab) {
+    const outgoing = readNutrientInputs();
+    if (Object.keys(outgoing).length > 0) {
+        nutrientDrafts[nutrientActiveTab] = { ...(nutrientDrafts[nutrientActiveTab] || {}), ...outgoing };
+    }
+
+    nutrientActiveTab = tab;
+    const incoming = nutrientDrafts[tab] || {};
+
+    const preview = { ...(nutrientDrafts["__ALL__"] || {}), ...incoming };
+    writeNutrientInputs(preview);
+
+    document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((el) => {
+        el.classList.toggle("active", el.dataset.tab === tab);
+    });
+    const cycle = activeCycle();
+    const labelEl = document.getElementById("nutrient-active-name");
+    if (labelEl) {
+        if (tab === "__ALL__") {
+            const count = (cycle?.plants || []).length;
+            labelEl.textContent = count > 0 ? `Values apply to all ${count} plant${count === 1 ? "" : "s"}.` : "";
+            labelEl.style.display = count > 0 ? "" : "none";
+        } else {
+            labelEl.textContent = tab === "__ALL__" ? "" : `Extra values for ${tab} (in addition to All).`;
+            labelEl.style.display = "";
+        }
+    }
+}
+
 function activeCycle() {
     return cycles.find((c) => c.id === activeCycleId);
 }
@@ -168,60 +241,72 @@ function renderAddForm() {
 
     syncHeaderActions();
 
-    const nutrientList = document.getElementById("nutrient-plants-list");
-    const nutrientInputs = document.getElementById("nutrient-inputs");
-    if (nutrientList) {
-        nutrientList.innerHTML = "";
+    const nutrientTabs = document.getElementById("nutrient-plant-tabs");
+    if (nutrientTabs) {
+        nutrientTabs.innerHTML = "";
         if (cycles.length === 0) {
-            if (nutrientInputs) nutrientInputs.style.display = "none";
             const empty = document.createElement("div");
-            empty.style.cssText = "font-size: 12px; color: var(--muted); padding: 4px 0";
+            empty.className = "nutrient-empty";
             empty.innerHTML = 'No grow cycles yet. Tap <span onclick="newCycle()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ New Cycle</span> to start one.';
-            nutrientList.appendChild(empty);
-        } else if (plants.length === 0) {
-            if (nutrientInputs) nutrientInputs.style.display = "none";
+            nutrientTabs.appendChild(empty);
+        } else if (sortedPlants.length === 0) {
             const empty = document.createElement("div");
-            empty.style.cssText = "font-size: 12px; color: var(--muted); padding: 4px 0";
+            empty.className = "nutrient-empty";
             empty.innerHTML = 'No plants yet. Tap <span onclick="openPlantManager()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.';
-            nutrientList.appendChild(empty);
+            nutrientTabs.appendChild(empty);
         } else {
-            if (nutrientInputs) nutrientInputs.style.display = "block";
-
-            const PLANT_LIST_SCROLL_THRESHOLD = 0;
-            nutrientList.classList.toggle("plant-picker-list--scroll", sortedPlants.length + 1 > PLANT_LIST_SCROLL_THRESHOLD);
-
-            const allWrap = document.createElement("label");
-            allWrap.className = "plant-picker-opt plant-picker-opt-all";
-            const allCb = document.createElement("input");
-            allCb.type = "checkbox";
-            allCb.className = "nutrient-plant-all";
-            allCb.onchange = () => {
-                const individual = nutrientList.querySelectorAll(".nutrient-plant");
-                individual.forEach((cb) => {
-                    cb.checked = allCb.checked;
-                });
-            };
-            allWrap.appendChild(allCb);
-            allWrap.appendChild(document.createTextNode("All plants"));
-            nutrientList.appendChild(allWrap);
+            const allTab = document.createElement("button");
+            allTab.type = "button";
+            allTab.className = "nutrient-tab";
+            allTab.dataset.tab = "__ALL__";
+            allTab.textContent = "All";
+            nutrientTabs.appendChild(allTab);
 
             sortedPlants.forEach((p) => {
-                const label = document.createElement("label");
-                label.className = "plant-picker-opt";
-                const cb = document.createElement("input");
-                cb.type = "checkbox";
-                cb.className = "nutrient-plant";
-                cb.value = p;
-                cb.onchange = updateNutrientAllToggle;
-                label.appendChild(cb);
-                label.appendChild(document.createTextNode(p));
+                const tab = document.createElement("button");
+                tab.type = "button";
+                tab.className = "nutrient-tab";
+                tab.dataset.tab = p;
                 if (isFavourite(cycle, p)) {
-                    const starWrap = document.createElement("span");
-                    starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-                    label.appendChild(starWrap.firstChild);
+                    const star = document.createElement("span");
+                    star.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:10px;height:10px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                    tab.appendChild(star.firstChild);
                 }
-                nutrientList.appendChild(label);
+                tab.appendChild(document.createTextNode(p));
+                nutrientTabs.appendChild(tab);
             });
+
+            nutrientTabs.querySelectorAll(".nutrient-tab").forEach((tab) => {
+                tab.addEventListener("click", () => setNutrientTab(tab.dataset.tab));
+            });
+
+            if (!Object.keys(nutrientDrafts).length) {
+                nutrientActiveTab = "__ALL__";
+            }
+            if (nutrientActiveTab !== "__ALL__" && !sortedPlants.includes(nutrientActiveTab)) {
+                delete nutrientDrafts[nutrientActiveTab];
+                nutrientActiveTab = "__ALL__";
+            }
+            Object.keys(nutrientDrafts).forEach((k) => {
+                if (k !== "__ALL__" && !sortedPlants.includes(k)) {
+                    delete nutrientDrafts[k];
+                }
+            });
+
+            writeNutrientInputs(nutrientDrafts[nutrientActiveTab] || {});
+            nutrientTabs.querySelectorAll(".nutrient-tab").forEach((el) => {
+                el.classList.toggle("active", el.dataset.tab === nutrientActiveTab);
+            });
+            const labelEl = document.getElementById("nutrient-active-name");
+            if (labelEl) {
+                if (nutrientActiveTab === "__ALL__") {
+                    labelEl.textContent = `Values apply to all ${sortedPlants.length} plants.`;
+                    labelEl.style.display = "";
+                } else {
+                    labelEl.textContent = `Extra values for ${nutrientActiveTab} (in addition to All).`;
+                    labelEl.style.display = "";
+                }
+            }
         }
     }
 
@@ -434,15 +519,23 @@ function showTab(name, resetScroll = false) {
 }
 
 function resetAddForm() {
-    document.querySelectorAll(".nutrient-plant, .nutrient-plant-all").forEach((el) => (el.checked = false));
-    ["fish", "grow", "bloom", "water"].forEach((n) => {
-        const el = document.getElementById("nutrient-" + n);
+    nutrientDrafts = {};
+    nutrientActiveTab = "__ALL__";
+    ["nutrient-fish", "nutrient-grow", "nutrient-bloom", "nutrient-water", "nutrient-fish-conc", "nutrient-grow-conc", "nutrient-bloom-conc"].forEach((id) => {
+        const el = document.getElementById(id);
         if (el) el.value = "";
     });
-    ["fish", "grow", "bloom"].forEach((n) => {
-        const concEl = document.getElementById("nutrient-" + n + "-conc");
-        if (concEl) concEl.value = "";
-    });
+    if (document.querySelector("#nutrient-plant-tabs .nutrient-tab")) {
+        document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((el) => {
+            el.classList.toggle("active", el.dataset.tab === "__ALL__");
+        });
+        const labelEl = document.getElementById("nutrient-active-name");
+        if (labelEl) {
+            const plants = cyclePlants();
+            labelEl.textContent = plants.length > 0 ? `Values apply to all ${plants.length} plants.` : "";
+            labelEl.style.display = plants.length > 0 ? "" : "none";
+        }
+    }
 
     ["lst", "def", "repot"].forEach((id) => {
         const el = document.getElementById("ck-" + id);
@@ -500,17 +593,6 @@ function getCycleLightDefaults() {
     const cycle = activeCycle();
     if (!cycle) return {};
     return cycle.lightDefaults || {};
-}
-
-function updateNutrientAllToggle() {
-    const allCb = document.querySelector(".nutrient-plant-all");
-    if (!allCb) return;
-    const individual = document.querySelectorAll(".nutrient-plant");
-    if (individual.length === 0) {
-        allCb.checked = false;
-        return;
-    }
-    allCb.checked = [...individual].every((cb) => cb.checked);
 }
 
 function updateLightStatus() {
@@ -1160,42 +1242,21 @@ function editEntry(id) {
 
     document.getElementById("new-dt").value = entry.dt;
 
-    const currentPlants = new Set(cyclePlants());
-    const plantsWithData = Object.entries(entry.plants || {}).filter(([p, d]) => currentPlants.has(p) && d && (d.fish || d.grow || d.bloom || d.water || d.fishConc || d.growConc || d.bloomConc));
-
-    document.querySelectorAll(".nutrient-plant").forEach((cb) => {
-        cb.checked = plantsWithData.some(([p]) => p === cb.value);
+    nutrientDrafts = {};
+    Object.entries(entry.plants || {}).forEach(([name, data]) => {
+        nutrientDrafts[name] = { ...data };
     });
-    updateNutrientAllToggle();
-
-    let commonVals = null;
-    let allSame = plantsWithData.length > 0;
-    for (const [, d] of plantsWithData) {
-        const vals = {
-            fish: d.fish || 0,
-            grow: d.grow || 0,
-            bloom: d.bloom || 0,
-            water: d.water || 0,
-            fishConc: d.fishConc || 0,
-            growConc: d.growConc || 0,
-            bloomConc: d.bloomConc || 0,
-        };
-        if (!commonVals) {
-            commonVals = vals;
-        } else if (vals.fish !== commonVals.fish || vals.grow !== commonVals.grow || vals.bloom !== commonVals.bloom || vals.water !== commonVals.water || vals.fishConc !== commonVals.fishConc || vals.growConc !== commonVals.growConc || vals.bloomConc !== commonVals.bloomConc) {
-            allSame = false;
-            break;
-        }
+    nutrientActiveTab = "__ALL__";
+    writeNutrientInputs({});
+    document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((el) => {
+        el.classList.toggle("active", el.dataset.tab === "__ALL__");
+    });
+    const editLabelEl = document.getElementById("nutrient-active-name");
+    if (editLabelEl) {
+        const entryPlantCount = Object.keys(entry.plants || {}).length;
+        editLabelEl.textContent = entryPlantCount > 0 ? `Editing — values for each plant are loaded when you tap their tab.` : `Values apply to all plants.`;
+        editLabelEl.style.display = "";
     }
-
-    ["fish", "grow", "bloom", "water"].forEach((n) => {
-        const el = document.getElementById("nutrient-" + n);
-        if (el) el.value = allSame && commonVals ? commonVals[n] || "" : "";
-    });
-    ["fish", "grow", "bloom"].forEach((n) => {
-        const concEl = document.getElementById("nutrient-" + n + "-conc");
-        if (concEl) concEl.value = allSame && commonVals ? commonVals[n + "Conc"] || "" : "";
-    });
 
     const actions = entry.actions || [];
     document.getElementById("ck-lst").checked = actions.some((a) => a.startsWith("LST"));
@@ -1297,6 +1358,11 @@ function saveEntry() {
     }
 
     const cycle = activeCycle();
+    const sortedPlants = [...cyclePlants()].sort((a, b) => {
+        const aFav = isFavourite(cycle, a) ? 0 : 1;
+        const bFav = isFavourite(cycle, b) ? 0 : 1;
+        return aFav - bFav;
+    });
 
     const totalPlantCount = cyclePlants().length;
     const actions = [];
@@ -1335,27 +1401,22 @@ function saveEntry() {
         });
     }
 
-    const plants = {};
-    const selectedNutrientPlants = [...document.querySelectorAll(".nutrient-plant:checked")].map((el) => el.value);
-    const fish = parseFloat(document.getElementById("nutrient-fish").value) || 0;
-    const grow = parseFloat(document.getElementById("nutrient-grow").value) || 0;
-    const bloom = parseFloat(document.getElementById("nutrient-bloom").value) || 0;
-    const water = parseFloat(document.getElementById("nutrient-water").value) || 0;
-    const fishConc = parseFloat(document.getElementById("nutrient-fish-conc").value) || 0;
-    const growConc = parseFloat(document.getElementById("nutrient-grow-conc").value) || 0;
-    const bloomConc = parseFloat(document.getElementById("nutrient-bloom-conc").value) || 0;
-    if (fish || grow || bloom || water || fishConc || growConc || bloomConc) {
-        selectedNutrientPlants.forEach((p) => {
-            plants[p] = {};
-            if (fish) plants[p].fish = fish;
-            if (grow) plants[p].grow = grow;
-            if (bloom) plants[p].bloom = bloom;
-            if (water) plants[p].water = water;
-            if (fishConc) plants[p].fishConc = fishConc;
-            if (growConc) plants[p].growConc = growConc;
-            if (bloomConc) plants[p].bloomConc = bloomConc;
-        });
+    const currentDraft = readNutrientInputs();
+    if (Object.keys(currentDraft).length > 0) {
+        nutrientDrafts[nutrientActiveTab] = { ...(nutrientDrafts[nutrientActiveTab] || {}), ...currentDraft };
     }
+
+    const plants = {};
+    const allDraft = nutrientDrafts["__ALL__"] || {};
+
+    sortedPlants.forEach((p) => {
+        const merged = { ...allDraft, ...(nutrientDrafts[p] || {}) };
+        const data = {};
+        ["fish", "grow", "bloom", "water", "fishConc", "growConc", "bloomConc"].forEach((k) => {
+            if (merged[k] != null && merged[k] !== "") data[k] = merged[k];
+        });
+        if (Object.keys(data).length > 0) plants[p] = data;
+    });
 
     const validPlants = new Set(cyclePlants());
     const plantObs = {};
