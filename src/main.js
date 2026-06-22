@@ -190,17 +190,17 @@ function setNutrientTab(tab) {
         el.classList.toggle("active", el.dataset.tab === tab);
     });
     const cycle = activeCycle();
-    const labelEl = document.getElementById("nutrient-active-name");
-    if (labelEl) {
-        if (tab === "__ALL__") {
-            const count = (cycle?.plants || []).length;
-            labelEl.textContent = count > 0 ? `Values apply to all ${count} plant${count === 1 ? "" : "s"}.` : "";
-            labelEl.style.display = count > 0 ? "" : "none";
-        } else {
-            labelEl.textContent = tab === "__ALL__" ? "" : `Extra values for ${tab} (in addition to All).`;
-            labelEl.style.display = "";
-        }
-    }
+    // const labelEl = document.getElementById("nutrient-active-name");
+    // if (labelEl) {
+    //     if (tab === "__ALL__") {
+    //         const count = (cycle?.plants || []).length;
+    //         labelEl.textContent = count > 0 ? `Values apply to all ${count} plant${count === 1 ? "" : "s"}.` : "";
+    //         labelEl.style.display = count > 0 ? "" : "none";
+    //     } else {
+    //         labelEl.textContent = tab === "__ALL__" ? "" : `Extra values for ${tab}`;
+    //         labelEl.style.display = "";
+    //     }
+    // }
 }
 
 function activeCycle() {
@@ -297,16 +297,16 @@ function renderAddForm() {
             nutrientTabs.querySelectorAll(".nutrient-tab").forEach((el) => {
                 el.classList.toggle("active", el.dataset.tab === nutrientActiveTab);
             });
-            const labelEl = document.getElementById("nutrient-active-name");
-            if (labelEl) {
-                if (nutrientActiveTab === "__ALL__") {
-                    labelEl.textContent = `Values apply to all ${sortedPlants.length} plants.`;
-                    labelEl.style.display = "";
-                } else {
-                    labelEl.textContent = `Extra values for ${nutrientActiveTab} (in addition to All).`;
-                    labelEl.style.display = "";
-                }
-            }
+            // const labelEl = document.getElementById("nutrient-active-name");
+            // if (labelEl) {
+            //     if (nutrientActiveTab === "__ALL__") {
+            //         labelEl.textContent = `Values apply to all ${sortedPlants.length} plants.`;
+            //         labelEl.style.display = "";
+            //     } else {
+            //         labelEl.textContent = `Extra values for ${nutrientActiveTab} (in addition to All).`;
+            //         labelEl.style.display = "";
+            //     }
+            // }
         }
     }
 
@@ -529,12 +529,12 @@ function resetAddForm() {
         document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((el) => {
             el.classList.toggle("active", el.dataset.tab === "__ALL__");
         });
-        const labelEl = document.getElementById("nutrient-active-name");
-        if (labelEl) {
-            const plants = cyclePlants();
-            labelEl.textContent = plants.length > 0 ? `Values apply to all ${plants.length} plants.` : "";
-            labelEl.style.display = plants.length > 0 ? "" : "none";
-        }
+        // const labelEl = document.getElementById("nutrient-active-name");
+        // if (labelEl) {
+        //     const plants = cyclePlants();
+        //     labelEl.textContent = plants.length > 0 ? `Values apply to all ${plants.length} plants.` : "";
+        //     labelEl.style.display = plants.length > 0 ? "" : "none";
+        // }
     }
 
     ["lst", "def", "repot"].forEach((id) => {
@@ -1252,11 +1252,11 @@ function editEntry(id) {
         el.classList.toggle("active", el.dataset.tab === "__ALL__");
     });
     const editLabelEl = document.getElementById("nutrient-active-name");
-    if (editLabelEl) {
-        const entryPlantCount = Object.keys(entry.plants || {}).length;
-        editLabelEl.textContent = entryPlantCount > 0 ? `Editing — values for each plant are loaded when you tap their tab.` : `Values apply to all plants.`;
-        editLabelEl.style.display = "";
-    }
+    // if (editLabelEl) {
+    //     const entryPlantCount = Object.keys(entry.plants || {}).length;
+    //     editLabelEl.textContent = entryPlantCount > 0 ? `Editing — values for each plant are loaded when you tap their tab.` : `Values apply to all plants.`;
+    //     editLabelEl.style.display = "";
+    // }
 
     const actions = entry.actions || [];
     document.getElementById("ck-lst").checked = actions.some((a) => a.startsWith("LST"));
