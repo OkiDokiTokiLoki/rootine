@@ -1845,7 +1845,7 @@ function importBackup(event) {
             if (!Array.isArray(imported)) throw new Error("Invalid format");
             if (!confirm(`Import ${imported.length} cycle(s)? This will replace all current data.`)) return;
             localStorage.setItem("grow_cycles", JSON.stringify(imported));
-            localStorage.setItem("grow_version", "7");
+            localStorage.removeItem("grow_version");
             location.reload();
         } catch {
             alert("Invalid backup file.");
