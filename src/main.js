@@ -1,5 +1,5 @@
 import "./style.css";
-import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta } from "./utils.js";
+import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE } from "./utils.js";
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
@@ -59,6 +59,15 @@ window.exportBackup = exportBackup;
 window.importBackup = importBackup;
 window.toggleHeaderMenu = toggleHeaderMenu;
 window.closeHeaderMenu = closeHeaderMenu;
+window.openNutrientManager = openNutrientManager;
+window.closeNutrientManager = closeNutrientManager;
+window.openAddNutrient = openAddNutrient;
+window.confirmAddNutrient = confirmAddNutrient;
+window.cancelAddNutrient = cancelAddNutrient;
+window.renameNutrient = renameNutrient;
+window.confirmRenameNutrient = confirmRenameNutrient;
+window.cancelRenameNutrient = cancelRenameNutrient;
+window.deleteNutrient = deleteNutrient;
 
 function toggleHeaderMenu(e) {
     if (e) e.stopPropagation();
@@ -132,75 +141,117 @@ document.addEventListener("click", (e) => {
 
 const PLANT_NAME_RE = /^[A-Za-z0-9 _-]+$/;
 
-const NUTRIENT_FIELDS = [
-    ["fish", "nutrient-fish"],
-    ["grow", "nutrient-grow"],
-    ["bloom", "nutrient-bloom"],
-    ["water", "nutrient-water"],
-    ["fishConc", "nutrient-fish-conc"],
-    ["growConc", "nutrient-grow-conc"],
-    ["bloomConc", "nutrient-bloom-conc"],
-];
-
 function readNutrientInputs() {
-    const out = {};
-    NUTRIENT_FIELDS.forEach(([key, id]) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const raw = el.value;
+    const out = { nutrients: {}, concentrations: {}, water: null };
+    const rowsContainer = document.getElementById("nutrient-rows");
+    if (rowsContainer) {
+        rowsContainer.querySelectorAll("input[data-nutrient]").forEach((el) => {
+            const name = el.dataset.nutrient;
+            const field = el.dataset.field;
+            const raw = el.value;
+            if (raw.trim() === "") {
+                if (el.dataset.previewHadValue === "1") {
+                    if (field === "amount") out.nutrients[name] = null;
+                    else out.concentrations[name] = null;
+                }
+                return;
+            }
+            const n = parseFloat(raw);
+            if (!isNaN(n)) {
+                if (field === "amount") out.nutrients[name] = n;
+                else out.concentrations[name] = n;
+            }
+        });
+    }
+
+    const waterEl = document.getElementById("nutrient-water");
+    if (waterEl) {
+        const raw = waterEl.value;
         if (raw.trim() === "") {
-            const previewHadValue = el.dataset.previewHadValue === "1";
-            if (previewHadValue) out[key] = null;
-            return;
+            if (waterEl.dataset.previewHadValue === "1") out.water = null;
+        } else {
+            const n = parseFloat(raw);
+            if (!isNaN(n)) out.water = n;
         }
-        const n = parseFloat(raw);
-        if (!isNaN(n)) out[key] = n;
-    });
+    }
+
     return out;
 }
 
 function writeNutrientInputs(data) {
-    NUTRIENT_FIELDS.forEach(([key, id]) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const v = data ? data[key] : undefined;
+    const d = data || {};
+    const nutrients = d.nutrients || {};
+    const concentrations = d.concentrations || {};
+
+    const rowsContainer = document.getElementById("nutrient-rows");
+    if (rowsContainer) {
+        rowsContainer.querySelectorAll("input[data-nutrient]").forEach((el) => {
+            const name = el.dataset.nutrient;
+            const field = el.dataset.field;
+            const v = field === "amount" ? nutrients[name] : concentrations[name];
+            const hasValue = v != null && v !== "";
+            el.value = hasValue ? String(v) : "";
+            if (hasValue) {
+                el.dataset.previewHadValue = "1";
+            } else {
+                delete el.dataset.previewHadValue;
+            }
+        });
+    }
+
+    const waterEl = document.getElementById("nutrient-water");
+    if (waterEl) {
+        const v = d.water;
         const hasValue = v != null && v !== "";
-        el.value = hasValue ? String(v) : "";
+        waterEl.value = hasValue ? String(v) : "";
         if (hasValue) {
-            el.dataset.previewHadValue = "1";
+            waterEl.dataset.previewHadValue = "1";
         } else {
-            delete el.dataset.previewHadValue;
+            delete waterEl.dataset.previewHadValue;
         }
-    });
+    }
+}
+
+function mergeDrafts(base, overlay) {
+    const result = { nutrients: {}, concentrations: {}, water: null };
+    const apply = (src) => {
+        if (!src) return;
+        Object.entries(src.nutrients || {}).forEach(([k, v]) => {
+            if (v != null) result.nutrients[k] = v;
+        });
+        Object.entries(src.concentrations || {}).forEach(([k, v]) => {
+            if (v != null) result.concentrations[k] = v;
+        });
+        if (src.water != null) result.water = src.water;
+    };
+    apply(base);
+    apply(overlay);
+
+    const clean = {};
+    if (Object.keys(result.nutrients).length > 0) clean.nutrients = result.nutrients;
+    if (Object.keys(result.concentrations).length > 0) clean.concentrations = result.concentrations;
+    if (result.water != null) clean.water = result.water;
+    return clean;
 }
 
 function setNutrientTab(tab) {
     const outgoing = readNutrientInputs();
-    if (Object.keys(outgoing).length > 0) {
-        nutrientDrafts[nutrientActiveTab] = { ...(nutrientDrafts[nutrientActiveTab] || {}), ...outgoing };
+    const hasValues = (outgoing.nutrients && Object.keys(outgoing.nutrients).length > 0) || (outgoing.concentrations && Object.keys(outgoing.concentrations).length > 0) || outgoing.water != null;
+    if (hasValues) {
+        nutrientDrafts[nutrientActiveTab] = mergeDrafts(nutrientDrafts[nutrientActiveTab], outgoing);
     }
 
     nutrientActiveTab = tab;
-    const incoming = nutrientDrafts[tab] || {};
 
-    const preview = { ...(nutrientDrafts["__ALL__"] || {}), ...incoming };
+    const allDraft = nutrientDrafts["__ALL__"] || {};
+    const tabDraft = nutrientDrafts[tab] || {};
+    const preview = mergeDrafts(allDraft, tabDraft);
+
     writeNutrientInputs(preview);
 
     document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((el) => {
         el.classList.toggle("active", el.dataset.tab === tab);
     });
-    const cycle = activeCycle();
-    // const labelEl = document.getElementById("nutrient-active-name");
-    // if (labelEl) {
-    //     if (tab === "__ALL__") {
-    //         const count = (cycle?.plants || []).length;
-    //         labelEl.textContent = count > 0 ? `Values apply to all ${count} plant${count === 1 ? "" : "s"}.` : "";
-    //         labelEl.style.display = count > 0 ? "" : "none";
-    //     } else {
-    //         labelEl.textContent = tab === "__ALL__" ? "" : `Extra values for ${tab}`;
-    //         labelEl.style.display = "";
-    //     }
-    // }
 }
 
 function activeCycle() {
@@ -209,6 +260,13 @@ function activeCycle() {
 
 function cyclePlants() {
     return activeCycle()?.plants || [];
+}
+
+function cycleNutrients() {
+    const cycle = activeCycle();
+    if (!cycle) return [];
+    if (!Array.isArray(cycle.nutrients)) cycle.nutrients = [];
+    return cycle.nutrients;
 }
 
 function resetPlantNotesDraft(seed) {
@@ -224,6 +282,36 @@ function syncHeaderActions() {
     const btn = document.getElementById("header-add-plants-btn");
     if (!btn) return;
     btn.style.display = cycles.length === 0 ? "none" : "";
+}
+
+function renderNutrientFormRows() {
+    const rowsContainer = document.getElementById("nutrient-rows");
+    if (!rowsContainer) return;
+    rowsContainer.innerHTML = "";
+    const cycle = activeCycle();
+    const nutrients = cycleNutrients();
+
+    if (nutrients.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "nutrient-empty";
+        empty.innerHTML = 'No nutrients yet. Add some via the <span onclick="openNutrientManager()" style="color:var(--green);cursor:pointer;text-decoration:underline">Nutrient Manager</span>.';
+        rowsContainer.appendChild(empty);
+        return;
+    }
+
+    nutrients.forEach((n) => {
+        const color = getNutrientColor(cycle, n.name);
+        const row = document.createElement("div");
+        row.className = "form-row";
+        row.innerHTML = `
+            <label class="form-label nutrient-field-label--${color}">${escapeHtml(n.name)}</label>
+            <div class="nutrient-input-group">
+                <input class="form-input" type="number" min="0" step="0.5" placeholder="cups" data-nutrient="${escapeHtml(n.name)}" data-field="amount" />
+                <input class="form-input form-input--conc" type="number" min="0" step="1" placeholder="ml/l" data-nutrient="${escapeHtml(n.name)}" data-field="conc" title="Concentration (ml/l)" />
+            </div>
+        `;
+        rowsContainer.appendChild(row);
+    });
 }
 
 function renderAddForm() {
@@ -280,9 +368,6 @@ function renderAddForm() {
                 tab.addEventListener("click", () => setNutrientTab(tab.dataset.tab));
             });
 
-            if (!Object.keys(nutrientDrafts).length) {
-                nutrientActiveTab = "__ALL__";
-            }
             if (nutrientActiveTab !== "__ALL__" && !sortedPlants.includes(nutrientActiveTab)) {
                 delete nutrientDrafts[nutrientActiveTab];
                 nutrientActiveTab = "__ALL__";
@@ -293,21 +378,35 @@ function renderAddForm() {
                 }
             });
 
-            writeNutrientInputs(nutrientDrafts[nutrientActiveTab] || {});
+            const validNutrients = new Set((cycle?.nutrients || []).map((n) => n.name));
+            Object.values(nutrientDrafts).forEach((draft) => {
+                if (draft.nutrients) {
+                    Object.keys(draft.nutrients).forEach((k) => {
+                        if (!validNutrients.has(k)) delete draft.nutrients[k];
+                    });
+                }
+                if (draft.concentrations) {
+                    Object.keys(draft.concentrations).forEach((k) => {
+                        if (!validNutrients.has(k)) delete draft.concentrations[k];
+                    });
+                }
+            });
+        }
+    }
+
+    renderNutrientFormRows();
+
+    if (sortedPlants.length > 0) {
+        const allDraft = nutrientDrafts["__ALL__"] || {};
+        const tabDraft = nutrientDrafts[nutrientActiveTab] || {};
+        writeNutrientInputs(mergeDrafts(allDraft, tabDraft));
+        if (nutrientTabs) {
             nutrientTabs.querySelectorAll(".nutrient-tab").forEach((el) => {
                 el.classList.toggle("active", el.dataset.tab === nutrientActiveTab);
             });
-            // const labelEl = document.getElementById("nutrient-active-name");
-            // if (labelEl) {
-            //     if (nutrientActiveTab === "__ALL__") {
-            //         labelEl.textContent = `Values apply to all ${sortedPlants.length} plants.`;
-            //         labelEl.style.display = "";
-            //     } else {
-            //         labelEl.textContent = `Extra values for ${nutrientActiveTab} (in addition to All).`;
-            //         labelEl.style.display = "";
-            //     }
-            // }
         }
+    } else {
+        writeNutrientInputs({});
     }
 
     ["lst", "def", "repot"].forEach((action) => {
@@ -521,20 +620,25 @@ function showTab(name, resetScroll = false) {
 function resetAddForm() {
     nutrientDrafts = {};
     nutrientActiveTab = "__ALL__";
-    ["nutrient-fish", "nutrient-grow", "nutrient-bloom", "nutrient-water", "nutrient-fish-conc", "nutrient-grow-conc", "nutrient-bloom-conc"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.value = "";
-    });
+
+    const rowsContainer = document.getElementById("nutrient-rows");
+    if (rowsContainer) {
+        rowsContainer.querySelectorAll("input[data-nutrient]").forEach((el) => {
+            el.value = "";
+            delete el.dataset.previewHadValue;
+        });
+    }
+
+    const waterEl = document.getElementById("nutrient-water");
+    if (waterEl) {
+        waterEl.value = "";
+        delete waterEl.dataset.previewHadValue;
+    }
+
     if (document.querySelector("#nutrient-plant-tabs .nutrient-tab")) {
         document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((el) => {
             el.classList.toggle("active", el.dataset.tab === "__ALL__");
         });
-        // const labelEl = document.getElementById("nutrient-active-name");
-        // if (labelEl) {
-        //     const plants = cyclePlants();
-        //     labelEl.textContent = plants.length > 0 ? `Values apply to all ${plants.length} plants.` : "";
-        //     labelEl.style.display = plants.length > 0 ? "" : "none";
-        // }
     }
 
     ["lst", "def", "repot"].forEach((id) => {
@@ -658,6 +762,8 @@ function _loadLightDefaults() {
     document.getElementById("light-end").value = d.end || "";
 }
 
+// ===== Plant manager =====
+
 function openPlantManager() {
     renderPlantList();
     document.getElementById("plant-manage-modal").style.display = "flex";
@@ -748,7 +854,7 @@ function toggleFavourite(index) {
     saveCycles(cycles);
     renderPlantList();
     renderAddForm();
-    renderStats(cycles, activeCycleId);
+    renderAll();
 }
 
 function confirmAddPlant() {
@@ -833,7 +939,7 @@ function confirmRenamePlant() {
         cycle.plants[index] = newName;
         delete cycle.plantTypes[oldName];
         cycles.forEach((c) => {
-            if (c.id !== cycle.id) return; // only migrate entries in the cycle the plant belongs to
+            if (c.id !== cycle.id) return;
             c.entries.forEach((e) => {
                 if (e.plants && e.plants[oldName]) {
                     e.plants[newName] = e.plants[oldName];
@@ -889,6 +995,186 @@ function isFavourite(cycle, name) {
     return Array.isArray(cycle.favourites) && cycle.favourites.includes(name);
 }
 
+// ===== Nutrient manager =====
+
+function openNutrientManager() {
+    renderNutrientList();
+    document.getElementById("nutrient-manage-modal").style.display = "flex";
+}
+
+function closeNutrientManager() {
+    document.getElementById("nutrient-manage-modal").style.display = "none";
+}
+
+function renderNutrientList() {
+    const cycle = activeCycle();
+    const list = document.getElementById("nutrient-list");
+    if (!list) return;
+    if (!cycle) {
+        list.innerHTML = '<div class="plant-empty">No active cycle. Start a new cycle from the header menu first.</div>';
+        return;
+    }
+    const nutrients = cycleNutrients();
+    if (nutrients.length === 0) {
+        list.innerHTML = '<div class="plant-empty">No nutrients yet. Add some to start logging feeds.</div>';
+        return;
+    }
+    list.innerHTML = "";
+    nutrients.forEach((n, i) => {
+        const color = getNutrientColor(cycle, n.name);
+        const row = document.createElement("div");
+        row.className = "plant-manage-row";
+        row.innerHTML = `
+            <div class="plant-manage-name">
+                <span class="nutrient-swatch nutrient-swatch--${color}"></span>
+                <span>${escapeHtml(n.name)}</span>
+            </div>
+            <div class="plant-manage-actions">
+                <button class="settings-btn edit-btn" onclick="renameNutrient(${i})" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg>
+                </button>
+                <button class="settings-btn delete-btn" onclick="deleteNutrient(${i})" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+            </div>
+        `;
+        list.appendChild(row);
+    });
+}
+
+function openAddNutrient() {
+    document.getElementById("new-nutrient-name").value = "";
+    document.getElementById("add-nutrient-modal").style.display = "flex";
+    setTimeout(() => document.getElementById("new-nutrient-name").focus(), 50);
+}
+
+function confirmAddNutrient() {
+    const name = document.getElementById("new-nutrient-name").value.trim();
+    if (!name) {
+        alert("Enter a nutrient name.");
+        return;
+    }
+    if (!PLANT_NAME_RE.test(name)) {
+        alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.");
+        return;
+    }
+    const cycle = activeCycle();
+    if (!cycle) {
+        alert("No active cycle.");
+        return;
+    }
+    const nutrients = cycleNutrients();
+    if (nutrients.some((n) => n.name === name)) {
+        alert("A nutrient with that name already exists.");
+        return;
+    }
+    nutrients.push({ name });
+    saveCycles(cycles);
+    document.getElementById("add-nutrient-modal").style.display = "none";
+    renderNutrientList();
+    renderAddForm();
+    renderAll();
+}
+
+function cancelAddNutrient() {
+    document.getElementById("add-nutrient-modal").style.display = "none";
+}
+
+function renameNutrient(index) {
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const nutrients = cycleNutrients();
+    const oldName = nutrients[index].name;
+    document.getElementById("rename-nutrient-input").value = oldName;
+    const modal = document.getElementById("rename-nutrient-modal");
+    modal.style.display = "flex";
+    modal._nutrientIndex = index;
+    modal._oldName = oldName;
+    setTimeout(() => {
+        const el = document.getElementById("rename-nutrient-input");
+        el.focus();
+        el.select();
+    }, 50);
+}
+
+function confirmRenameNutrient() {
+    const modal = document.getElementById("rename-nutrient-modal");
+    const newName = document.getElementById("rename-nutrient-input").value.trim();
+    const index = modal._nutrientIndex;
+    const oldName = modal._oldName;
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const nutrients = cycleNutrients();
+
+    if (!newName) {
+        alert("Nutrient name can't be empty.");
+        return;
+    }
+    if (newName === oldName) {
+        modal.style.display = "none";
+        return;
+    }
+    if (!PLANT_NAME_RE.test(newName)) {
+        alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.");
+        return;
+    }
+    if (nutrients.some((n) => n.name === newName)) {
+        alert("A nutrient with that name already exists.");
+        return;
+    }
+
+    nutrients[index].name = newName;
+
+    cycle.entries.forEach((e) => {
+        Object.values(e.plants || {}).forEach((pd) => {
+            if (pd.nutrients && pd.nutrients[oldName] != null) {
+                pd.nutrients[newName] = pd.nutrients[oldName];
+                delete pd.nutrients[oldName];
+            }
+            if (pd.concentrations && pd.concentrations[oldName] != null) {
+                pd.concentrations[newName] = pd.concentrations[oldName];
+                delete pd.concentrations[oldName];
+            }
+        });
+    });
+
+    if (nutrientDrafts[oldName]) {
+        nutrientDrafts[newName] = nutrientDrafts[oldName];
+        delete nutrientDrafts[oldName];
+    }
+
+    saveCycles(cycles);
+    modal.style.display = "none";
+    renderNutrientList();
+    renderAddForm();
+    renderAll();
+}
+
+function cancelRenameNutrient() {
+    document.getElementById("rename-nutrient-modal").style.display = "none";
+}
+
+function deleteNutrient(index) {
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const nutrients = cycleNutrients();
+    const name = nutrients[index].name;
+    if (!confirm(`Remove nutrient "${name}"? Existing entries that reference it keep their data, but it will no longer appear in the Add form or stats.`)) return;
+    nutrients.splice(index, 1);
+
+    Object.values(nutrientDrafts).forEach((draft) => {
+        if (draft.nutrients) delete draft.nutrients[name];
+        if (draft.concentrations) delete draft.concentrations[name];
+    });
+
+    saveCycles(cycles);
+    renderNutrientList();
+    renderAddForm();
+    renderAll();
+}
+
+// ===== Plant detail =====
+
 window.openPlantDetail = function (name) {
     const cycle = activeCycle();
     if (!cycle || !cycle.plants.includes(name)) {
@@ -905,7 +1191,9 @@ function renderPlantDetailModal(cycle, name) {
     const typeLabel = type === "auto" ? "AUTO" : "PHOTO";
     const typeBadgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
 
-    const t = { fish: 0, grow: 0, bloom: 0, water: 0, fishConc: null, growConc: null, bloomConc: null, fishConcDate: null, growConcDate: null, bloomConcDate: null };
+    const cycleNutrientList = cycle.nutrients || [];
+
+    const t = { nutrients: {}, concentrations: {}, concDate: {}, water: 0 };
     let lastFeed = null;
     let lastWater = null;
     let lastLst = null;
@@ -918,23 +1206,19 @@ function renderPlantDetailModal(cycle, name) {
     cycle.entries.forEach((e) => {
         const pd = e.plants?.[name];
         if (pd) {
-            t.fish += pd.fish || 0;
-            t.grow += pd.grow || 0;
-            t.bloom += pd.bloom || 0;
-            t.water += pd.water || 0;
-            // Track the most recent non-zero concentration per nutrient,
-            // along with the date it was logged. Water has no concentration.
-            ["fish", "grow", "bloom"].forEach((n) => {
-                const concKey = n + "Conc";
-                if (pd[concKey]) {
-                    const dateKey = concKey + "Date";
-                    if (!t[dateKey] || new Date(e.dt) > new Date(t[dateKey])) {
-                        t[concKey] = pd[concKey];
-                        t[dateKey] = e.dt;
-                    }
+            Object.entries(pd.nutrients || {}).forEach(([n, v]) => {
+                t.nutrients[n] = (t.nutrients[n] || 0) + (v || 0);
+            });
+            Object.entries(pd.concentrations || {}).forEach(([n, v]) => {
+                if (!v) return;
+                if (!t.concDate[n] || new Date(e.dt) > new Date(t.concDate[n])) {
+                    t.concentrations[n] = v;
+                    t.concDate[n] = e.dt;
                 }
             });
-            const isFeed = pd.fish || pd.grow || pd.bloom;
+            t.water += pd.water || 0;
+
+            const isFeed = pd.nutrients && Object.values(pd.nutrients).some((v) => v && v > 0);
             const isWater = pd.water;
             if (isFeed) {
                 feedCount++;
@@ -972,17 +1256,19 @@ function renderPlantDetailModal(cycle, name) {
 
     plantObsItems.sort((a, b) => new Date(b.dt) - new Date(a.dt));
 
-    // For each nutrient, count how many feed entries used the same value as
-    // the latest logged concentration (distinct from the cycle-wide cup total).
-    const concFeedCount = { fish: 0, grow: 0, bloom: 0 };
-    ["fish", "grow", "bloom"].forEach((n) => {
-        const concKey = n + "Conc";
-        const latest = t[concKey];
-        if (latest == null) return;
+    const concFeedCount = {};
+    cycleNutrientList.forEach((n) => {
+        const latest = t.concentrations[n.name];
+        if (latest == null) {
+            concFeedCount[n.name] = 0;
+            return;
+        }
+        let count = 0;
         cycle.entries.forEach((e) => {
             const pd = e.plants?.[name];
-            if (pd && pd[concKey] === latest) concFeedCount[n]++;
+            if (pd && pd.concentrations && pd.concentrations[n.name] === latest) count++;
         });
+        concFeedCount[n.name] = count;
     });
 
     const repottedAt = meta.repottedAt || cycle.startDate;
@@ -1036,10 +1322,6 @@ function renderPlantDetailModal(cycle, name) {
 
     const repottedFmt = repottedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-    // Each nutrient gets its own labelled block: latest concentration, the
-    // date it's been in effect since (with the same relative-duration
-    // styling used by Last fed / Last watered below), how many feeds used
-    // that exact concentration, and the running cup total for the cycle.
     const nutrientBlock = (label, nutrientClass, qty, concVal, concDate, feedsAtConc) => `
         <div class="plant-detail-nutrient-block">
             <div class="plant-detail-nutrient-name ${nutrientClass}">${label}</div>
@@ -1074,6 +1356,30 @@ function renderPlantDetailModal(cycle, name) {
                   )
                   .join("");
 
+    const nutrientBlocks = cycleNutrientList
+        .map((n) => {
+            const color = getNutrientColor(cycle, n.name);
+            const qty = t.nutrients[n.name] || 0;
+            const conc = t.concentrations[n.name];
+            const concDate = t.concDate[n.name];
+            const count = concFeedCount[n.name] || 0;
+            return nutrientBlock(n.name, `nutrient--${color}`, qty, conc, concDate, count);
+        })
+        .join("");
+
+    const nutrientsSection =
+        cycleNutrientList.length > 0
+            ? `${nutrientBlocks}
+           <div class="plant-detail-row">
+               <div class="plant-detail-label">Total water</div>
+               <div class="plant-detail-value nutrient--water">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
+           </div>`
+            : `<div class="plant-detail-row">
+               <div class="plant-detail-label">Total water</div>
+               <div class="plant-detail-value nutrient--water">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
+           </div>
+           <div class="plant-detail-empty">No nutrients configured for this cycle. Add some via the Nutrient Manager to track per-nutrient stats.</div>`;
+
     const statsHtml = `
         <div class="plant-detail-row">
             <div class="plant-detail-label">Type</div>
@@ -1089,14 +1395,8 @@ function renderPlantDetailModal(cycle, name) {
         </div>
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
-        ${nutrientBlock("Fish", "nutrient--fish", t.fish, t.fishConc, t.fishConcDate, concFeedCount.fish)}
-        ${nutrientBlock("Grow", "nutrient--grow", t.grow, t.growConc, t.growConcDate, concFeedCount.grow)}
-        ${nutrientBlock("Bloom", "nutrient--bloom", t.bloom, t.bloomConc, t.bloomConcDate, concFeedCount.bloom)}
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Total water</div>
-            <div class="plant-detail-value nutrient--water">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
-        </div>
-                <div class="plant-detail-divider"></div>
+        ${nutrientsSection}
+        <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Activity</div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Feed sessions</div>
@@ -1144,6 +1444,8 @@ window.closePlantDetail = function () {
     document.getElementById("plant-detail-modal").style.display = "none";
 };
 
+// ===== Cycles =====
+
 function newCycle() {
     const defaultName = `Grow #${cycles.length + 1}`;
     document.getElementById("new-cycle-input").value = defaultName;
@@ -1162,7 +1464,7 @@ window.confirmNewCycle = function () {
     const pad = (n) => String(n).padStart(2, "0");
     const startDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
-    const newC = { id: cycleUid(), name, startDate, plants: [], plantTypes: {}, entries: [], lightDefaults: {} };
+    const newC = { id: cycleUid(), name, startDate, plants: [], plantTypes: {}, entries: [], lightDefaults: {}, nutrients: [] };
     cycles.push(newC);
 
     activeCycleId = newC.id;
@@ -1210,6 +1512,7 @@ window.confirmRenameCycle = function () {
         cycle.name = name;
         saveCycles(cycles);
         renderLog(cycles, activeCycleId);
+        renderStats(cycles, activeCycleId);
     }
     modal.style.display = "none";
 };
@@ -1251,12 +1554,6 @@ function editEntry(id) {
     document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((el) => {
         el.classList.toggle("active", el.dataset.tab === "__ALL__");
     });
-    const editLabelEl = document.getElementById("nutrient-active-name");
-    // if (editLabelEl) {
-    //     const entryPlantCount = Object.keys(entry.plants || {}).length;
-    //     editLabelEl.textContent = entryPlantCount > 0 ? `Editing — values for each plant are loaded when you tap their tab.` : `Values apply to all plants.`;
-    //     editLabelEl.style.display = "";
-    // }
 
     const actions = entry.actions || [];
     document.getElementById("ck-lst").checked = actions.some((a) => a.startsWith("LST"));
@@ -1402,19 +1699,40 @@ function saveEntry() {
     }
 
     const currentDraft = readNutrientInputs();
-    if (Object.keys(currentDraft).length > 0) {
-        nutrientDrafts[nutrientActiveTab] = { ...(nutrientDrafts[nutrientActiveTab] || {}), ...currentDraft };
+    const hasCurrentDraft = (currentDraft.nutrients && Object.keys(currentDraft.nutrients).length > 0) || (currentDraft.concentrations && Object.keys(currentDraft.concentrations).length > 0) || currentDraft.water != null;
+    if (hasCurrentDraft) {
+        nutrientDrafts[nutrientActiveTab] = mergeDrafts(nutrientDrafts[nutrientActiveTab], currentDraft);
     }
 
     const plants = {};
     const allDraft = nutrientDrafts["__ALL__"] || {};
 
     sortedPlants.forEach((p) => {
-        const merged = { ...allDraft, ...(nutrientDrafts[p] || {}) };
+        const tabDraft = nutrientDrafts[p] || {};
         const data = {};
-        ["fish", "grow", "bloom", "water", "fishConc", "growConc", "bloomConc"].forEach((k) => {
-            if (merged[k] != null && merged[k] !== "") data[k] = merged[k];
+
+        const mergedNutrients = {};
+        Object.entries(allDraft.nutrients || {}).forEach(([k, v]) => {
+            if (v != null) mergedNutrients[k] = v;
         });
+        Object.entries(tabDraft.nutrients || {}).forEach(([k, v]) => {
+            if (v != null) mergedNutrients[k] = v;
+        });
+        if (Object.keys(mergedNutrients).length > 0) data.nutrients = mergedNutrients;
+
+        const mergedConcs = {};
+        Object.entries(allDraft.concentrations || {}).forEach(([k, v]) => {
+            if (v != null) mergedConcs[k] = v;
+        });
+        Object.entries(tabDraft.concentrations || {}).forEach(([k, v]) => {
+            if (v != null) mergedConcs[k] = v;
+        });
+        if (Object.keys(mergedConcs).length > 0) data.concentrations = mergedConcs;
+
+        // Water: per-tab overrides All. Only set if there's a value.
+        const water = tabDraft.water != null ? tabDraft.water : allDraft.water;
+        if (water != null && water !== "") data.water = water;
+
         if (Object.keys(data).length > 0) plants[p] = data;
     });
 
@@ -1527,7 +1845,7 @@ function importBackup(event) {
             if (!Array.isArray(imported)) throw new Error("Invalid format");
             if (!confirm(`Import ${imported.length} cycle(s)? This will replace all current data.`)) return;
             localStorage.setItem("grow_cycles", JSON.stringify(imported));
-            localStorage.setItem("grow_version", "6"); // keep in sync with storage.js STORAGE_VERSION
+            localStorage.setItem("grow_version", "7");
             location.reload();
         } catch {
             alert("Invalid backup file.");

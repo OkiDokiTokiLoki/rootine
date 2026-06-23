@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, escapeHtml } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 
 let collapsedWeeks;
@@ -9,7 +9,6 @@ export function initLog(cWeeks, cCycles) {
     collapsedCycles = cCycles;
 }
 
-// Week key is scoped per cycle to avoid collisions: "cycleId--weekNum"
 function weekKey(cycleId, wk) {
     return `${cycleId}--${wk}`;
 }
@@ -61,7 +60,7 @@ function renderEntriesForCycle(cycle) {
             lastWk = wk;
         }
 
-        html += renderEntryCard(e);
+        html += renderEntryCard(e, cycle);
     });
 
     if (lastWk !== null) html += "</div>";
@@ -73,19 +72,17 @@ function hasPlantObs(e) {
     return Object.values(e.plantObs).some((t) => t && String(t).trim());
 }
 
-function renderEntryCard(e) {
-    // Check for feed, water, light, and other actions
+function renderEntryCard(e, cycle) {
     const vals = Object.values(e.plants || {});
-    const hasFeed = vals.some((p) => p.fish || p.grow || p.bloom);
-    const hasWater = vals.some((p) => p.water);
+    const hasFeed = vals.some((p) => {
+        if (!p || !p.nutrients) return false;
+        return Object.values(p.nutrients).some((v) => v && v > 0);
+    });
+    const hasWater = vals.some((p) => p && p.water > 0);
     const hasLight = (e.actions || []).some((a) => a.startsWith("Light adjusted"));
     const hasNonLightAction = (e.actions || []).some((a) => a.startsWith("LST") || a.startsWith("Defoliate") || a.startsWith("Repot / transplant"));
-    // An entry counts as having a note if it has a general observation OR
-    // any plant-tagged observation. The badge doesn't distinguish the two
-    // — the expanded body shows the details.
     const hasObs = !!(e.obs && e.obs.trim()) || hasPlantObs(e);
 
-    // Build badge HTML — append one badge per thing the entry contains
     let badgeHtml = "";
 
     if (hasFeed) {
@@ -114,9 +111,13 @@ function renderEntryCard(e) {
         body += "<div>";
         plants.forEach(([p, d]) => {
             let pills = "";
-            if (d.fish) pills += `<span class="pill pill-fish">Fish - ${d.fish} cup(s)</span>`;
-            if (d.grow) pills += `<span class="pill pill-grow">Grow - ${d.grow} cup(s)</span>`;
-            if (d.bloom) pills += `<span class="pill pill-bloom">Bloom - ${d.bloom} cup(s)</span>`;
+            (cycle?.nutrients || []).forEach((n) => {
+                const qty = d.nutrients?.[n.name];
+                if (qty && qty > 0) {
+                    const color = getNutrientColor(cycle, n.name);
+                    pills += `<span class="pill pill--${color}">${escapeHtml(n.name)} - ${qty} cup(s)</span>`;
+                }
+            });
             if (d.water) pills += `<span class="pill pill-water">Water - ${d.water} cup(s)</span>`;
             body += `<div class="plant-row"><span class="pname">${escapeHtml(p)}</span><div class="pills">${pills || "—"}</div></div>`;
         });
@@ -126,9 +127,6 @@ function renderEntryCard(e) {
         body += `<div class="action-list">` + e.actions.map((a) => `<span class="action-tag">${escapeHtml(a)}</span>`).join("") + "</div>";
     }
     if (e.obs) body += `<div class="obs-box">${escapeHtml(e.obs)}</div>`;
-    // Plant-tagged observations render as their own labelled boxes so the
-    // reader can see at a glance which plant the note was about. Same
-    // styling as a regular obs-box with a small plant name on top.
     if (hasPlantObs(e)) {
         Object.entries(e.plantObs).forEach(([p, text]) => {
             if (!text || !text.trim()) return;
@@ -174,7 +172,7 @@ export function renderLog(cycles, activeCycleId) {
                     ${activePill}
                     <span class="cycle-start">${startFmt}</span>
                     <button class="settings-btn edit-cycle-btn" onclick="event.stopPropagation();editCycleName('${cycle.id}', '${cycle.name.replace(/'/g, "\\\'")}')" title="Edit cycle name">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" style="width:18px;height:18px"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" style="width:18px;height:18px"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086 a1 1 0 010 1.414L7.5 20H4z"></path></svg>
                     </button>
                     <button class="settings-btn delete-cycle-btn" onclick="event.stopPropagation();deleteCycle('${cycle.id}')" title="Delete cycle">
                         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>

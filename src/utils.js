@@ -1,3 +1,17 @@
+export const NUTRIENT_PALETTE = ["fish", "grow", "bloom", "blue", "amber", "red"];
+
+export function getNutrientColor(cycle, nutrientName) {
+    if (!cycle || !Array.isArray(cycle.nutrients)) return "neutral";
+    const idx = cycle.nutrients.findIndex((n) => n.name === nutrientName);
+    if (idx < 0) return "neutral";
+    return NUTRIENT_PALETTE[idx % NUTRIENT_PALETTE.length];
+}
+
+export function abbrevNutrient(name) {
+    if (!name) return "";
+    return name.slice(0, 2).toUpperCase();
+}
+
 export function getWeekNum(dateStr, cycleStartDate) {
     const d = new Date(dateStr);
     const start = new Date(cycleStartDate);
@@ -15,8 +29,14 @@ export function fmtTime(s) {
 
 export function entryType(e) {
     const vals = Object.values(e.plants || {});
-    if (vals.some((p) => p.fish || p.grow || p.bloom)) return "feed";
-    if (vals.some((p) => p.water)) return "water";
+    if (
+        vals.some((p) => {
+            if (!p || !p.nutrients) return false;
+            return Object.values(p.nutrients).some((v) => v && v > 0);
+        })
+    )
+        return "feed";
+    if (vals.some((p) => p && p.water > 0)) return "water";
     return "note";
 }
 

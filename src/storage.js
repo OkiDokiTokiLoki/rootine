@@ -83,15 +83,74 @@ const migrations = [
             return c;
         });
     },
+
+    // v6 → v7: nutrients become a per-cycle list, and entry plant data
+    // moves to a nested structure. Old data had hardcoded fish/grow/bloom
+    // keys at the top level of each plant's data. Migrate to:
+    //   cycle.nutrients: [{ name: "Fish" }, ...]
+    //   entry.plants[name]: { nutrients: { Fish: 1 }, concentrations: { Fish: 5 }, water: 2 }
+    // Cycles with no fish/grow/bloom data start with an empty nutrient list
+    // — the user adds nutrients via the Nutrient Manager.
+    (cycles) => {
+        const NAMES = ["Fish", "Grow", "Bloom"];
+        return cycles.map((c) => {
+            // Already migrated (or freshly created). Just make sure the
+            // nutrients field exists so downstream code can read it without
+            // a type check.
+            if (Array.isArray(c.nutrients)) {
+                return c;
+            }
+
+            // Inspect every entry's plant data to figure out which of the
+            // three legacy nutrients were actually used. Only those become
+            // entries in the new per-cycle nutrient list, so cycles that
+            // only used water stay nutrient-less until the user adds some.
+            const used = new Set();
+            (c.entries || []).forEach((e) => {
+                Object.values(e.plants || {}).forEach((p) => {
+                    if (p.fish || p.fishConc) used.add("Fish");
+                    if (p.grow || p.growConc) used.add("Grow");
+                    if (p.bloom || p.bloomConc) used.add("Bloom");
+                });
+            });
+
+            // Preserve order (Fish, Grow, Bloom) when adding defaults so the
+            // colour mapping stays stable for users with existing data.
+            const nutrients = NAMES.filter((n) => used.has(n)).map((name) => ({ name }));
+
+            // Migrate each entry's plant data into the nested structure.
+            // The old keys are not copied through — anything that's not
+            // water/fish/grow/bloom/fishConc/growConc/bloomConc is dropped,
+            // since the previous versions didn't have any other fields.
+            const newEntries = (c.entries || []).map((e) => {
+                if (!e.plants) return e;
+                const newPlants = {};
+                Object.entries(e.plants).forEach(([plantName, data]) => {
+                    const newNutrients = {};
+                    const newConcentrations = {};
+                    NAMES.forEach((name) => {
+                        const lower = name.toLowerCase();
+                        if (data[lower]) newNutrients[name] = data[lower];
+                        const concKey = lower + "Conc";
+                        if (data[concKey]) newConcentrations[name] = data[concKey];
+                    });
+                    const newData = {};
+                    if (data.water) newData.water = data.water;
+                    if (Object.keys(newNutrients).length > 0) newData.nutrients = newNutrients;
+                    if (Object.keys(newConcentrations).length > 0) newData.concentrations = newConcentrations;
+                    if (Object.keys(newData).length > 0) newPlants[plantName] = newData;
+                });
+                return { ...e, plants: newPlants };
+            });
+
+            return { ...c, nutrients, entries: newEntries };
+        });
+    },
 ];
 
 const STORAGE_VERSION = migrations.length + 1;
 
 function seed() {
-    // Fresh install starts empty. The user creates their first grow cycle
-    // through the "+ New Cycle" modal, or restores from a JSON backup via
-    // the Import button in Stats. No bundled sample data — the export/import
-    // flow is the canonical way to seed an install with prior history.
     localStorage.setItem("grow_cycles", "[]");
     localStorage.setItem("grow_version", String(STORAGE_VERSION));
     return [];
@@ -119,9 +178,6 @@ export function saveCycles(cycles) {
 }
 
 export function loadActiveCycleId(cycles) {
-    // No cycles yet (fresh install, or last one just got deleted) — no
-    // active cycle to point at. The UI handles null gracefully; the user
-    // just needs to tap "+ New Cycle".
     if (!cycles.length) return null;
     const stored = localStorage.getItem("active_cycle_id");
     if (stored && cycles.find((c) => c.id === stored)) return stored;
