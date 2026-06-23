@@ -1330,8 +1330,8 @@ textarea.form-input {
 .tab-btn svg {
     width: var(--icon-lg);
     height: var(--icon-lg);
+    fill: currentColor;
     stroke: currentColor;
-    fill: none;
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -1864,11 +1864,7 @@ textarea.form-input {
 .light-status-bulb {
     width: 13px;
     height: 13px;
-    stroke: var(--amber);
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+    fill: var(--amber);
     flex-shrink: 0;
     transition: stroke 0.2s;
 }
