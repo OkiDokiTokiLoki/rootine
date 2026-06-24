@@ -962,7 +962,7 @@ textarea.form-input {
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 2px;
+    margin-bottom: 5px;
     padding: 0 2px;
 }
 
@@ -1733,6 +1733,10 @@ textarea.form-input {
 .entry-card:not(.open) .duplicate-entry-btn,
 .entry-card:not(.open) .delete-entry-btn,
 .entry-card:not(.open) .edit-entry-btn {
+    display: none;
+}
+
+.entry-card.open .badge {
     display: none;
 }
 

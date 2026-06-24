@@ -58,3 +58,7 @@ export function getPlantMeta(cycle, name) {
     if (typeof raw === "string") return { type: raw, repottedAt: cycle?.startDate };
     return { type: raw.type || "photo", repottedAt: raw.repottedAt || cycle?.startDate };
 }
+
+export function fmtQty(n) {
+    return n % 1 === 0 ? String(n) : n.toFixed(1);
+}

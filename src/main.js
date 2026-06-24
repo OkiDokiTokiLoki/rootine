@@ -1,5 +1,5 @@
 import "./style.css";
-import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE } from "./utils.js";
+import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty } from "./utils.js";
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
@@ -1399,24 +1399,6 @@ function renderPlantDetailModal(cycle, name) {
         <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
         ${nutrientsSection}
         <div class="plant-detail-divider"></div>
-        <div class="plant-detail-section-label">Activity</div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Feed sessions</div>
-            <div class="plant-detail-value">${feedCount}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Water sessions</div>
-            <div class="plant-detail-value">${waterCount}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times LST'd</div>
-            <div class="plant-detail-value">${lstCount}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times defoliated</div>
-            <div class="plant-detail-value">${defoliateCount}</div>
-        </div>
-        <div class="plant-detail-divider"></div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Last fed</div>
             <div class="plant-detail-value">${fmtStamp(lastFeed, true)}</div>
@@ -1432,6 +1414,23 @@ function renderPlantDetailModal(cycle, name) {
         <div class="plant-detail-row">
             <div class="plant-detail-label">Last defoliated</div>
             <div class="plant-detail-value">${fmtStamp(lastDefoliate, true)}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Feed sessions</div>
+            <div class="plant-detail-value">${feedCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Water sessions</div>
+            <div class="plant-detail-value">${waterCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times LST'd</div>
+            <div class="plant-detail-value">${lstCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times defoliated</div>
+            <div class="plant-detail-value">${defoliateCount}</div>
         </div>
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Notes</div>

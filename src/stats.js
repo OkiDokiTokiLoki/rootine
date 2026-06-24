@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getNutrientColor, abbrevNutrient } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getNutrientColor, abbrevNutrient, fmtQty } from "./utils.js";
 import { saveCollapsedObs } from "./storage.js";
 
 let statsMode = "active";
@@ -85,10 +85,10 @@ function renderPlantCard(name, totals, type, isFav, noteCount, cycle) {
             const qty = (totals.nutrients || {})[n.name] || 0;
             if (qty <= 0) return "";
             const color = getNutrientColor(cycle, n.name);
-            return `<span class="nutrient-totals__item nutrient--${color}" title="${escapeHtml(n.name)}">${abbrevNutrient(n.name)} ${qty.toFixed(1)}</span>`;
+            return `<span class="nutrient-totals__item nutrient--${color}" title="${escapeHtml(n.name)}">${abbrevNutrient(n.name)} ${fmtQty(qty)}</span>`;
         })
         .join("");
-    const waterQty = (totals.water || 0).toFixed(1);
+    const waterQty = fmtQty(totals.water || 0);
     const waterChip = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${waterQty}</span>`;
 
     return `

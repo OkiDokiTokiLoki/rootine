@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 
 let collapsedWeeks;
@@ -114,10 +114,10 @@ function renderEntryCard(e, cycle) {
                 const qty = d.nutrients?.[n.name];
                 if (qty && qty > 0) {
                     const color = getNutrientColor(cycle, n.name);
-                    pills += `<span class="pill pill--${color}">${escapeHtml(n.name)} - ${qty} cup(s)</span>`;
+                    pills += `<span class="pill pill--${color}">${escapeHtml(n.name)} - ${fmtQty(qty)} cup${qty === 1 ? "" : "s"}</span>`;
                 }
             });
-            if (d.water) pills += `<span class="pill pill-water">Water - ${d.water} cup(s)</span>`;
+            if (d.water) pills += `<span class="pill pill-water">Water - ${fmtQty(d.water)} cup${d.water === 1 ? "" : "s"}</span>`;
             body += `<div class="plant-row"><span class="pname">${escapeHtml(p)}</span><div class="pills">${pills || "—"}</div></div>`;
         });
         body += "</div>";
