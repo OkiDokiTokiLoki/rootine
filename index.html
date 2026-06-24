@@ -8,8 +8,8 @@
         <meta name="apple-mobile-web-app-title" content="Rootine - Grow Journal" />
         <meta name="theme-color" content="#1a1a1a" />
         <title>Rootine</title>
-      <script type="module" crossorigin src="/rootine/assets/index-cgcblFAg.js"></script>
-      <link rel="stylesheet" crossorigin href="/rootine/assets/index-DFArw_Sr.css">
+      <script type="module" crossorigin src="/rootine/assets/index-B1R-nRUh.js"></script>
+      <link rel="stylesheet" crossorigin href="/rootine/assets/index-CaB8qffQ.css">
     </head>
     <body>
         <div id="app">
@@ -350,6 +350,8 @@
                 <div class="modal-title">Add Nutrient</div>
                 <input id="new-nutrient-name" type="text" class="form-input form-input-full" placeholder="e.g. CalMag" style="margin-bottom: 14px" />
                 <div class="modal-hint">Letters, numbers, spaces, dashes, underscores.</div>
+                <div class="modal-label">Starting concentration (ml/l, optional)</div>
+                <input id="new-nutrient-conc" type="number" min="0" step="1" class="form-input form-input-full" placeholder="e.g. 5" style="margin-bottom: 14px" />
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="cancelAddNutrient()">Cancel</button>
                     <button class="btn-confirm" onclick="confirmAddNutrient()">Add</button>
@@ -365,6 +367,20 @@
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="cancelRenameNutrient()">Cancel</button>
                     <button class="btn-confirm" onclick="confirmRenameNutrient()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit default concentration modal -->
+        <div id="edit-nutrient-default-modal" class="modal-overlay modal-overlay--higher" style="display: none">
+            <div class="modal-content">
+                <div class="modal-title">Default concentration</div>
+                <div class="modal-subtitle" id="edit-nutrient-default-name"></div>
+                <div class="modal-hint">Used as a starting value in the Add form and shown in Plant Detail when no entry has logged a concentration yet. Leave blank to clear.</div>
+                <input id="edit-nutrient-default-input" type="number" min="0" step="1" class="form-input form-input-full" placeholder="e.g. 5" style="margin-bottom: 14px" />
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="cancelEditNutrientDefault()">Cancel</button>
+                    <button class="btn-confirm" onclick="confirmEditNutrientDefault()">Save</button>
                 </div>
             </div>
         </div>
