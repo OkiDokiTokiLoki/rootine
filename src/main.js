@@ -68,6 +68,9 @@ window.renameNutrient = renameNutrient;
 window.confirmRenameNutrient = confirmRenameNutrient;
 window.cancelRenameNutrient = cancelRenameNutrient;
 window.deleteNutrient = deleteNutrient;
+window.editNutrientDefault = editNutrientDefault;
+window.confirmEditNutrientDefault = confirmEditNutrientDefault;
+window.cancelEditNutrientDefault = cancelEditNutrientDefault;
 
 function toggleHeaderMenu(e) {
     if (e) e.stopPropagation();
@@ -799,8 +802,8 @@ function renderPlantList() {
             <div class="plant-manage-name">${escapeHtml(p)}</div>
             <div class="plant-manage-actions">
                 <span class="${badgeClass}" onclick="togglePlantType(${i})" title="Click to toggle type">${badgeLabel}</span>
-                <button class="settings-btn edit-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
-                <button class="settings-btn delete-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                <button class="settings-btn blue-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
+                <button class="settings-btn red-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
                 <button class="settings-btn favourite-btn ${isFavourite(cycle, p) ? "is-favourite" : ""}" onclick="toggleFavourite(${i})" aria-label="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"} ${escapeHtml(p)}" title="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"}"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;${isFavourite(cycle, p) ? "fill:var(--amber);stroke:var(--amber)" : "fill:none;stroke:var(--muted)"}" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
             </div>
         `;
@@ -1030,12 +1033,16 @@ function renderNutrientList() {
             <div class="plant-manage-name">
                 <span class="nutrient-swatch nutrient-swatch--${color}"></span>
                 <span>${escapeHtml(n.name)}</span>
+                ${n.defaultConcentration != null ? `<span class="nutrient-default-hint" title="Default concentration">${n.defaultConcentration} ml/l</span>` : ""}
             </div>
             <div class="plant-manage-actions">
-                <button class="settings-btn edit-btn" onclick="renameNutrient(${i})" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
+                <button class="settings-btn blue-btn" onclick="renameNutrient(${i})" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
                     <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg>    
                 </button>
-                <button class="settings-btn delete-btn" onclick="deleteNutrient(${i})" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
+                <button class="settings-btn amber-btn" onclick="editNutrientDefault(${i})" title="Set default concentration for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h167q11-35 43-57.5t70-22.5q38 0 70 22.5t43 57.5h167q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H640q0 17-11.5 28.5T600-720H360q-17 0-28.5-11.5T320-760H200v560Zm280-560q17 0 28.5-11.5T520-800q0-17-11.5-28.5T480-840q-17 0-28.5 11.5T440-800q0 17 11.5 28.5T480-760Z"/></svg>
+                </button>
+                <button class="settings-btn red-btn" onclick="deleteNutrient(${i})" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
                     <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
                 </button>
             </div>
@@ -1046,12 +1053,19 @@ function renderNutrientList() {
 
 function openAddNutrient() {
     document.getElementById("new-nutrient-name").value = "";
+    document.getElementById("new-nutrient-conc").value = "";
     document.getElementById("add-nutrient-modal").style.display = "flex";
     setTimeout(() => document.getElementById("new-nutrient-name").focus(), 50);
 }
 
 function confirmAddNutrient() {
     const name = document.getElementById("new-nutrient-name").value.trim();
+    const concRaw = document.getElementById("new-nutrient-conc").value.trim();
+    let defaultConcentration = null;
+    if (concRaw !== "") {
+        const n = parseFloat(concRaw);
+        if (!isNaN(n) && n >= 0) defaultConcentration = n;
+    }
     if (!name) {
         alert("Enter a nutrient name.");
         return;
@@ -1070,7 +1084,7 @@ function confirmAddNutrient() {
         alert("A nutrient with that name already exists.");
         return;
     }
-    nutrients.push({ name });
+    nutrients.push({ name, defaultConcentration });
     saveCycles(cycles);
     document.getElementById("add-nutrient-modal").style.display = "none";
     renderNutrientList();
@@ -1173,6 +1187,56 @@ function deleteNutrient(index) {
     renderNutrientList();
     renderAddForm();
     renderAll();
+}
+
+function editNutrientDefault(index) {
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const nutrients = cycleNutrients();
+    const n = nutrients[index];
+    if (!n) return;
+    document.getElementById("edit-nutrient-default-name").textContent = n.name;
+    const input = document.getElementById("edit-nutrient-default-input");
+    input.value = n.defaultConcentration != null ? String(n.defaultConcentration) : "";
+    const modal = document.getElementById("edit-nutrient-default-modal");
+    modal.style.display = "flex";
+    modal._nutrientIndex = index;
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 50);
+}
+
+function confirmEditNutrientDefault() {
+    const modal = document.getElementById("edit-nutrient-default-modal");
+    const cycle = activeCycle();
+    if (!cycle) return;
+    const nutrients = cycleNutrients();
+    const n = nutrients[modal._nutrientIndex];
+    if (!n) {
+        modal.style.display = "none";
+        return;
+    }
+    const raw = document.getElementById("edit-nutrient-default-input").value.trim();
+    if (raw === "") {
+        n.defaultConcentration = null;
+    } else {
+        const v = parseFloat(raw);
+        if (isNaN(v) || v < 0) {
+            alert("Concentration must be a non-negative number.");
+            return;
+        }
+        n.defaultConcentration = v;
+    }
+    saveCycles(cycles);
+    modal.style.display = "none";
+    renderNutrientList();
+    renderAddForm();
+    renderAll();
+}
+
+function cancelEditNutrientDefault() {
+    document.getElementById("edit-nutrient-default-modal").style.display = "none";
 }
 
 // ===== Plant detail =====
@@ -1324,7 +1388,7 @@ function renderPlantDetailModal(cycle, name) {
 
     const repottedFmt = repottedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-    const nutrientBlock = (label, nutrientClass, qty, concVal, concDate, feedsAtConc) => `
+    const nutrientBlock = (label, nutrientClass, qty, concVal, concDate, feedsAtConc, isDefault) => `
         <div class="plant-detail-nutrient-block">
             <div class="plant-detail-nutrient-name ${nutrientClass}">${label}</div>
             <div class="plant-detail-row">
@@ -1333,11 +1397,11 @@ function renderPlantDetailModal(cycle, name) {
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Date</div>
-                <div class="plant-detail-value">${concDate ? `<span class="plant-detail-rel">${relStr(concDate)}</span> since ${fmtDate(concDate)}` : "—"}</div>
+                <div class="plant-detail-value">${concDate ? `<span class="plant-detail-rel">${relStr(concDate)}</span> since ${fmtDate(concDate)}` : isDefault ? `<span class="plant-detail-rel">since cycle start</span>` : "—"}</div>
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Concentration total</div>
-                <div class="plant-detail-value">${feedsAtConc} feed${feedsAtConc === 1 ? "" : "s"}</div>
+                <div class="plant-detail-value">${isDefault ? "Default" : `${feedsAtConc} feed${feedsAtConc === 1 ? "" : "s"}`}</div>
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Cycle total</div>
@@ -1364,8 +1428,11 @@ function renderPlantDetailModal(cycle, name) {
             const qty = t.nutrients[n.name] || 0;
             const conc = t.concentrations[n.name];
             const concDate = t.concDate[n.name];
+            const isDefault = conc == null && n.defaultConcentration != null;
+            const effectiveConc = conc != null ? conc : (n.defaultConcentration ?? null);
+            const effectiveDate = concDate || (isDefault ? cycle.startDate : null);
             const count = concFeedCount[n.name] || 0;
-            return nutrientBlock(n.name, `nutrient--${color}`, qty, conc, concDate, count);
+            return nutrientBlock(n.name, `nutrient--${color}`, qty, effectiveConc, effectiveDate, count, isDefault);
         })
         .join("");
 

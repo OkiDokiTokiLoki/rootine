@@ -146,6 +146,16 @@ const migrations = [
             return { ...c, nutrients, entries: newEntries };
         });
     },
+
+    // v7 → v8: nutrients carry an optional default concentration (ml/l)
+    // that seeds the Add form and acts as a fallback for "Latest
+    // concentration" in the Plant Detail modal when no log entry has
+    // recorded one yet. Existing nutrients start with no default.
+    (cycles) =>
+        cycles.map((c) => ({
+            ...c,
+            nutrients: Array.isArray(c.nutrients) ? c.nutrients.map((n) => ({ defaultConcentration: null, ...n })) : c.nutrients,
+        })),
 ];
 
 const STORAGE_VERSION = migrations.length + 1;
