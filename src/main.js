@@ -704,18 +704,64 @@ function getCycleLightDefaults() {
     return cycle.lightDefaults || {};
 }
 
+function parseLightAction(action) {
+    if (!action || !action.startsWith("Light adjusted")) return null;
+    const m = action.match(/\((.*?)\)\s*$/);
+    if (!m) return { lux: null, dist: null, start: null, end: null };
+    const parts = m[1].split(", ");
+    const out = { lux: null, dist: null, start: null, end: null };
+    parts.forEach((part) => {
+        if (part.includes("lux")) out.lux = part.replace("k lux", "").trim();
+        else if (part.includes("cm")) out.dist = part.replace("cm", "").trim();
+        else if (part.includes("–")) {
+            const [s, e] = part.split("–");
+            out.start = s.trim();
+            out.end = e.trim();
+        }
+    });
+    return out;
+}
+
+function latestLoggedLight(cycle) {
+    if (!cycle) return null;
+    const sorted = [...(cycle.entries || [])].sort((a, b) => new Date(b.dt) - new Date(a.dt));
+    for (const e of sorted) {
+        const action = (e.actions || []).find((a) => a.startsWith("Light adjusted"));
+        if (action) return { parsed: parseLightAction(action), dt: e.dt };
+    }
+    return null;
+}
+
 function updateLightStatus() {
-    const d = getCycleLightDefaults();
+    const cycle = activeCycle();
     const el = document.getElementById("light-status-text");
     const bulb = document.getElementById("light-status-bulb");
     if (!el) return;
 
+    const latest = latestLoggedLight(cycle);
+    const defaults = getCycleLightDefaults();
+    let lux = null,
+        dist = null,
+        start = null,
+        end = null;
+    if (latest) {
+        lux = latest.parsed.lux ?? defaults.lux ?? null;
+        dist = latest.parsed.dist ?? defaults.dist ?? null;
+        start = latest.parsed.start ?? defaults.start ?? null;
+        end = latest.parsed.end ?? defaults.end ?? null;
+    } else {
+        lux = defaults.lux || null;
+        dist = defaults.dist || null;
+        start = defaults.start || null;
+        end = defaults.end || null;
+    }
+
     let isOn = false;
     const parts = [];
-    if (d.lux) parts.push(d.lux + "K");
-    if (d.start && d.end) {
-        const [sh, sm] = d.start.split(":").map(Number);
-        const [eh, em] = d.end.split(":").map(Number);
+    if (lux) parts.push(lux + "K");
+    if (start && end) {
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
         let onMins = eh * 60 + em - (sh * 60 + sm);
         if (onMins < 0) onMins += 24 * 60;
         const onH = Math.round(onMins / 60);
@@ -738,12 +784,15 @@ function updateLightStatus() {
             const h12 = hr % 12 || 12;
             return h12 + (m !== "00" ? ":" + m : "") + ampm;
         };
-        parts.push(fmt(d.start) + "–" + fmt(d.end) + " (" + onH + "/" + offH + ")");
+        parts.push(fmt(start) + "–" + fmt(end) + " (" + onH + "/" + offH + ")");
     }
 
-    if (bulb) bulb.style.stroke = isOn ? "var(--amber)" : "var(--muted)";
-
-    el.textContent = parts.length ? parts.join("·") : "no active schedule";
+    const nextText = parts.length ? parts.join("·") : "no active schedule";
+    if (el.textContent !== nextText) el.textContent = nextText;
+    if (bulb) {
+        const nextStroke = isOn ? "var(--amber)" : "var(--muted)";
+        if (bulb.style.fill !== nextStroke) bulb.style.fill = nextStroke;
+    }
 }
 
 function _saveLightDefaults() {
@@ -1607,6 +1656,7 @@ function editEntry(id) {
         saveActiveCycleId(activeCycleId);
         updateGrowAge();
         renderAddForm();
+        updateLightStatus();
     }
 
     editingEntryId = id;
@@ -1927,6 +1977,7 @@ function renderAll() {
     renderLog(cycles, activeCycleId);
     renderStats(cycles, activeCycleId);
     refreshOpenPlantDetail();
+    updateLightStatus();
 }
 
 function refreshOpenPlantDetail() {
@@ -1939,10 +1990,14 @@ function refreshOpenPlantDetail() {
 }
 
 updateGrowAge();
-updateLightStatus();
 setDateDefault();
 _loadLightDefaults();
 renderAddForm();
+setInterval(updateLightStatus, 60 * 1000);
+window.addEventListener("focus", updateLightStatus);
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) updateLightStatus();
+});
 try {
     renderAll();
 } catch (err) {
