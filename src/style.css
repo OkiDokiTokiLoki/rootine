@@ -951,6 +951,11 @@ textarea.form-input {
     word-break: break-word;
 }
 
+.plant-detail-value--muted {
+    color: var(--muted);
+    font-weight: 500;
+}
+
 .plant-detail-divider {
     height: 1px;
     background: var(--border2);
@@ -1643,14 +1648,51 @@ textarea.form-input {
     border-radius: var(--r-md);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     padding: 6px;
-    display: none;
     flex-direction: column;
     gap: 2px;
     z-index: 50;
+    display: flex;
+
+    opacity: 0;
+    transform: translateY(-12px);
+    pointer-events: none;
+    visibility: hidden;
+    transition:
+        transform 0.22s ease,
+        opacity 0.18s ease,
+        visibility 0s linear 0.22s;
 }
 
 .header-menu.open {
-    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    visibility: visible;
+    transition:
+        transform 0.22s ease,
+        opacity 0.18s ease,
+        visibility 0s linear 0s;
+}
+
+.header-menu-icon__line {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+        transform 0.25s ease,
+        opacity 0.18s ease;
+}
+
+.header-menu-btn.is-open .header-menu-icon__line--top {
+    transform: translateY(5px) rotate(45deg);
+}
+
+.header-menu-btn.is-open .header-menu-icon__line--middle {
+    opacity: 0;
+    transform: scaleX(0);
+}
+
+.header-menu-btn.is-open .header-menu-icon__line--bottom {
+    transform: translateY(-5px) rotate(-45deg);
 }
 
 .header-menu-item {

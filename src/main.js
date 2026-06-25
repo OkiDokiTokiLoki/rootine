@@ -77,6 +77,7 @@ function toggleHeaderMenu(e) {
     const menu = document.getElementById("header-menu");
     const btn = document.getElementById("header-menu-btn");
     const isOpen = menu.classList.toggle("open");
+    btn.classList.toggle("is-open", isOpen);
     btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
 }
 
@@ -84,6 +85,7 @@ function closeHeaderMenu() {
     const menu = document.getElementById("header-menu");
     const btn = document.getElementById("header-menu-btn");
     menu.classList.remove("open");
+    btn.classList.remove("is-open");
     btn.setAttribute("aria-expanded", "false");
 }
 
@@ -1317,8 +1319,15 @@ function renderPlantDetailModal(cycle, name) {
     let waterCount = 0;
     let lstCount = 0;
     let defoliateCount = 0;
+    let weeklyFeeds = 0;
+    let weeklyWaters = 0;
+    let weeklyLst = 0;
+    let weeklyDefoliate = 0;
+    let weeklyEntries = 0;
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const plantObsItems = [];
     cycle.entries.forEach((e) => {
+        if (new Date(e.dt).getTime() >= sevenDaysAgo) weeklyEntries++;
         const pd = e.plants?.[name];
         if (pd) {
             Object.entries(pd.nutrients || {}).forEach(([n, v]) => {
@@ -1338,10 +1347,12 @@ function renderPlantDetailModal(cycle, name) {
             if (isFeed) {
                 feedCount++;
                 if (!lastFeed || new Date(e.dt) > new Date(lastFeed)) lastFeed = e.dt;
+                if (new Date(e.dt).getTime() >= sevenDaysAgo) weeklyFeeds++;
             }
             if (isWater) {
                 waterCount++;
                 if (!lastWater || new Date(e.dt) > new Date(lastWater)) lastWater = e.dt;
+                if (new Date(e.dt).getTime() >= sevenDaysAgo) weeklyWaters++;
             }
         }
         if (e.plantObs && e.plantObs[name] && e.plantObs[name].trim()) {
@@ -1362,9 +1373,11 @@ function renderPlantDetailModal(cycle, name) {
             if (kind === "LST") {
                 lstCount++;
                 if (!lastLst || entryDt > new Date(lastLst)) lastLst = e.dt;
+                if (entryDt.getTime() >= sevenDaysAgo) weeklyLst++;
             } else {
                 defoliateCount++;
                 if (!lastDefoliate || entryDt > new Date(lastDefoliate)) lastDefoliate = e.dt;
+                if (entryDt.getTime() >= sevenDaysAgo) weeklyDefoliate++;
             }
         });
     });
@@ -1487,11 +1500,12 @@ function renderPlantDetailModal(cycle, name) {
 
     const nutrientsSection =
         cycleNutrientList.length > 0
-            ? `${nutrientBlocks}
+            ? `
            <div class="plant-detail-row">
                <div class="plant-detail-label">Total water</div>
                <div class="plant-detail-value nutrient--water">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
-           </div>`
+           </div>
+           ${nutrientBlocks}`
             : `<div class="plant-detail-row">
                <div class="plant-detail-label">Total water</div>
                <div class="plant-detail-value nutrient--water">${t.water.toFixed(1)} cup${t.water === 1 ? "" : "s"}</div>
@@ -1515,6 +1529,7 @@ function renderPlantDetailModal(cycle, name) {
         <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
         ${nutrientsSection}
         <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Recount</div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Last fed</div>
             <div class="plant-detail-value">${fmtStamp(lastFeed, true)}</div>
@@ -1532,6 +1547,29 @@ function renderPlantDetailModal(cycle, name) {
             <div class="plant-detail-value">${fmtStamp(lastDefoliate, true)}</div>
         </div>
         <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Last 7 days</div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times fed</div>
+            <div class="plant-detail-value${weeklyFeeds === 0 ? " plant-detail-value--muted" : ""}">${weeklyFeeds}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times watered</div>
+            <div class="plant-detail-value${weeklyWaters === 0 ? " plant-detail-value--muted" : ""}">${weeklyWaters}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times LST'd</div>
+            <div class="plant-detail-value${weeklyLst === 0 ? " plant-detail-value--muted" : ""}">${weeklyLst}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times defoliated</div>
+            <div class="plant-detail-value${weeklyDefoliate === 0 ? " plant-detail-value--muted" : ""}">${weeklyDefoliate}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Log entries</div>
+            <div class="plant-detail-value${weeklyEntries === 0 ? " plant-detail-value--muted" : ""}">${weeklyEntries}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Cycle recap</div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Feed sessions</div>
             <div class="plant-detail-value">${feedCount}</div>
