@@ -1386,16 +1386,24 @@ function renderPlantDetailModal(cycle, name) {
 
     const concFeedCount = {};
     cycleNutrientList.forEach((n) => {
-        const latest = t.concentrations[n.name];
-        if (latest == null) {
-            concFeedCount[n.name] = 0;
-            return;
-        }
+        const defaultConc = n.defaultConcentration ?? null;
+        let activeConc = defaultConc;
         let count = 0;
-        cycle.entries.forEach((e) => {
+        const sorted = [...cycle.entries].sort((a, b) => new Date(a.dt) - new Date(b.dt));
+        for (const e of sorted) {
             const pd = e.plants?.[name];
-            if (pd && pd.concentrations && pd.concentrations[n.name] === latest) count++;
-        });
+            if (!pd) continue;
+            const amount = pd.nutrients?.[n.name];
+            const hasFeed = amount && amount > 0;
+            const entryConc = pd.concentrations?.[n.name] ?? null;
+            if (entryConc != null && entryConc !== activeConc) {
+                activeConc = entryConc;
+                count = 0;
+            }
+            if (hasFeed && entryConc != null && entryConc === activeConc) {
+                count++;
+            }
+        }
         concFeedCount[n.name] = count;
     });
 
@@ -1463,7 +1471,7 @@ function renderPlantDetailModal(cycle, name) {
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Concentration total</div>
-                <div class="plant-detail-value">${isDefault ? "Default" : `${feedsAtConc} feed${feedsAtConc === 1 ? "" : "s"}`}</div>
+                <div class="plant-detail-value">${feedsAtConc} feed${feedsAtConc === 1 ? "" : "s"}</div>
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Cycle total</div>
