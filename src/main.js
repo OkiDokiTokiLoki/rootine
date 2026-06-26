@@ -3,6 +3,7 @@ import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientC
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
+import { on, closeHeaderMenu } from "./actions.js";
 import { registerServiceWorker } from "./sw.js";
 
 let cycles = loadCycles();
@@ -23,55 +24,6 @@ initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
 initObsCollapsed(collapsedObs);
 
-window.toggleWeek = toggleWeek;
-window.toggleCycle = toggleCycle;
-window.toggleEntry = toggleEntry;
-window.deleteEntry = deleteEntry;
-window.duplicateEntry = duplicateEntry;
-window.editEntry = editEntry;
-window.cancelEdit = cancelEdit;
-window.saveEntry = saveEntry;
-window.showTab = showTab;
-window.editPlantObs = editPlantObs;
-window.switchPlant = switchPlant;
-window.togglePlantPicker = togglePlantPicker;
-window.toggleLightInputs = toggleLightInputs;
-window.saveLightDefaults = _saveLightDefaults;
-window.setStatsCycle = setStatsCycle;
-window.newCycle = newCycle;
-window.deleteCycle = deleteCycle;
-window.openPlantManager = openPlantManager;
-window.closePlantManager = closePlantManager;
-window.openAddPlant = openAddPlant;
-window.confirmAddPlant = confirmAddPlant;
-window.renamePlant = renamePlant;
-window.cancelAddPlant = cancelAddPlant;
-window.cancelRenamePlant = cancelRenamePlant;
-window.confirmRenamePlant = confirmRenamePlant;
-window.deletePlant = deletePlant;
-window.selectPlantType = selectPlantType;
-window.togglePlantType = togglePlantType;
-window.toggleFavourite = toggleFavourite;
-window.toggleObs = toggleObs;
-window.addPlantObs = addPlantObs;
-window.removePlantObs = removePlantObs;
-window.exportBackup = exportBackup;
-window.importBackup = importBackup;
-window.toggleHeaderMenu = toggleHeaderMenu;
-window.closeHeaderMenu = closeHeaderMenu;
-window.openNutrientManager = openNutrientManager;
-window.closeNutrientManager = closeNutrientManager;
-window.openAddNutrient = openAddNutrient;
-window.confirmAddNutrient = confirmAddNutrient;
-window.cancelAddNutrient = cancelAddNutrient;
-window.renameNutrient = renameNutrient;
-window.confirmRenameNutrient = confirmRenameNutrient;
-window.cancelRenameNutrient = cancelRenameNutrient;
-window.deleteNutrient = deleteNutrient;
-window.editNutrientDefault = editNutrientDefault;
-window.confirmEditNutrientDefault = confirmEditNutrientDefault;
-window.cancelEditNutrientDefault = cancelEditNutrientDefault;
-
 function toggleHeaderMenu(e) {
     if (e) e.stopPropagation();
     const menu = document.getElementById("header-menu");
@@ -79,14 +31,6 @@ function toggleHeaderMenu(e) {
     const isOpen = menu.classList.toggle("open");
     btn.classList.toggle("is-open", isOpen);
     btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-}
-
-function closeHeaderMenu() {
-    const menu = document.getElementById("header-menu");
-    const btn = document.getElementById("header-menu-btn");
-    menu.classList.remove("open");
-    btn.classList.remove("is-open");
-    btn.setAttribute("aria-expanded", "false");
 }
 
 document.addEventListener("click", (e) => {
@@ -299,7 +243,7 @@ function renderNutrientFormRows() {
     if (nutrients.length === 0) {
         const empty = document.createElement("div");
         empty.className = "nutrient-empty";
-        empty.innerHTML = 'No nutrients yet. Add some via the <span onclick="openNutrientManager()" style="color:var(--green);cursor:pointer;text-decoration:underline">Nutrient Manager</span>.';
+        empty.innerHTML = 'No nutrients yet. Add some via the <span data-action="openNutrientManager" style="color:var(--green);cursor:pointer;text-decoration:underline">Nutrient Manager</span>.';
         rowsContainer.appendChild(empty);
         return;
     }
@@ -340,12 +284,12 @@ function renderAddForm() {
         if (cycles.length === 0) {
             const empty = document.createElement("div");
             empty.className = "nutrient-empty";
-            empty.innerHTML = 'No grow cycles yet. Tap <span onclick="newCycle()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ New Cycle</span> to start one.';
+            empty.innerHTML = 'No grow cycles yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">+ New Cycle</span> to start one.';
             nutrientTabs.appendChild(empty);
         } else if (sortedPlants.length === 0) {
             const empty = document.createElement("div");
             empty.className = "nutrient-empty";
-            empty.innerHTML = 'No plants yet. Tap <span onclick="openPlantManager()" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.';
+            empty.innerHTML = 'No plants yet. Tap <span data-action="openPlantManager" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.';
             nutrientTabs.appendChild(empty);
         } else {
             const allTab = document.createElement("button");
@@ -519,10 +463,10 @@ function renderPlantObsList() {
             <div class="plant-obs-item-header">
                 <span class="plant-obs-item-name">${escapeHtml(o.plant)}</span>
                 <div>
-                    <button class="plant-obs-item-edit" type="button" onclick="editPlantObs(${i})" title="Edit note" aria-label="Edit note for ${escapeHtml(o.plant)}">
+                    <button class="plant-obs-item-edit" type="button" data-action="editPlantObs" data-index="${i}" title="Edit note" aria-label="Edit note for ${escapeHtml(o.plant)}">
                         <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg>
                     </button>
-                    <button class="plant-obs-item-remove" type="button" onclick="removePlantObs(${i})" title="Remove note" aria-label="Remove note for ${escapeHtml(o.plant)}">
+                    <button class="plant-obs-item-remove" type="button" data-action="removePlantObs" data-index="${i}" title="Remove note" aria-label="Remove note for ${escapeHtml(o.plant)}">
                         <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
                     </button>
                 </div>
@@ -686,14 +630,9 @@ function setDateDefault() {
     document.getElementById("new-dt").value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
-function switchPlant(p) {
-    document.querySelectorAll(".plant-tab").forEach((el) => el.classList.toggle("active", (el.dataset.plant || el.textContent) === p));
-    document.querySelectorAll(".plant-panel").forEach((el) => el.classList.toggle("active", el.id === "panel-" + p));
-}
-
-function togglePlantPicker(action) {
-    const checked = document.getElementById("ck-" + action).checked;
-    document.getElementById(action + "-plants").style.display = checked ? "block" : "none";
+function togglePlantPicker(pick) {
+    const checked = document.getElementById("ck-" + pick).checked;
+    document.getElementById(pick + "-plants").style.display = checked ? "block" : "none";
 }
 
 function toggleLightInputs() {
@@ -842,7 +781,7 @@ function renderPlantList() {
     }
     list.innerHTML = "";
     plants.forEach((p, i) => {
-        const meta = cycle.plantTypes?.[p] || { type: "auto" };
+        const meta = cycle.plantTypes?.[p] || { type: "photo" };
         const type = typeof meta === "string" ? meta : meta.type;
         const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
         const badgeLabel = type === "auto" ? "AUTO" : "PHOTO";
@@ -851,10 +790,10 @@ function renderPlantList() {
         row.innerHTML = `
             <div class="plant-manage-name">${escapeHtml(p)}</div>
             <div class="plant-manage-actions">
-                <span class="${badgeClass}" onclick="togglePlantType(${i})" title="Click to toggle type">${badgeLabel}</span>
-                <button class="settings-btn blue-btn" onclick="renamePlant(${i})" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
-                <button class="settings-btn red-btn" onclick="deletePlant(${i})" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
-                <button class="settings-btn favourite-btn ${isFavourite(cycle, p) ? "is-favourite" : ""}" onclick="toggleFavourite(${i})" aria-label="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"} ${escapeHtml(p)}" title="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"}"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;${isFavourite(cycle, p) ? "fill:var(--amber);stroke:var(--amber)" : "fill:none;stroke:var(--muted)"}" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+                <span class="${badgeClass}" data-action="togglePlantType" data-index="${i}" title="Click to toggle type">${badgeLabel}</span>
+                <button class="settings-btn blue-btn" data-action="renamePlant" data-index="${i}" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
+                <button class="settings-btn red-btn" data-action="deletePlant" data-index="${i}" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+                <button class="settings-btn favourite-btn ${isFavourite(cycle, p) ? "is-favourite" : ""}" data-action="toggleFavourite" data-index="${i}" aria-label="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"} ${escapeHtml(p)}" title="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"}"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;${isFavourite(cycle, p) ? "fill:var(--amber);stroke:var(--amber)" : "fill:none;stroke:var(--muted)"}" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
             </div>
         `;
         list.appendChild(row);
@@ -1082,13 +1021,13 @@ function renderNutrientList() {
                 ${n.defaultConcentration != null ? `<span class="nutrient-default-hint" title="Starting dilution">${n.defaultConcentration} ml/l</span>` : ""}
             </div>
             <div class="plant-manage-actions">
-                <button class="settings-btn blue-btn" onclick="renameNutrient(${i})" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg>    
+                <button class="settings-btn blue-btn" data-action="renameNutrient" data-index="${i}" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg>
                 </button>
-                <button class="settings-btn red-btn" onclick="deleteNutrient(${i})" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
+                <button class="settings-btn red-btn" data-action="deleteNutrient" data-index="${i}" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
                     <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
                 </button>
-                <button class="settings-btn amber-btn" onclick="editNutrientDefault(${i})" title="Set starting dilution for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">
+                <button class="settings-btn amber-btn" data-action="editNutrientDefault" data-index="${i}" title="Set starting dilution for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">
                     <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M480-100q-133 0-226.5-92T160-416q0-63 24.5-120.5T254-638l226-222 226 222q45 44 69.5 101.5T800-416q0 132-93.5 224T480-100ZM240-416h480q0-47-18-89.5T650-580L480-748 310-580q-34 32-52 74.5T240-416Z"/></svg>
                 </button>
             </div>
@@ -1283,7 +1222,7 @@ function cancelEditNutrientDefault() {
 
 // ===== Plant detail =====
 
-window.openPlantDetail = function (name) {
+function openPlantDetail(name) {
     const cycle = activeCycle();
     if (!cycle || !cycle.plants.includes(name)) {
         const found = cycles.find((c) => c.plants && c.plants.includes(name));
@@ -1291,7 +1230,7 @@ window.openPlantDetail = function (name) {
         return renderPlantDetailModal(found, name);
     }
     renderPlantDetailModal(cycle, name);
-};
+}
 
 function renderPlantDetailModal(cycle, name) {
     const meta = getPlantMeta(cycle, name);
@@ -1594,9 +1533,9 @@ function renderPlantDetailModal(cycle, name) {
     document.getElementById("plant-detail-modal").style.display = "flex";
 }
 
-window.closePlantDetail = function () {
+function closePlantDetail() {
     document.getElementById("plant-detail-modal").style.display = "none";
-};
+}
 
 // ===== Cycles =====
 
@@ -1607,7 +1546,7 @@ function newCycle() {
     document.getElementById("new-cycle-input").select();
 }
 
-window.confirmNewCycle = function () {
+function confirmNewCycle() {
     const name = document.getElementById("new-cycle-input").value.trim() || `Grow #${cycles.length + 1}`;
     document.getElementById("new-cycle-modal").style.display = "none";
 
@@ -1632,13 +1571,13 @@ window.confirmNewCycle = function () {
     resetAddForm();
     setDateDefault();
     showTab("log", true);
-};
+}
 
-window.cancelNewCycle = function () {
+function cancelNewCycle() {
     document.getElementById("new-cycle-modal").style.display = "none";
-};
+}
 
-window.editCycleName = function (id, currentName) {
+function editCycleName(id, currentName) {
     const modal = document.getElementById("rename-cycle-modal");
     const input = document.getElementById("rename-cycle-input");
     input.value = currentName;
@@ -1646,13 +1585,13 @@ window.editCycleName = function (id, currentName) {
     input.focus();
     modal._cycleId = id;
     modal._currentName = currentName;
-};
+}
 
-window.cancelRenameCycle = function () {
+function cancelRenameCycle() {
     document.getElementById("rename-cycle-modal").style.display = "none";
-};
+}
 
-window.confirmRenameCycle = function () {
+function confirmRenameCycle() {
     const modal = document.getElementById("rename-cycle-modal");
     const name = document.getElementById("rename-cycle-input").value.trim();
     if (!name || name === modal._currentName) {
@@ -1665,7 +1604,7 @@ window.confirmRenameCycle = function () {
         persist();
     }
     modal.style.display = "none";
-};
+}
 
 function setStatsCycle(id) {
     setStatsMode(id === "all" ? "all" : id);
@@ -1880,7 +1819,6 @@ function saveEntry() {
         });
         if (Object.keys(mergedConcs).length > 0) data.concentrations = mergedConcs;
 
-        // Water: per-tab overrides All. Only set if there's a value.
         const water = tabDraft.water != null ? tabDraft.water : allDraft.water;
         if (water != null && water !== "") data.water = water;
 
@@ -1922,7 +1860,6 @@ function saveEntry() {
     }
 
     persist();
-
     resetAddForm();
     showTab("log", true);
 }
@@ -2002,9 +1939,8 @@ function importBackup(event) {
     event.target.value = "";
 }
 
-function persist() {
-    saveCycles(cycles);
-    renderAll();
+function triggerImport() {
+    document.getElementById("import-backup-input").click();
 }
 
 function renderAll() {
@@ -2012,6 +1948,11 @@ function renderAll() {
     renderStats(cycles, activeCycleId);
     refreshOpenPlantDetail();
     updateLightStatus();
+}
+
+function persist() {
+    saveCycles(cycles);
+    renderAll();
 }
 
 function refreshOpenPlantDetail() {
@@ -2022,6 +1963,79 @@ function refreshOpenPlantDetail() {
     const cycle = cycles.find((c) => c.plants && c.plants.includes(name));
     if (cycle) renderPlantDetailModal(cycle, name);
 }
+
+// ===== Action handlers (event delegation) =====
+// Each one used to be window.X = X so inline onclick="X(...)" in templates
+// could reach it. With data-action + a single document listener (in
+// actions.js), those exports aren't needed. User-controlled strings (cycle
+// names, plant names) reach handlers via data-id only — never via an HTML
+// attribute that was built by string interpolation.
+
+on("toggleWeek", "click", (el) => toggleWeek(el.dataset.id, Number(el.dataset.week)));
+on("toggleCycle", "click", (el) => toggleCycle(el.dataset.id));
+on("toggleEntry", "click", (el) => toggleEntry(el.dataset.id));
+on("editEntry", "click", (el) => editEntry(el.dataset.id));
+on("deleteEntry", "click", (el) => deleteEntry(el.dataset.id));
+on("duplicateEntry", "click", (el) => duplicateEntry(el.dataset.id));
+on("setStatsCycle", "click", (el) => setStatsCycle(el.dataset.id));
+
+on("editCycleName", "click", (el) => {
+    const cycle = cycles.find((c) => c.id === el.dataset.id);
+    if (cycle) editCycleName(cycle.id, cycle.name);
+});
+on("deleteCycle", "click", (el) => deleteCycle(el.dataset.id));
+
+on("togglePlantType", "click", (el) => togglePlantType(Number(el.dataset.index)));
+on("renamePlant", "click", (el) => renamePlant(Number(el.dataset.index)));
+on("deletePlant", "click", (el) => deletePlant(Number(el.dataset.index)));
+on("toggleFavourite", "click", (el) => toggleFavourite(Number(el.dataset.index)));
+
+on("renameNutrient", "click", (el) => renameNutrient(Number(el.dataset.index)));
+on("deleteNutrient", "click", (el) => deleteNutrient(Number(el.dataset.index)));
+on("editNutrientDefault", "click", (el) => editNutrientDefault(Number(el.dataset.index)));
+
+on("editPlantObs", "click", (el) => editPlantObs(Number(el.dataset.index)));
+on("removePlantObs", "click", (el) => removePlantObs(Number(el.dataset.index)));
+
+on("addPlantObs", "click", () => addPlantObs());
+on("saveEntry", "click", () => saveEntry());
+on("cancelEdit", "click", () => cancelEdit());
+on("togglePlantPicker", "change", (el) => togglePlantPicker(el.dataset.pick));
+on("toggleLightInputs", "change", () => toggleLightInputs());
+on("saveLightDefaults", "input", () => _saveLightDefaults());
+
+on("showTab", "click", (el) => showTab(el.dataset.id));
+on("toggleObs", "click", () => toggleObs());
+
+on("newCycle", "click", () => newCycle());
+on("openPlantManager", "click", () => openPlantManager());
+on("openNutrientManager", "click", () => openNutrientManager());
+on("exportBackup", "click", () => exportBackup());
+on("importBackup", "change", (_el, e) => importBackup(e));
+on("triggerImport", "click", () => triggerImport());
+
+on("confirmNewCycle", "click", () => confirmNewCycle());
+on("cancelNewCycle", "click", () => cancelNewCycle());
+on("confirmRenameCycle", "click", () => confirmRenameCycle());
+on("cancelRenameCycle", "click", () => cancelRenameCycle());
+on("confirmAddPlant", "click", () => confirmAddPlant());
+on("cancelAddPlant", "click", () => cancelAddPlant());
+on("confirmRenamePlant", "click", () => confirmRenamePlant());
+on("cancelRenamePlant", "click", () => cancelRenamePlant());
+on("closePlantManager", "click", () => closePlantManager());
+on("openAddPlant", "click", () => openAddPlant());
+on("closePlantDetail", "click", () => closePlantDetail());
+on("confirmAddNutrient", "click", () => confirmAddNutrient());
+on("cancelAddNutrient", "click", () => cancelAddNutrient());
+on("confirmRenameNutrient", "click", () => confirmRenameNutrient());
+on("cancelRenameNutrient", "click", () => cancelRenameNutrient());
+on("confirmEditNutrientDefault", "click", () => confirmEditNutrientDefault());
+on("cancelEditNutrientDefault", "click", () => cancelEditNutrientDefault());
+
+on("selectPlantType", "click", (el) => selectPlantType(el.dataset.scope, el.dataset.type));
+on("openPlantDetail", "click", (el) => openPlantDetail(el.dataset.id));
+
+on("toggleHeaderMenu", "click", (e) => toggleHeaderMenu(e));
 
 updateGrowAge();
 setDateDefault();

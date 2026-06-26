@@ -1,5 +1,6 @@
 import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
+import { on } from "./actions.js";
 
 let collapsedWeeks;
 let collapsedCycles;
@@ -8,6 +9,12 @@ export function initLog(cWeeks, cCycles) {
     collapsedWeeks = cWeeks;
     collapsedCycles = cCycles;
 }
+
+// Delegated click handlers. Each looks up its argument from el.dataset —
+// no string interpolation of user content into HTML attributes.
+on("toggleWeek", "click", (el) => toggleWeek(el.dataset.id, Number(el.dataset.week)));
+on("toggleCycle", "click", (el) => toggleCycle(el.dataset.id));
+on("toggleEntry", "click", (el) => toggleEntry(el.dataset.id));
 
 function weekKey(cycleId, wk) {
     return `${cycleId}--${wk}`;
@@ -50,7 +57,7 @@ function renderEntriesForCycle(cycle) {
             if (lastWk !== null) html += `</div>`;
             const isCollapsed = collapsedWeeks.has(key);
             html += `
-        <div class="week-header" onclick="toggleWeek('${cycle.id}', ${wk})">
+        <div class="week-header" data-action="toggleWeek" data-id="${escapeHtml(cycle.id)}" data-week="${wk}">
           <span>Week ${wk}</span>
           <svg class="week-chevron${isCollapsed ? " collapsed" : ""}" id="week-chev-${key}" viewBox="0 0 24 24" style="margin-left:5px">
             <polyline points="6 9 12 15 18 9"/>
@@ -64,7 +71,7 @@ function renderEntriesForCycle(cycle) {
     });
 
     if (lastWk !== null) html += "</div>";
-    return html || '<div class="empty" style="padding:20px 0">No entries yet. <span onclick="document.querySelectorAll(\'#tabs button\')[1].click()" style="color:var(--green);cursor:pointer;text-decoration:underline">Change that.</span></div>';
+    return html || '<div class="empty" style="padding:20px 0">No entries yet. <span data-action="showTab" data-id="add" style="color:var(--green);cursor:pointer;text-decoration:underline">Change that.</span></div>';
 }
 
 function hasPlantObs(e) {
@@ -134,26 +141,25 @@ function renderEntryCard(e, cycle) {
     }
 
     return `
-    <div class="entry-card" id="card-${e.id}">
-      <div class="entry-header" onclick="toggleEntry('${e.id}')">
+    <div class="entry-card" id="card-${escapeHtml(e.id)}">
+      <div class="entry-header" data-action="toggleEntry" data-id="${escapeHtml(e.id)}">
         <div>
           <div class="entry-date">${fmtDate(e.dt)}</div>
           <div class="entry-time">${fmtTime(e.dt)}</div>
         </div>
         <div style="display:flex;gap:6px">
-            <button class="settings-btn blue-btn" onclick="editEntry('${e.id}')" title="Edit entry"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg></button>
-            <button class="settings-btn red-btn" onclick="deleteEntry('${e.id}')" title="Delete entry"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></button>
-            <button class="settings-btn green-btn" onclick="duplicateEntry('${e.id}')" title="Duplicate entry"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/></svg></button>
+            <button class="settings-btn blue-btn" data-action="editEntry" data-id="${escapeHtml(e.id)}" title="Edit entry"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg></button>
+            <button class="settings-btn red-btn" data-action="deleteEntry" data-id="${escapeHtml(e.id)}" title="Delete entry"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></button>
+            <button class="settings-btn green-btn" data-action="duplicateEntry" data-id="${escapeHtml(e.id)}" title="Duplicate entry"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/></svg></button>
         </div>
         <span style="display:flex;align-items:center;gap:6px;margin-left:auto">${badgeHtml}</span>
-        <svg class="chevron" id="chev-${e.id}" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        <svg class="chevron" id="chev-${escapeHtml(e.id)}" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
-      <div class="entry-body" id="body-${e.id}">${body}</div>
+      <div class="entry-body" id="body-${escapeHtml(e.id)}">${body}</div>
     </div>`;
 }
 
 export function renderLog(cycles, activeCycleId) {
-    // Newest cycle first
     const sorted = [...cycles].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
     let html = "";
 
@@ -165,28 +171,37 @@ export function renderLog(cycles, activeCycleId) {
 
         html += `
         <div class="cycle-block">
-            <div class="cycle-header${isCollapsed ? " collapsed" : ""}" id="cycle-header-${cycle.id}" onclick="toggleCycle('${cycle.id}')">
+            <div class="cycle-header${isCollapsed ? " collapsed" : ""}"
+                 id="cycle-header-${escapeHtml(cycle.id)}"
+                 data-action="toggleCycle"
+                 data-id="${escapeHtml(cycle.id)}">
                 <div class="cycle-header-left">
                     <span class="cycle-name">${escapeHtml(cycle.name)}</span>
                     ${activePill}
                     <span class="cycle-start">${startFmt}</span>
-                    <button class="settings-btn blue-btn" onclick="event.stopPropagation();editCycleName('${cycle.id}', '${cycle.name.replace(/'/g, "\\\'")}')" title="Edit cycle name">
+                    <button class="settings-btn blue-btn"
+                            data-action="editCycleName"
+                            data-id="${escapeHtml(cycle.id)}"
+                            title="Edit cycle name">
                         <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg>
                     </button>
-                    <button class="settings-btn red-btn" onclick="event.stopPropagation();deleteCycle('${cycle.id}')" title="Delete cycle">
+                    <button class="settings-btn red-btn"
+                            data-action="deleteCycle"
+                            data-id="${escapeHtml(cycle.id)}"
+                            title="Delete cycle">
                         <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
                     </button>
                 </div>
-                <svg class="week-chevron${isCollapsed ? " collapsed" : ""}" id="cycle-chev-${cycle.id}" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round">
+                <svg class="week-chevron${isCollapsed ? " collapsed" : ""}" id="cycle-chev-${escapeHtml(cycle.id)}" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round">
                     <polyline points="6 9 12 15 18 9"/>
                 </svg>
             </div>
-            <div class="cycle-entries${isCollapsed ? " collapsed" : ""}" id="cycle-entries-${cycle.id}">
+            <div class="cycle-entries${isCollapsed ? " collapsed" : ""}" id="cycle-entries-${escapeHtml(cycle.id)}">
                 ${renderEntriesForCycle(cycle)}
             </div>
         </div>`;
     });
 
-    if (!html) html = '<div class="empty">No entries yet. Tap <span onclick="newCycle()" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging.</div>';
+    if (!html) html = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging.</div>';
     document.getElementById("log-list").innerHTML = html;
 }

@@ -1,5 +1,6 @@
 import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getNutrientColor, abbrevNutrient, fmtQty } from "./utils.js";
 import { saveCollapsedObs } from "./storage.js";
+import { on } from "./actions.js";
 
 let statsMode = "active";
 
@@ -36,6 +37,10 @@ function applyObsCollapsedClasses() {
     if (chev) chev.classList.toggle("collapsed", collapsedObs);
     if (header) header.classList.toggle("collapsed", collapsedObs);
 }
+
+// Delegated handler. Reads plant name from el.dataset.id (escaped at render
+// time). The .replace(/'/g, "\\'") hack for inline onclick is gone.
+on("openPlantDetail", "click", (el) => openPlantDetail(el.dataset.id));
 
 function computeStats(entries) {
     let feeds = 0,
@@ -75,7 +80,6 @@ function countPlantNotes(cycle, name) {
 
 function renderPlantCard(name, totals, type, isFav, noteCount, cycle) {
     const starSvg = isFav ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;fill:var(--amber);stroke:var(--amber);flex-shrink:0" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
-    const safeName = name.replace(/'/g, "\\'");
     const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
     const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
 
@@ -92,7 +96,7 @@ function renderPlantCard(name, totals, type, isFav, noteCount, cycle) {
     const waterChip = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${waterQty}</span>`;
 
     return `
-    <div class="plant-stat-row plant-stat-row-clickable" onclick="openPlantDetail('${safeName}')">
+    <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(name)}">
         <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
             <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span>
             ${starSvg}
@@ -116,12 +120,13 @@ export function renderStats(cycles, activeCycleId) {
               (c) => `
         <button
           class="stats-cycle-btn${statsMode === c.id || (statsMode === "active" && c.id === activeCycleId) ? " active" : ""}"
-          onclick="setStatsCycle('${c.id}')"
+          data-action="setStatsCycle"
+          data-id="${escapeHtml(c.id)}"
         >${escapeHtml(c.name)}</button>
       `
           )
           .join("")}
-      <button class="stats-cycle-btn${statsMode === "all" ? " active" : ""}" onclick="setStatsCycle('all')">All cycles</button>
+      <button class="stats-cycle-btn${statsMode === "all" ? " active" : ""}" data-action="setStatsCycle" data-id="all">All cycles</button>
     </div>`;
 
     let targetCycles;
@@ -196,7 +201,6 @@ export function renderStats(cycles, activeCycleId) {
     }
     document.getElementById("stats-plants").innerHTML = plantsHtml;
 
-    // Observations
     obsEntries.sort((a, b) => new Date(b.dt) - new Date(a.dt));
     let obsHtml = "";
     obsEntries.forEach((e) => {
