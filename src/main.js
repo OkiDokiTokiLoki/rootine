@@ -806,8 +806,7 @@ function _saveLightDefaults() {
         start: document.getElementById("light-start").value,
         end: document.getElementById("light-end").value,
     };
-    saveCycles(cycles);
-    updateLightStatus();
+    persist();
 }
 
 function _loadLightDefaults() {
@@ -843,7 +842,7 @@ function renderPlantList() {
     }
     list.innerHTML = "";
     plants.forEach((p, i) => {
-        const meta = cycle.plantTypes?.[p] || { type: "photo" };
+        const meta = cycle.plantTypes?.[p] || { type: "auto" };
         const type = typeof meta === "string" ? meta : meta.type;
         const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
         const badgeLabel = type === "auto" ? "AUTO" : "PHOTO";
@@ -892,7 +891,7 @@ function togglePlantType(index) {
         cycle.plantTypes[name] = { type: current, repottedAt: cycle.startDate };
     }
     cycle.plantTypes[name].type = current === "auto" ? "photo" : "auto";
-    saveCycles(cycles);
+    persist();
     renderPlantList();
 }
 
@@ -907,10 +906,9 @@ function toggleFavourite(index) {
     } else {
         cycle.favourites.push(name);
     }
-    saveCycles(cycles);
+    persist();
     renderPlantList();
     renderAddForm();
-    renderAll();
 }
 
 function confirmAddPlant() {
@@ -936,11 +934,10 @@ function confirmAddPlant() {
     cycle.plants.push(name);
     if (!cycle.plantTypes || typeof cycle.plantTypes !== "object") cycle.plantTypes = {};
     cycle.plantTypes[name] = pendingAddPlantType;
-    saveCycles(cycles);
+    persist();
     document.getElementById("add-plant-modal").style.display = "none";
     renderPlantList();
     renderAddForm();
-    renderAll();
 }
 
 function cancelAddPlant() {
@@ -1023,11 +1020,10 @@ function confirmRenamePlant() {
         repottedAt: cycle.plantTypes[newName]?.repottedAt || cycle.startDate,
     };
 
-    saveCycles(cycles);
+    persist();
     modal.style.display = "none";
     renderPlantList();
     renderAddForm();
-    renderAll();
 }
 
 function cancelRenamePlant() {
@@ -1041,10 +1037,9 @@ function deletePlant(index) {
     if (!confirm(`Remove plant "${name}"? It will disappear from the Add form. Existing entries that reference it keep their data.`)) return;
     cycle.plants.splice(index, 1);
     if (cycle.plantTypes) delete cycle.plantTypes[name];
-    saveCycles(cycles);
+    persist();
     renderPlantList();
     renderAddForm();
-    renderAll();
 }
 
 function isFavourite(cycle, name) {
@@ -1084,7 +1079,7 @@ function renderNutrientList() {
             <div class="plant-manage-name">
                 <span class="nutrient-swatch nutrient-swatch--${color}"></span>
                 <span>${escapeHtml(n.name)}</span>
-                ${n.defaultConcentration != null ? `<span class="nutrient-default-hint" title="Default concentration">${n.defaultConcentration} ml/l</span>` : ""}
+                ${n.defaultConcentration != null ? `<span class="nutrient-default-hint" title="Starting dilution">${n.defaultConcentration} ml/l</span>` : ""}
             </div>
             <div class="plant-manage-actions">
                 <button class="settings-btn blue-btn" onclick="renameNutrient(${i})" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
@@ -1093,7 +1088,7 @@ function renderNutrientList() {
                 <button class="settings-btn red-btn" onclick="deleteNutrient(${i})" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
                     <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
                 </button>
-                <button class="settings-btn amber-btn" onclick="editNutrientDefault(${i})" title="Set default concentration for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">
+                <button class="settings-btn amber-btn" onclick="editNutrientDefault(${i})" title="Set starting dilution for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">
                     <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M480-100q-133 0-226.5-92T160-416q0-63 24.5-120.5T254-638l226-222 226 222q45 44 69.5 101.5T800-416q0 132-93.5 224T480-100ZM240-416h480q0-47-18-89.5T650-580L480-748 310-580q-34 32-52 74.5T240-416Z"/></svg>
                 </button>
             </div>
@@ -1136,11 +1131,10 @@ function confirmAddNutrient() {
         return;
     }
     nutrients.push({ name, defaultConcentration });
-    saveCycles(cycles);
+    persist();
     document.getElementById("add-nutrient-modal").style.display = "none";
     renderNutrientList();
     renderAddForm();
-    renderAll();
 }
 
 function cancelAddNutrient() {
@@ -1210,11 +1204,10 @@ function confirmRenameNutrient() {
         delete nutrientDrafts[oldName];
     }
 
-    saveCycles(cycles);
+    persist();
     modal.style.display = "none";
     renderNutrientList();
     renderAddForm();
-    renderAll();
 }
 
 function cancelRenameNutrient() {
@@ -1234,10 +1227,9 @@ function deleteNutrient(index) {
         if (draft.concentrations) delete draft.concentrations[name];
     });
 
-    saveCycles(cycles);
+    persist();
     renderNutrientList();
     renderAddForm();
-    renderAll();
 }
 
 function editNutrientDefault(index) {
@@ -1279,11 +1271,10 @@ function confirmEditNutrientDefault() {
         }
         n.defaultConcentration = v;
     }
-    saveCycles(cycles);
+    persist();
     modal.style.display = "none";
     renderNutrientList();
     renderAddForm();
-    renderAll();
 }
 
 function cancelEditNutrientDefault() {
@@ -1462,16 +1453,16 @@ function renderPlantDetailModal(cycle, name) {
         <div class="plant-detail-nutrient-block">
             <div class="plant-detail-nutrient-name ${nutrientClass}">${label}</div>
             <div class="plant-detail-row">
-                <div class="plant-detail-label">Latest concentration</div>
+                <div class="plant-detail-label">Active dilution</div>
                 <div class="plant-detail-value">${concVal != null ? concVal + " ml/l" : "—"}</div>
+            </div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Used for</div>
+                <div class="plant-detail-value">${feedsAtConc} feed${feedsAtConc === 1 ? "" : "s"}</div>
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Date</div>
                 <div class="plant-detail-value">${concDate ? `<span class="plant-detail-rel">${relStr(concDate)}</span> since ${fmtDate(concDate)}` : isDefault ? `<span class="plant-detail-rel">since cycle start</span>` : "—"}</div>
-            </div>
-            <div class="plant-detail-row">
-                <div class="plant-detail-label">Concentration total</div>
-                <div class="plant-detail-value">${feedsAtConc} feed${feedsAtConc === 1 ? "" : "s"}</div>
             </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Cycle total</div>
@@ -1632,16 +1623,14 @@ window.confirmNewCycle = function () {
 
     activeCycleId = newC.id;
 
-    saveCycles(cycles);
+    persist();
     saveActiveCycleId(activeCycleId);
 
     updateGrowAge();
     renderAddForm();
-    renderAll();
     syncHeaderActions();
     resetAddForm();
     setDateDefault();
-    updateLightStatus();
     showTab("log", true);
 };
 
@@ -1673,9 +1662,7 @@ window.confirmRenameCycle = function () {
     const cycle = cycles.find((c) => c.id === modal._cycleId);
     if (cycle) {
         cycle.name = name;
-        saveCycles(cycles);
-        renderLog(cycles, activeCycleId);
-        renderStats(cycles, activeCycleId);
+        persist();
     }
     modal.style.display = "none";
 };
@@ -1934,8 +1921,7 @@ function saveEntry() {
         });
     }
 
-    saveCycles(cycles);
-    renderAll();
+    persist();
 
     resetAddForm();
     showTab("log", true);
@@ -1956,8 +1942,7 @@ function duplicateEntry(id) {
             copy.id = uid();
 
             cycle.entries.unshift(copy);
-            saveCycles(cycles);
-            renderAll();
+            persist();
             return;
         }
     }
@@ -1968,8 +1953,7 @@ function deleteEntry(id) {
     cycles.forEach((c) => {
         c.entries = c.entries.filter((e) => e.id !== id);
     });
-    saveCycles(cycles);
-    renderAll();
+    persist();
 }
 
 function deleteCycle(id) {
@@ -1981,10 +1965,9 @@ function deleteCycle(id) {
         activeCycleId = cycles.length ? cycles[cycles.length - 1].id : null;
         saveActiveCycleId(activeCycleId);
     }
-    saveCycles(cycles);
+    persist();
     updateGrowAge();
     renderAddForm();
-    renderAll();
 }
 
 function exportBackup() {
@@ -2017,6 +2000,11 @@ function importBackup(event) {
     };
     reader.readAsText(file);
     event.target.value = "";
+}
+
+function persist() {
+    saveCycles(cycles);
+    renderAll();
 }
 
 function renderAll() {
