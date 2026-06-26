@@ -781,8 +781,7 @@ function renderPlantList() {
     }
     list.innerHTML = "";
     plants.forEach((p, i) => {
-        const meta = cycle.plantTypes?.[p] || { type: "photo" };
-        const type = typeof meta === "string" ? meta : meta.type;
+        const type = getPlantMeta(cycle, p).type;
         const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
         const badgeLabel = type === "auto" ? "AUTO" : "PHOTO";
         const row = document.createElement("div");

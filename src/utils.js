@@ -54,9 +54,9 @@ export function escapeHtml(s) {
 
 export function getPlantMeta(cycle, name) {
     const raw = cycle?.plantTypes?.[name];
-    if (!raw) return { type: "photo", repottedAt: cycle?.startDate };
+    if (!raw) return { type: "auto", repottedAt: cycle?.startDate };
     if (typeof raw === "string") return { type: raw, repottedAt: cycle?.startDate };
-    return { type: raw.type || "photo", repottedAt: raw.repottedAt || cycle?.startDate };
+    return { type: raw.type || "auto", repottedAt: raw.repottedAt || cycle?.startDate };
 }
 
 export function fmtQty(n) {
