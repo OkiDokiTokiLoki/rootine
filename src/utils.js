@@ -1,90 +1,61 @@
 export const NUTRIENT_PALETTE = ["fish", "grow", "bloom", "blue", "amber", "red"];
-
-export function getNutrientColor(cycle, nutrientName) {
-    if (!cycle || !Array.isArray(cycle.nutrients)) return "neutral";
-    const idx = cycle.nutrients.findIndex((n) => n.name === nutrientName);
-    if (idx < 0) return "neutral";
-    return NUTRIENT_PALETTE[idx % NUTRIENT_PALETTE.length];
+export function getNutrientColor(t, e) {
+    if (!t || !Array.isArray(t.nutrients)) return "neutral";
+    const n = t.nutrients.findIndex((t) => t.name === e);
+    return n < 0 ? "neutral" : NUTRIENT_PALETTE[n % NUTRIENT_PALETTE.length];
 }
-
-export function abbrevNutrient(name) {
-    if (!name) return "";
-    return name.slice(0, 2).toUpperCase();
+export function abbrevNutrient(t) {
+    return t ? t.slice(0, 2).toUpperCase() : "";
 }
-
-export function getWeekNum(dateStr, cycleStartDate) {
-    const entry = new Date(dateStr);
-    const start = new Date(cycleStartDate);
-    const entryMidnight = new Date(entry.getFullYear(), entry.getMonth(), entry.getDate());
-    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const days = Math.floor((entryMidnight - startMidnight) / (24 * 60 * 60 * 1000));
-    return Math.max(1, Math.floor(days / 7) + 1);
+export function getWeekNum(t, e) {
+    const n = new Date(t),
+        r = new Date(e),
+        a = new Date(n.getFullYear(), n.getMonth(), n.getDate()),
+        o = new Date(r.getFullYear(), r.getMonth(), r.getDate()),
+        l = Math.floor((a - o) / 864e5);
+    return Math.max(1, Math.floor(l / 7) + 1);
 }
-
-export function fmtDate(s) {
-    return new Date(s).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+export function fmtDate(t) {
+    return new Date(t).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
-
-export function fmtTime(s) {
-    return new Date(s).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+export function fmtTime(t) {
+    return new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
-
-export function entryType(e) {
-    const vals = Object.values(e.plants || {});
-    if (
-        vals.some((p) => {
-            if (!p || !p.nutrients) return false;
-            return Object.values(p.nutrients).some((v) => v && v > 0);
-        })
-    )
-        return "feed";
-    if (vals.some((p) => p && p.water > 0)) return "water";
-    return "note";
+export function entryType(t) {
+    const e = Object.values(t.plants || {});
+    return e.some((t) => !(!t || !t.nutrients) && Object.values(t.nutrients).some((t) => t && t > 0)) ? "feed" : e.some((t) => t && t.water > 0) ? "water" : "note";
 }
-
 export function uid() {
     return "e" + Date.now() + Math.random().toString(36).slice(2, 6);
 }
-
 export function cycleUid() {
     return "cycle-" + Date.now();
 }
-
-export function escapeHtml(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+export function escapeHtml(t) {
+    return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
-
-export function getPlantMeta(cycle, name) {
-    const raw = cycle?.plantTypes?.[name];
-    if (!raw) return { type: "auto", repottedAt: cycle?.startDate };
-    if (typeof raw === "string") return { type: raw, repottedAt: cycle?.startDate };
-    return { type: raw.type || "auto", repottedAt: raw.repottedAt || cycle?.startDate };
+export function getPlantMeta(t, e) {
+    const n = t?.plantTypes?.[e];
+    return n ? ("string" == typeof n ? { type: n, repottedAt: t?.startDate } : { type: n.type || "auto", repottedAt: n.repottedAt || t?.startDate }) : { type: "auto", repottedAt: t?.startDate };
 }
-
-export function fmtQty(n) {
-    return n % 1 === 0 ? String(n) : n.toFixed(1);
+export function fmtQty(t) {
+    return t % 1 == 0 ? String(t) : t.toFixed(1);
 }
-
-export function formatAction(action) {
-    if (action == null) return "";
-    if (typeof action === "string") return escapeHtml(action);
-
-    switch (action.type) {
+export function formatAction(t) {
+    if (null == t) return "";
+    if ("string" == typeof t) return escapeHtml(t);
+    switch (t.type) {
         case "lst":
         case "def":
         case "repot": {
-            const labels = { lst: "LST", def: "Defoliate", repot: "Repot / transplant" };
-            const prefix = labels[action.type];
-            if (!action.plants || action.plants.length === 0) {
-                return `${prefix} (All plants)`;
-            }
-            return `${prefix} (${action.plants.map(escapeHtml).join(", ")})`;
+            const e = { lst: "LST", def: "Defoliate", repot: "Repot / transplant" }[t.type];
+            return t.plants && 0 !== t.plants.length ? `${e} (${t.plants.map(escapeHtml).join(", ")})` : `${e} (All plants)`;
         }
         case "light": {
-            const parts = [action.lux ? `${escapeHtml(action.lux)}k lux` : null, action.dist ? `${escapeHtml(action.dist)}cm` : null, action.start && action.end ? `${escapeHtml(action.start)}–${escapeHtml(action.end)}` : null].filter(Boolean);
-            return parts.length ? `Light adjusted (${parts.join(", ")})` : "Light adjusted";
+            const e = [t.lux ? `${escapeHtml(t.lux)}k lux` : null, t.dist ? `${escapeHtml(t.dist)}cm` : null, t.start && t.end ? `${escapeHtml(t.start)}–${escapeHtml(t.end)}` : null].filter(Boolean);
+            return e.length ? `Light adjusted (${e.join(", ")})` : "Light adjusted";
         }
         default:
-            return escapeHtml(JSON.stringify(action));
+            return escapeHtml(JSON.stringify(t));
     }
 }

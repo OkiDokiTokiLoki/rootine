@@ -2,214 +2,122 @@ import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getN
 import { saveCollapsedObs } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
-
 let statsMode = "active";
-
-export function initStats(initialMode) {
-    statsMode = initialMode || "active";
+export function initStats(t) {
+    statsMode = t || "active";
 }
-
-export function setStatsMode(mode) {
-    statsMode = mode;
+export function setStatsMode(t) {
+    statsMode = t;
 }
-
 export function getStatsMode() {
     return statsMode;
 }
-
-let collapsedObs = false;
-
-export function initObsCollapsed(state) {
-    collapsedObs = !!state;
-    applyObsCollapsedClasses();
+let collapsedObs = !1;
+export function initObsCollapsed(t) {
+    ((collapsedObs = !!t), applyObsCollapsedClasses());
 }
-
 export function toggleObs() {
-    collapsedObs = !collapsedObs;
-    saveCollapsedObs(collapsedObs);
-    applyObsCollapsedClasses();
+    ((collapsedObs = !collapsedObs), saveCollapsedObs(collapsedObs), applyObsCollapsedClasses());
 }
-
 function applyObsCollapsedClasses() {
-    const list = document.getElementById("obs-list");
-    const chev = document.getElementById("obs-chev");
-    const header = document.getElementById("obs-section-header");
-    if (list) list.classList.toggle("collapsed", collapsedObs);
-    if (chev) chev.classList.toggle("collapsed", collapsedObs);
-    if (header) header.classList.toggle("collapsed", collapsedObs);
+    const t = document.getElementById("obs-list"),
+        e = document.getElementById("obs-chev"),
+        s = document.getElementById("obs-section-header");
+    (t && t.classList.toggle("collapsed", collapsedObs), e && e.classList.toggle("collapsed", collapsedObs), s && s.classList.toggle("collapsed", collapsedObs));
 }
-
-// Delegated handler. Reads plant name from el.dataset.id (escaped at render
-// time). The .replace(/'/g, "\\'") hack for inline onclick is gone.
-on("openPlantDetail", "click", (el) => openPlantDetail(el.dataset.id));
-
-function computeStats(entries) {
-    let feeds = 0,
-        waters = 0,
-        issues = 0;
-    const days = new Set();
-    const obsEntries = [];
-
-    entries.forEach((e) => {
-        const vals = Object.values(e.plants || {});
-        if (
-            vals.some((p) => {
-                if (!p || !p.nutrients) return false;
-                return Object.values(p.nutrients).some((v) => v && v > 0);
+function computeStats(t) {
+    let e = 0,
+        s = 0,
+        n = 0;
+    const a = new Set(),
+        l = [];
+    return (
+        t.forEach((t) => {
+            const o = Object.values(t.plants || {});
+            (o.some((t) => !(!t || !t.nutrients) && Object.values(t.nutrients).some((t) => t && t > 0)) && e++, o.some((t) => t && t.water > 0) && s++, t.obs && (n++, l.push(t)), a.add(t.dt.slice(0, 10)));
+        }),
+        { feeds: e, waters: s, issues: n, days: a, obsEntries: l }
+    );
+}
+function countPlantNotes(t, e) {
+    let s = 0;
+    return (
+        (t.entries || []).forEach((t) => {
+            const n = t.plantObs?.[e];
+            n && String(n).trim() && s++;
+        }),
+        s
+    );
+}
+function renderPlantCard(t, e, s, n, a, l) {
+    const o = n ? icon.star({ size: 12 }) : "",
+        i = "auto" === s ? "AUTO" : "PHOTO",
+        c = "auto" === s ? "plant-type-badge auto" : "plant-type-badge photo",
+        d = ((l && l.nutrients) || [])
+            .map((t) => {
+                const s = (e.nutrients || {})[t.name] || 0;
+                if (s <= 0) return "";
+                return `<span class="nutrient-totals__item nutrient--${getNutrientColor(l, t.name)}" title="${escapeHtml(t.name)}">${escapeHtml(abbrevNutrient(t.name))} ${fmtQty(s)}</span>`;
             })
-        )
-            feeds++;
-        if (vals.some((p) => p && p.water > 0)) waters++;
-        if (e.obs) {
-            issues++;
-            obsEntries.push(e);
-        }
-        days.add(e.dt.slice(0, 10));
-    });
-
-    return { feeds, waters, issues, days, obsEntries };
+            .join(""),
+        r = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${fmtQty(e.water || 0)}</span>`;
+    return `\n    <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(t)}">\n        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">\n            <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t)}</span>\n            ${o}\n            <span class="${c}" style="font-size:10px;padding:2px 6px">${i}</span>\n        </div>\n        <span class="nutrient-totals">\n            ${d}\n            ${r}\n        </span>\n    </div>`;
 }
-
-function countPlantNotes(cycle, name) {
-    let n = 0;
-    (cycle.entries || []).forEach((e) => {
-        const t = e.plantObs?.[name];
-        if (t && String(t).trim()) n++;
-    });
-    return n;
-}
-
-function renderPlantCard(name, totals, type, isFav, noteCount, cycle) {
-    const starSvg = isFav ? icon.star({ size: 12 }) : "";
-    const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
-    const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
-
-    const nutrientList = (cycle && cycle.nutrients) || [];
-    const nutrientChips = nutrientList
-        .map((n) => {
-            const qty = (totals.nutrients || {})[n.name] || 0;
-            if (qty <= 0) return "";
-            const color = getNutrientColor(cycle, n.name);
-            return `<span class="nutrient-totals__item nutrient--${color}" title="${escapeHtml(n.name)}">${escapeHtml(abbrevNutrient(n.name))} ${fmtQty(qty)}</span>`;
-        })
-        .join("");
-    const waterQty = fmtQty(totals.water || 0);
-    const waterChip = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${waterQty}</span>`;
-
-    return `
-    <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(name)}">
-        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
-            <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span>
-            ${starSvg}
-            <span class="${badgeClass}" style="font-size:10px;padding:2px 6px">${typeBadge}</span>
-        </div>
-        <span class="nutrient-totals">
-            ${nutrientChips}
-            ${waterChip}
-        </span>
-    </div>`;
-}
-
-export function renderStats(cycles, activeCycleId) {
-    const CYCLE_TOGGLE_SCROLL_THRESHOLD = 0;
-    const useScroll = cycles.length + 1 > CYCLE_TOGGLE_SCROLL_THRESHOLD;
-
-    const toggleHtml = `
-    <div class="stats-cycle-toggle${useScroll ? " stats-cycle-toggle--scroll" : ""}">
-      ${cycles
-          .map(
-              (c) => `
-        <button
-          class="stats-cycle-btn${statsMode === c.id || (statsMode === "active" && c.id === activeCycleId) ? " active" : ""}"
-          data-action="setStatsCycle"
-          data-id="${escapeHtml(c.id)}"
-        >${escapeHtml(c.name)}</button>
-      `
-          )
-          .join("")}
-      <button class="stats-cycle-btn${statsMode === "all" ? " active" : ""}" data-action="setStatsCycle" data-id="all">All cycles</button>
-    </div>`;
-
-    let targetCycles;
-    if (statsMode === "all") {
-        targetCycles = [...cycles].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
-    } else {
-        const targetId = statsMode === "active" ? activeCycleId : statsMode;
-        const cycle = cycles.find((c) => c.id === targetId) || cycles.find((c) => c.id === activeCycleId);
-        targetCycles = cycle ? [cycle] : [];
+on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id));
+export function renderStats(t, e) {
+    const s = `\n    <div class="stats-cycle-toggle${t.length + 1 > 0 ? " stats-cycle-toggle--scroll" : ""}">\n      ${t.map((t) => `\n        <button\n          class="stats-cycle-btn${statsMode === t.id || ("active" === statsMode && t.id === e) ? " active" : ""}"\n          data-action="setStatsCycle"\n          data-id="${escapeHtml(t.id)}"\n        >${escapeHtml(t.name)}</button>\n      `).join("")}\n      <button class="stats-cycle-btn${"all" === statsMode ? " active" : ""}" data-action="setStatsCycle" data-id="all">All cycles</button>\n    </div>`;
+    let n;
+    if ("all" === statsMode) n = [...t].sort((t, e) => new Date(e.startDate) - new Date(t.startDate));
+    else {
+        const s = "active" === statsMode ? e : statsMode,
+            a = t.find((t) => t.id === s) || t.find((t) => t.id === e);
+        n = a ? [a] : [];
     }
-
-    const entries = targetCycles.flatMap((c) => c.entries);
-    const cycleStartDate = statsMode === "all" ? null : targetCycles[0]?.startDate || null;
-
-    const { feeds, waters, issues, days, obsEntries } = computeStats(entries);
-
-    document.getElementById("s-feeds").textContent = feeds;
-    document.getElementById("s-waters").textContent = waters;
-    document.getElementById("s-days").textContent = days.size;
-    document.getElementById("s-issues").textContent = issues;
-    document.getElementById("stats-cycle-toggle-container").innerHTML = toggleHtml;
-
-    let plantsHtml = "";
-    targetCycles.forEach((cycle) => {
-        const cycleTotals = (() => {
-            const t = {};
-            cycle.entries.forEach((e) => {
-                Object.entries(e.plants || {}).forEach(([p, d]) => {
-                    if (!t[p]) t[p] = { nutrients: {}, water: 0 };
-                    Object.entries(d.nutrients || {}).forEach(([k, v]) => {
-                        t[p].nutrients[k] = (t[p].nutrients[k] || 0) + (v || 0);
-                    });
-                    t[p].water += d.water || 0;
-                });
-            });
-            return t;
-        })();
-
-        const cyclePlants = cycle.plants || [];
-        const showLabel = statsMode === "all";
-        const isActive = cycle.id === activeCycleId;
-        const activePill = isActive ? `<span class="cycle-active-badge">Active</span>` : "";
-        const blockStyle = showLabel ? ' style="margin-bottom: 14px"' : "";
-
-        if (cyclePlants.length === 0) {
-            plantsHtml += `<div class="stats-cycle-block"${blockStyle}>`;
-            if (showLabel) {
-                plantsHtml += `<div class="stats-cycle-block-label"><span>${escapeHtml(cycle.name)}</span>${activePill}</div>`;
-            }
-            plantsHtml += `<div style="color:var(--muted);font-size:13px">No plants in this cycle yet.</div>`;
-            plantsHtml += `</div>`;
-            return;
-        }
-
-        const favSet = new Set(cycle.favourites || []);
-        const sortedCyclePlants = [...cyclePlants].sort((a, b) => (favSet.has(a) ? 0 : 1) - (favSet.has(b) ? 0 : 1));
-        plantsHtml += `<div class="stats-cycle-block"${blockStyle}>`;
-        if (showLabel) {
-            plantsHtml += `<div class="stats-cycle-block-label"><span>${escapeHtml(cycle.name)}</span>${activePill}</div>`;
-        }
-        sortedCyclePlants.forEach((p) => {
-            const meta = getPlantMeta(cycle, p);
-            const t = cycleTotals[p] || { nutrients: {}, water: 0 };
-            const noteCount = countPlantNotes(cycle, p);
-            plantsHtml += renderPlantCard(p, t, meta.type, favSet.has(p), noteCount, cycle);
-        });
-        plantsHtml += `</div>`;
-    });
-
-    if (!targetCycles.length) {
-        plantsHtml = '<div style="color:var(--muted);font-size:13px">No cycles to show.</div>';
-    }
-    document.getElementById("stats-plants").innerHTML = plantsHtml;
-
-    obsEntries.sort((a, b) => new Date(b.dt) - new Date(a.dt));
-    let obsHtml = "";
-    obsEntries.forEach((e) => {
-        const wk = cycleStartDate ? `· Week ${getWeekNum(e.dt, cycleStartDate)}` : "";
-        obsHtml += `<div class="obs-entry">
-      <div class="obs-entry-date">${fmtDate(e.dt)} · ${fmtTime(e.dt)} ${wk}</div>
-      <div class="obs-entry-text">${escapeHtml(e.obs)}</div>
-    </div>`;
-    });
-    document.getElementById("obs-list").innerHTML = obsHtml || '<div class="empty" style="padding:20px 0">No observations logged yet.</div>';
+    const a = n.flatMap((t) => t.entries),
+        l = "all" === statsMode ? null : n[0]?.startDate || null,
+        { feeds: o, waters: i, issues: c, days: d, obsEntries: r } = computeStats(a);
+    ((document.getElementById("s-feeds").textContent = o), (document.getElementById("s-waters").textContent = i), (document.getElementById("s-days").textContent = d.size), (document.getElementById("s-issues").textContent = c), (document.getElementById("stats-cycle-toggle-container").innerHTML = s));
+    let p = "";
+    (n.forEach((t) => {
+        const s = (() => {
+                const e = {};
+                return (
+                    t.entries.forEach((t) => {
+                        Object.entries(t.plants || {}).forEach(([t, s]) => {
+                            (e[t] || (e[t] = { nutrients: {}, water: 0 }),
+                                Object.entries(s.nutrients || {}).forEach(([s, n]) => {
+                                    e[t].nutrients[s] = (e[t].nutrients[s] || 0) + (n || 0);
+                                }),
+                                (e[t].water += s.water || 0));
+                        });
+                    }),
+                    e
+                );
+            })(),
+            n = t.plants || [],
+            a = "all" === statsMode,
+            l = t.id === e ? '<span class="cycle-active-badge">Active</span>' : "",
+            o = a ? ' style="margin-bottom: 14px"' : "";
+        if (0 === n.length) return ((p += `<div class="stats-cycle-block"${o}>`), a && (p += `<div class="stats-cycle-block-label"><span>${escapeHtml(t.name)}</span>${l}</div>`), (p += '<div style="color:var(--muted);font-size:13px">No plants in this cycle yet.</div>'), void (p += "</div>"));
+        const i = new Set(t.favourites || []),
+            c = [...n].sort((t, e) => (i.has(t) ? 0 : 1) - (i.has(e) ? 0 : 1));
+        ((p += `<div class="stats-cycle-block"${o}>`),
+            a && (p += `<div class="stats-cycle-block-label"><span>${escapeHtml(t.name)}</span>${l}</div>`),
+            c.forEach((e) => {
+                const n = getPlantMeta(t, e),
+                    a = s[e] || { nutrients: {}, water: 0 },
+                    l = countPlantNotes(t, e);
+                p += renderPlantCard(e, a, n.type, i.has(e), l, t);
+            }),
+            (p += "</div>"));
+    }),
+        n.length || (p = '<div style="color:var(--muted);font-size:13px">No cycles to show.</div>'),
+        (document.getElementById("stats-plants").innerHTML = p),
+        r.sort((t, e) => new Date(e.dt) - new Date(t.dt)));
+    let m = "";
+    (r.forEach((t) => {
+        const e = l ? `· Week ${getWeekNum(t.dt, l)}` : "";
+        m += `<div class="obs-entry">\n      <div class="obs-entry-date">${fmtDate(t.dt)} · ${fmtTime(t.dt)} ${e}</div>\n      <div class="obs-entry-text">${escapeHtml(t.obs)}</div>\n    </div>`;
+    }),
+        (document.getElementById("obs-list").innerHTML = m || '<div class="empty" style="padding:20px 0">No observations logged yet.</div>'));
 }
