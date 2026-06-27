@@ -1,3 +1,5 @@
+// In main.js
+
 import "./style.css";
 import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty } from "./utils.js";
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs } from "./storage.js";
@@ -12,14 +14,38 @@ let activeCycleId = loadActiveCycleId(cycles);
 const collapsedCycles = loadCollapsedCycles();
 const collapsedWeeks = loadCollapsedWeeks();
 const collapsedObs = loadCollapsedObs();
-let editingEntryId = null;
-let pendingAddPlantType = "auto";
-let pendingRenamePlantType = "auto";
-let editingPlantObsIndex = null;
-let pendingPlantObs = [];
-let selectedPlantObsTab = null;
 let nutrientDrafts = {};
 let nutrientActiveTab = "__ALL__";
+
+// All form-state that's "pending" — i.e. mid-entry and not yet persisted
+// — lives on one object. resetAddForm() resets it wholesale, cancelEdit
+// and the cycle-switch path in editEntry() reset just the bits they
+// own (currently: nothing outside the Add form), and the modal-bound
+// modal._plantIndex / modal._oldName slots stay on the DOM nodes
+// because they belong to a different scope (one modal, one key) and
+// aren't reset by leaving the Add tab.
+//
+// editEntry() reads from it before resetting so re-opening the form
+// while editing restores the prior plant-obs drafts; this matches the
+// previous behavior where pendingPlantObs and selectedPlantObsTab
+// persisted across showTab("add") → showTab("log") → editEntry again.
+const draftState = {
+    editingEntryId: null,
+    pendingAddPlantType: "auto",
+    pendingRenamePlantType: "auto",
+    pendingPlantObs: [],
+    selectedPlantObsTab: null,
+    editingPlantObsIndex: null,
+};
+
+function resetDraft() {
+    draftState.editingEntryId = null;
+    draftState.pendingAddPlantType = "auto";
+    draftState.pendingRenamePlantType = "auto";
+    draftState.pendingPlantObs = [];
+    draftState.selectedPlantObsTab = null;
+    draftState.editingPlantObsIndex = null;
+}
 
 initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
@@ -219,9 +245,9 @@ function cycleNutrients() {
 }
 
 function resetPlantNotesDraft(seed) {
-    pendingPlantObs = Array.isArray(seed) ? [...seed] : [];
-    selectedPlantObsTab = null;
-    editingPlantObsIndex = null;
+    draftState.pendingPlantObs = Array.isArray(seed) ? [...seed] : [];
+    draftState.selectedPlantObsTab = null;
+    draftState.editingPlantObsIndex = null;
     const plantObsInput = document.getElementById("plant-obs-input");
     if (plantObsInput) plantObsInput.value = "";
     renderPlantObsList();
@@ -394,7 +420,7 @@ function renderAddForm() {
             label.appendChild(document.createTextNode(p));
             if (isFavourite(cycle, p)) {
                 const starWrap = document.createElement("span");
-                starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                starWrap.innerHTML = icon.star({ size: 11, marginRight: 0, verticalAlign: -1 });
                 label.appendChild(starWrap.firstChild);
             }
             list.appendChild(label);
@@ -424,7 +450,7 @@ function populatePlantObsTabs() {
     if (addBtn) addBtn.disabled = false;
 
     const sortedPlants = [...plants].sort((a, b) => (isFavourite(cycle, a) ? 0 : 1) - (isFavourite(cycle, b) ? 0 : 1));
-    const tagged = new Set(pendingPlantObs.map((o) => o.plant));
+    const tagged = new Set(draftState.pendingPlantObs.map((o) => o.plant));
 
     tabs.innerHTML = sortedPlants
         .map((p) => {
@@ -435,15 +461,15 @@ function populatePlantObsTabs() {
         })
         .join("");
 
-    selectedPlantObsTab = null;
+    draftState.selectedPlantObsTab = null;
 
     tabs.querySelectorAll(".plant-obs-tab").forEach((tab) => {
         tab.addEventListener("click", () => {
             if (tab.disabled) return;
-            selectedPlantObsTab = tab.dataset.plant;
-            editingPlantObsIndex = null;
+            draftState.selectedPlantObsTab = tab.dataset.plant;
+            draftState.editingPlantObsIndex = null;
             document.querySelectorAll(".plant-obs-item").forEach((el) => el.classList.remove("editing"));
-            tabs.querySelectorAll(".plant-obs-tab").forEach((t) => t.classList.toggle("active", t.dataset.plant === selectedPlantObsTab));
+            tabs.querySelectorAll(".plant-obs-tab").forEach((t) => t.classList.toggle("active", t.dataset.plant === draftState.selectedPlantObsTab));
             const inp = document.getElementById("plant-obs-input");
             if (inp) inp.focus();
         });
@@ -453,13 +479,13 @@ function populatePlantObsTabs() {
 function renderPlantObsList() {
     const list = document.getElementById("plant-obs-list");
     if (!list) return;
-    if (pendingPlantObs.length === 0) {
+    if (draftState.pendingPlantObs.length === 0) {
         list.innerHTML = "";
     } else {
-        list.innerHTML = pendingPlantObs
+        list.innerHTML = draftState.pendingPlantObs
             .map(
                 (o, i) => `
-        <div class="plant-obs-item${editingPlantObsIndex === i ? " editing" : ""}">
+        <div class="plant-obs-item${draftState.editingPlantObsIndex === i ? " editing" : ""}">
             <div class="plant-obs-item-header">
                 <span class="plant-obs-item-name">${escapeHtml(o.plant)}</span>
                 <div>
@@ -482,7 +508,7 @@ function renderPlantObsList() {
 function addPlantObs() {
     const inputEl = document.getElementById("plant-obs-input");
     if (!inputEl) return;
-    const plant = selectedPlantObsTab;
+    const plant = draftState.selectedPlantObsTab;
     const text = inputEl.value.trim();
     if (!plant) {
         const tabs = document.getElementById("plant-obs-tabs");
@@ -497,32 +523,32 @@ function addPlantObs() {
         inputEl.focus();
         return;
     }
-    if (editingPlantObsIndex !== null) {
-        pendingPlantObs[editingPlantObsIndex].text = text;
-        editingPlantObsIndex = null;
+    if (draftState.editingPlantObsIndex !== null) {
+        draftState.pendingPlantObs[draftState.editingPlantObsIndex].text = text;
+        draftState.editingPlantObsIndex = null;
     } else {
-        const existingIdx = pendingPlantObs.findIndex((o) => o.plant === plant);
+        const existingIdx = draftState.pendingPlantObs.findIndex((o) => o.plant === plant);
         if (existingIdx >= 0) {
             if (!confirm(`"${plant}" already has a note for this entry. Replace it?`)) return;
-            pendingPlantObs[existingIdx].text = text;
+            draftState.pendingPlantObs[existingIdx].text = text;
         } else {
-            pendingPlantObs.push({ plant, text });
+            draftState.pendingPlantObs.push({ plant, text });
         }
     }
     inputEl.value = "";
-    selectedPlantObsTab = null;
+    draftState.selectedPlantObsTab = null;
     renderPlantObsList();
     inputEl.focus();
 }
 
 function removePlantObs(index) {
-    const obs = pendingPlantObs[index];
+    const obs = draftState.pendingPlantObs[index];
     if (!obs) return;
     if (!confirm(`Remove note for "${obs.plant}"?`)) return;
-    pendingPlantObs.splice(index, 1);
-    if (editingPlantObsIndex !== null) {
-        if (editingPlantObsIndex === index) editingPlantObsIndex = null;
-        else if (editingPlantObsIndex > index) editingPlantObsIndex -= 1;
+    draftState.pendingPlantObs.splice(index, 1);
+    if (draftState.editingPlantObsIndex !== null) {
+        if (draftState.editingPlantObsIndex === index) draftState.editingPlantObsIndex = null;
+        else if (draftState.editingPlantObsIndex > index) draftState.editingPlantObsIndex -= 1;
     }
     renderPlantObsList();
     const inputEl = document.getElementById("plant-obs-input");
@@ -530,10 +556,10 @@ function removePlantObs(index) {
 }
 
 function editPlantObs(index) {
-    const obs = pendingPlantObs[index];
+    const obs = draftState.pendingPlantObs[index];
     if (!obs) return;
-    editingPlantObsIndex = index;
-    selectedPlantObsTab = obs.plant;
+    draftState.editingPlantObsIndex = index;
+    draftState.selectedPlantObsTab = obs.plant;
     const input = document.getElementById("plant-obs-input");
     if (input) {
         input.value = obs.text;
@@ -549,7 +575,7 @@ function editPlantObs(index) {
 
 function showTab(name, resetScroll = false) {
     const current = ["log", "add", "stats"].find((t) => document.getElementById("section-" + t).classList.contains("active"));
-    if (current === "add" && name !== "add" && !editingEntryId) {
+    if (current === "add" && name !== "add" && !draftState.editingEntryId) {
         resetAddForm();
     }
 
@@ -557,7 +583,7 @@ function showTab(name, resetScroll = false) {
         document.getElementById("section-" + t).classList.toggle("active", t === name);
         document.getElementById("tab-" + t).classList.toggle("active", t === name);
     });
-    if (name === "add" && !editingEntryId) {
+    if (name === "add" && !draftState.editingEntryId) {
         resetAddForm();
         setDateDefault();
     }
@@ -793,7 +819,7 @@ function renderPlantList() {
 
 function openAddPlant() {
     document.getElementById("new-plant-name").value = "";
-    pendingAddPlantType = "auto";
+    draftState.pendingAddPlantType = "auto";
     selectPlantType("add", "auto");
     document.getElementById("add-plant-modal").style.display = "flex";
     setTimeout(() => document.getElementById("new-plant-name").focus(), 50);
@@ -801,9 +827,9 @@ function openAddPlant() {
 
 function selectPlantType(scope, type) {
     if (scope === "add") {
-        pendingAddPlantType = type;
+        draftState.pendingAddPlantType = type;
     } else {
-        pendingRenamePlantType = type;
+        draftState.pendingRenamePlantType = type;
     }
     const sel = scope === "add" ? "#add-plant-type-toggle" : "#rename-plant-type-toggle";
     document.querySelectorAll(sel + " .type-toggle-opt").forEach((el) => {
@@ -863,7 +889,7 @@ function confirmAddPlant() {
     }
     cycle.plants.push(name);
     if (!cycle.plantTypes || typeof cycle.plantTypes !== "object") cycle.plantTypes = {};
-    cycle.plantTypes[name] = pendingAddPlantType;
+    cycle.plantTypes[name] = draftState.pendingAddPlantType;
     persist();
     document.getElementById("add-plant-modal").style.display = "none";
     renderPlantList();
@@ -881,7 +907,7 @@ function renamePlant(index) {
     const rawType = (cycle.plantTypes || {})[oldName];
     const existingType = (typeof rawType === "object" ? rawType?.type : rawType) || "auto";
     document.getElementById("rename-plant-input").value = oldName;
-    pendingRenamePlantType = existingType;
+    draftState.pendingRenamePlantType = existingType;
     selectPlantType("rename", existingType);
     const modal = document.getElementById("rename-plant-modal");
     modal.style.display = "flex";
@@ -901,7 +927,7 @@ function confirmRenamePlant() {
     const newNameRaw = document.getElementById("rename-plant-input").value.trim();
     const index = modal._plantIndex;
     const oldName = modal._oldName;
-    const newType = pendingRenamePlantType;
+    const newType = draftState.pendingRenamePlantType;
 
     if (!newNameRaw) {
         alert("Plant name can't be empty.");
@@ -1600,6 +1626,13 @@ function setStatsCycle(id) {
     renderStats(cycles, activeCycleId);
 }
 
+// Restore checkboxes for an action that tags a set of plants (LST,
+// Defoliate, Repot). An empty plant list (legacy "All plants") means
+// "every plant was selected at save time" — we treat that as all
+// checkboxes ticked, matching the original behavior. `autoCheckAll`
+// preserves the (slightly asymmetric) original behavior where only LST
+// re-checks the "All plants" master checkbox when every individual is
+// ticked; Defoliate and Repot leave it unchecked.
 function restorePlants(action, itemSelector, allSelector, autoCheckAll) {
     if (!action || !Array.isArray(action.plants)) return;
     const allCb = document.querySelector(allSelector);
@@ -1638,7 +1671,7 @@ function editEntry(id) {
         updateLightStatus();
     }
 
-    editingEntryId = id;
+    draftState.editingEntryId = id;
 
     document.getElementById("new-dt").value = entry.dt;
 
@@ -1810,7 +1843,7 @@ function saveEntry() {
 
     const validPlants = new Set(cyclePlants());
     const plantObs = {};
-    pendingPlantObs.forEach((o) => {
+    draftState.pendingPlantObs.forEach((o) => {
         if (o.plant && validPlants.has(o.plant) && o.text && o.text.trim()) {
             plantObs[o.plant] = o.text.trim();
         }
@@ -1818,8 +1851,8 @@ function saveEntry() {
 
     const obs = document.getElementById("new-obs").value.trim();
 
-    if (editingEntryId) {
-        const entry = cycle.entries.find((e) => e.id === editingEntryId);
+    if (draftState.editingEntryId) {
+        const entry = cycle.entries.find((e) => e.id === draftState.editingEntryId);
         if (entry) {
             entry.dt = dt;
             entry.plants = plants;
@@ -1830,7 +1863,7 @@ function saveEntry() {
             alert("Couldn't find the entry to update. Please try editing it again.");
             return;
         }
-        editingEntryId = null;
+        resetDraft();
     } else {
         cycle.entries.unshift({
             id: uid(),
@@ -1848,7 +1881,7 @@ function saveEntry() {
 }
 
 function cancelEdit() {
-    editingEntryId = null;
+    resetDraft();
     resetAddForm();
     setDateDefault();
     showTab("log", true);
