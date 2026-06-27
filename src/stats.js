@@ -90,7 +90,7 @@ function renderPlantCard(name, totals, type, isFav, noteCount, cycle) {
             const qty = (totals.nutrients || {})[n.name] || 0;
             if (qty <= 0) return "";
             const color = getNutrientColor(cycle, n.name);
-            return `<span class="nutrient-totals__item nutrient--${color}" title="${escapeHtml(n.name)}">${abbrevNutrient(n.name)} ${fmtQty(qty)}</span>`;
+            return `<span class="nutrient-totals__item nutrient--${color}" title="${escapeHtml(n.name)}">${escapeHtml(abbrevNutrient(n.name))} ${fmtQty(qty)}</span>`;
         })
         .join("");
     const waterQty = fmtQty(totals.water || 0);

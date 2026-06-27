@@ -242,17 +242,68 @@ export function loadCycles() {
     const raw = localStorage.getItem("grow_cycles");
     if (!raw) return seed();
 
-    let cycles = JSON.parse(raw);
-    const version = parseInt(localStorage.getItem("grow_version") || "1", 10);
+    let cycles;
+    try {
+        cycles = JSON.parse(raw);
+    } catch {
+        quarantineCorruptData(raw);
+        return seed();
+    }
 
-    // version is 1-indexed, so the v1→v2 migration is migrations[version - 1].
+    if (!isValidCyclesShape(cycles)) {
+        quarantineCorruptData(raw);
+        return seed();
+    }
+
+    const version = parseInt(localStorage.getItem("grow_version") || "1", 10);
     for (let i = version - 1; i < migrations.length; i++) {
         cycles = migrations[i](cycles);
+    }
+
+    if (!isValidCyclesShape(cycles)) {
+        quarantineCorruptData(raw);
+        return seed();
     }
 
     localStorage.setItem("grow_cycles", JSON.stringify(cycles));
     localStorage.setItem("grow_version", String(STORAGE_VERSION));
     return cycles;
+}
+
+export function isValidCyclesShape(cycles) {
+    if (!Array.isArray(cycles)) return false;
+    for (const c of cycles) {
+        if (c === null || typeof c !== "object" || Array.isArray(c)) return false;
+        if (typeof c.id !== "string") return false;
+        if (typeof c.name !== "string") return false;
+        if (typeof c.startDate !== "string") return false;
+        if (!Array.isArray(c.entries)) return false;
+        for (const e of c.entries) {
+            if (e === null || typeof e !== "object" || Array.isArray(e)) return false;
+            if (typeof e.id !== "string") return false;
+            if (typeof e.dt !== "string") return false;
+        }
+    }
+    return true;
+}
+
+function quarantineCorruptData(raw) {
+    try {
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        localStorage.setItem(`_corrupt_backup_${stamp}`, raw);
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith("_corrupt_backup_")) keys.push(k);
+        }
+        keys.sort();
+        while (keys.length > 3) {
+            localStorage.removeItem(keys.shift());
+        }
+    } catch {
+        // Even if the quarantine write fails (quota, etc.), the caller
+        // will fall through to seed() and the app will still boot.
+    }
 }
 
 export function saveCycles(cycles) {

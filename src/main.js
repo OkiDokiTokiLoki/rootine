@@ -2,7 +2,7 @@
 
 import "./style.css";
 import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty } from "./utils.js";
-import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs } from "./storage.js";
+import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs, isValidCyclesShape } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { on, closeHeaderMenu } from "./actions.js";
@@ -1037,7 +1037,8 @@ function renderNutrientList() {
             <div class="plant-manage-name">
                 <span class="nutrient-swatch nutrient-swatch--${color}"></span>
                 <span>${escapeHtml(n.name)}</span>
-                ${n.defaultConcentration != null ? `<span class="nutrient-default-hint" title="Starting dilution">${n.defaultConcentration} ml/l</span>` : ""}
+                ${n.defaultConcentration != null ? `<span class="nutrient-default-hint" title="Starting dilution">${escapeHtml(String(n.defaultConcentration))} ml/l</span>` : ""}
+
             </div>
             <div class="plant-manage-actions">
                 <button class="settings-btn blue-btn" data-action="renameNutrient" data-index="${i}" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
@@ -1065,14 +1066,18 @@ function openAddNutrient() {
 function confirmAddNutrient() {
     const name = document.getElementById("new-nutrient-name").value.trim();
     const concRaw = document.getElementById("new-nutrient-conc").value.trim();
-    let defaultConcentration = null;
-    if (concRaw !== "") {
-        const n = parseFloat(concRaw);
-        if (!isNaN(n) && n >= 0) defaultConcentration = n;
-    }
     if (!name) {
         alert("Enter a nutrient name.");
         return;
+    }
+    let defaultConcentration = null;
+    if (concRaw !== "") {
+        const n = parseFloat(concRaw);
+        if (isNaN(n) || n < 0) {
+            alert("Concentration must be a non-negative number.");
+            return;
+        }
+        defaultConcentration = n;
     }
     if (!PLANT_NAME_RE.test(name)) {
         alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.");
@@ -1405,7 +1410,7 @@ function renderPlantDetailModal(cycle, name) {
 
     const nutrientBlock = (label, nutrientClass, qty, concVal, concDate, feedsAtConc, isDefault) => `
         <div class="plant-detail-nutrient-block">
-            <div class="plant-detail-nutrient-name ${nutrientClass}">${label}</div>
+            <div class="plant-detail-nutrient-name ${nutrientClass}">${escapeHtml(label)}</div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Active dilution</div>
                 <div class="plant-detail-value">${concVal != null ? concVal + " ml/l" : "—"}</div>
@@ -1609,7 +1614,11 @@ function cancelRenameCycle() {
 function confirmRenameCycle() {
     const modal = document.getElementById("rename-cycle-modal");
     const name = document.getElementById("rename-cycle-input").value.trim();
-    if (!name || name === modal._currentName) {
+    if (!name) {
+        alert("Cycle name can't be empty.");
+        return;
+    }
+    if (name === modal._currentName) {
         modal.style.display = "none";
         return;
     }
@@ -1853,18 +1862,20 @@ function saveEntry() {
 
     if (draftState.editingEntryId) {
         const entry = cycle.entries.find((e) => e.id === draftState.editingEntryId);
-        if (entry) {
+        if (!entry) {
+            alert("This entry was deleted from another tab or session. Saving as a new entry.");
+            resetDraft();
+        } else {
             entry.dt = dt;
             entry.plants = plants;
             entry.actions = actions;
             entry.obs = obs || undefined;
             entry.plantObs = Object.keys(plantObs).length ? plantObs : {};
-        } else {
-            alert("Couldn't find the entry to update. Please try editing it again.");
-            return;
+            resetDraft();
         }
-        resetDraft();
-    } else {
+    }
+
+    if (!draftState.editingEntryId) {
         cycle.entries.unshift({
             id: uid(),
             dt,
@@ -1940,19 +1951,40 @@ function importBackup(event) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
+        const raw = e.target.result;
+        let imported;
         try {
-            const imported = JSON.parse(e.target.result);
-            if (!Array.isArray(imported)) throw new Error("Invalid format");
-            if (!confirm(`Import ${imported.length} cycle(s)? This will replace all current data.`)) return;
-            localStorage.setItem("grow_cycles", JSON.stringify(imported));
-            localStorage.removeItem("grow_version");
-            location.reload();
+            imported = JSON.parse(raw);
         } catch {
             alert("Invalid backup file.");
+            event.target.value = "";
+            return;
         }
+        if (!isValidCyclesShape(imported)) {
+            alert("Invalid backup file.");
+            event.target.value = "";
+            return;
+        }
+        if (!confirm(`Import ${imported.length} cycle(s)? This will replace all current data.`)) {
+            event.target.value = "";
+            return;
+        }
+        try {
+            localStorage.setItem("grow_cycles", JSON.stringify(imported));
+        } catch (err) {
+            // localStorage throws QuotaExceededError when the payload
+            // exceeds the per-origin cap (typically ~5 MB). The user's
+            // existing data is untouched, but they have no feedback —
+            // alert so they know to free up space or split the backup.
+            const sizeMB = (raw.length / (1024 * 1024)).toFixed(2);
+            alert(`Couldn't write backup to storage (${err.name || "error"}).\n\n` + `Backup size: ${sizeMB} MB. Your browser's localStorage is full.\n\n` + `Try clearing site data, removing old cycles, or splitting the backup into smaller pieces.`);
+            event.target.value = "";
+            return;
+        }
+        localStorage.removeItem("grow_version");
+        location.reload();
     };
     reader.readAsText(file);
-    event.target.value = "";
 }
 
 function triggerImport() {

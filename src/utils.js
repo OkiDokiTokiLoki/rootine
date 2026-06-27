@@ -13,10 +13,12 @@ export function abbrevNutrient(name) {
 }
 
 export function getWeekNum(dateStr, cycleStartDate) {
-    const d = new Date(dateStr);
+    const entry = new Date(dateStr);
     const start = new Date(cycleStartDate);
-    const diff = Math.floor((d - start) / (7 * 24 * 60 * 60 * 1000));
-    return Math.max(1, diff + 1);
+    const entryMidnight = new Date(entry.getFullYear(), entry.getMonth(), entry.getDate());
+    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const days = Math.floor((entryMidnight - startMidnight) / (24 * 60 * 60 * 1000));
+    return Math.max(1, Math.floor(days / 7) + 1);
 }
 
 export function fmtDate(s) {
@@ -79,7 +81,7 @@ export function formatAction(action) {
             return `${prefix} (${action.plants.map(escapeHtml).join(", ")})`;
         }
         case "light": {
-            const parts = [action.lux ? `${action.lux}k lux` : null, action.dist ? `${action.dist}cm` : null, action.start && action.end ? `${action.start}–${action.end}` : null].filter(Boolean);
+            const parts = [action.lux ? `${escapeHtml(action.lux)}k lux` : null, action.dist ? `${escapeHtml(action.dist)}cm` : null, action.start && action.end ? `${escapeHtml(action.start)}–${escapeHtml(action.end)}` : null].filter(Boolean);
             return parts.length ? `Light adjusted (${parts.join(", ")})` : "Light adjusted";
         }
         default:
