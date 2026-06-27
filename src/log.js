@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction, someValue } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
@@ -40,15 +40,15 @@ function renderEntriesForCycle(e) {
     );
 }
 function hasPlantObs(e) {
-    return !(!e.plantObs || "object" != typeof e.plantObs) && Object.values(e.plantObs).some((e) => e && String(e).trim());
+    return someValue(e.plantObs, (v) => v && String(v).trim());
 }
 function renderEntryCard(e, t) {
     const s = Object.values(e.plants || {}),
-        a = s.some((e) => !(!e || !e.nutrients) && Object.values(e.nutrients).some((e) => e && e > 0)),
-        n = s.some((e) => e && e.water > 0),
-        l = (e.actions || []).some((e) => e && "light" === e.type),
-        c = (e.actions || []).some((e) => e && ("lst" === e.type || "def" === e.type || "repot" === e.type)),
-        i = !(!e.obs || !e.obs.trim()) || hasPlantObs(e);
+        a = s.some((p) => p && someValue(p.nutrients, (v) => v && v > 0)),
+        n = s.some((p) => p && p.water > 0),
+        l = (e.actions || []).some((a) => a && a.type === "light"),
+        c = (e.actions || []).some((a) => a && (a.type === "lst" || a.type === "def" || a.type === "repot")),
+        i = !!e.obs?.trim() || hasPlantObs(e);
     let d = "";
     (a && (d += `<span class="badge badge-feed"    style="margin-left:0">${icon.badgeFeed()}</span>`), n && (d += `<span class="badge badge-water"   style="margin-left:0">${icon.badgeWater()}</span>`), l && (d += `<span class="badge badge-light"   style="margin-left:0;">${icon.badgeLight()}</span>`), c && (d += `<span class="badge badge-scissors" style="margin-left:0;">${icon.badgeScissors()}</span>`), i && (d += `<span class="badge badge-note"    style="margin-left:0;" title="Has observation">${icon.badgeNote()}</span>`));
     const o = Object.entries(e.plants || {});

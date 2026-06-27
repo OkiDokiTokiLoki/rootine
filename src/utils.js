@@ -59,3 +59,10 @@ export function formatAction(t) {
             return escapeHtml(JSON.stringify(t));
     }
 }
+export function someValue(obj, pred = Boolean) {
+    if (!obj) return false;
+    for (const k in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, k) && pred(obj[k])) return true;
+    }
+    return false;
+}

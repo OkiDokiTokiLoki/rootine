@@ -11,56 +11,90 @@ const VIEW_BOX = "0 -960 960 960",
         note: "M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z",
         waterDropLine: "M480-100q-133 0-226.5-92T160-416q0-63 24.5-120.5T254-638l226-222 226 222q45 44 69.5 101.5T800-416q0 132-93.5 224T480-100ZM240-416h480q0-47-18-89.5T650-580L480-748 310-580q-34 32-52 74.5T240-416Z",
     };
-function materialIcon(t, e = {}) {
-    if (e.style) return `<svg xmlns="${NS}" style="${e.style}" viewBox="${VIEW_BOX}"><path d="${t}"/></svg>`;
-    const r = e.size ?? 18,
-        n = e.width ?? r,
-        o = e.height ?? r;
-    return `<svg xmlns="${NS}" height="${"number" == typeof o ? `${o}px` : o}" viewBox="${VIEW_BOX}" width="${"number" == typeof n ? `${n}px` : n}" fill="currentColor"><path d="${t}"/></svg>`;
+
+// Rendered SVGs are cached by (icon-name, size, style) so repeated
+// calls don't rebuild the same string. First render builds; every
+// subsequent call with the same key is a Map.get.
+const cache = new Map();
+function cached(key, build) {
+    let s = cache.get(key);
+    if (s === undefined) {
+        s = build();
+        cache.set(key, s);
+    }
+    return s;
 }
+
+// Build a Material-icon SVG string. Uses inline styles for width/height
+// (not bare attributes) so host CSS can't override the size, and
+// fill="currentColor" so the icon picks up the host element's text color.
+function materialSvg(name, opts = {}) {
+    const path = PATHS[name];
+    if (!path) return "";
+    if (opts.style) {
+        return cached(`m:${name}:style:${opts.style}`, () => `<svg xmlns="${NS}" style="${opts.style}" viewBox="${VIEW_BOX}"><path d="${path}"/></svg>`);
+    }
+    const size = opts.size ?? 18;
+    const w = opts.width ?? size;
+    const h = opts.height ?? size;
+    const ws = "number" == typeof w ? `${w}px` : w;
+    const hs = "number" == typeof h ? `${h}px` : h;
+    return cached(`m:${name}:${ws}x${hs}`, () => `<svg xmlns="${NS}" style="width:${ws};height:${hs}" viewBox="${VIEW_BOX}" fill="currentColor"><path d="${path}"/></svg>`);
+}
+
 export function edit(t) {
-    return materialIcon(PATHS.edit, t);
+    return materialSvg("edit", t);
 }
 export function trash(t) {
-    return materialIcon(PATHS.trash, t);
+    return materialSvg("trash", t);
 }
 export function duplicate(t) {
-    return materialIcon(PATHS.duplicate, t);
+    return materialSvg("duplicate", t);
 }
-function badgeIcon(t) {
-    return `<svg xmlns="${NS}" style="width:13px;height:15px;fill:currentColor;" viewBox="${VIEW_BOX}"><path d="${t}"/></svg>`;
+
+const BADGE_STYLE = "width:13px;height:15px;fill:currentColor";
+function badgeSvg(name) {
+    return cached(`b:${name}`, () => {
+        const path = PATHS[name];
+        return `<svg xmlns="${NS}" style="${BADGE_STYLE}" viewBox="${VIEW_BOX}"><path d="${path}"/></svg>`;
+    });
 }
 export function badgeFeed() {
-    return badgeIcon(PATHS.feed);
+    return badgeSvg("feed");
 }
 export function badgeWater() {
-    return badgeIcon(PATHS.waterDrop);
+    return badgeSvg("waterDrop");
 }
 export function badgeLight() {
-    return badgeIcon(PATHS.lightBulb);
+    return badgeSvg("lightBulb");
 }
 export function badgeScissors() {
-    return badgeIcon(PATHS.scissors);
+    return badgeSvg("scissors");
 }
 export function badgeNote() {
-    return badgeIcon(PATHS.note);
+    return badgeSvg("note");
 }
+
 export function waterDropLine(t) {
-    return materialIcon(PATHS.waterDropLine, t);
+    return materialSvg("waterDropLine", t);
 }
+
 export function editStroke() {
-    return `<svg viewBox="0 0 24 24" xmlns="${NS}" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg>`;
+    return cached("s:editStroke", () => '<svg viewBox="0 0 24 24" xmlns="' + NS + '" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg>');
 }
 export function trashStroke() {
-    return '<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
+    return cached("s:trashStroke", () => '<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>');
 }
+
 const STAR_POLYGON = "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2";
 export function star({ size: t = 11, filled: e = !0, marginRight: r = null, verticalAlign: n = null } = {}) {
     const o = [`width:${t}px`, `height:${t}px`, `fill:${e ? "var(--amber)" : "none"}`, `stroke:${e ? "var(--amber)" : "var(--muted)"}`, "flex-shrink:0", null != r ? `margin-right:${r}px` : null, null != n ? `vertical-align:${n}px` : null].filter(Boolean).join(";");
-    return `<svg viewBox="0 0 24 24" xmlns="${NS}" style="${o}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="${STAR_POLYGON}"/></svg>`;
+    return cached(`star:${o}`, () => `<svg viewBox="0 0 24 24" xmlns="${NS}" style="${o}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="${STAR_POLYGON}"/></svg>`);
 }
-const CHEVRON_POLYLINE = "6 9 12 15 18 9";
+
 export function chevronDown({ className: t = "chevron", id: e = "", style: r = "" } = {}) {
-    return `<svg class="${t}"${e ? ` id="${e}"` : ""} viewBox="0 0 24 24"${r ? ` style="${r}"` : ""}><polyline points="6 9 12 15 18 9"/></svg>`;
+    const key = `chev:${t}:${e}:${r}`;
+    return cached(key, () => `<svg class="${t}"${e ? ` id="${e}"` : ""} viewBox="0 0 24 24"${r ? ` style="${r}"` : ""}><polyline points="6 9 12 15 18 9"/></svg>`);
 }
+
 export const icon = { edit: edit, trash: trash, duplicate: duplicate, editStroke: editStroke, trashStroke: trashStroke, badgeFeed: badgeFeed, badgeWater: badgeWater, badgeLight: badgeLight, badgeScissors: badgeScissors, badgeNote: badgeNote, waterDropLine: waterDropLine, star: star, chevronDown: chevronDown };

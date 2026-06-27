@@ -120,8 +120,9 @@ function mergeDrafts(t, e) {
 }
 function setNutrientTab(t) {
     const e = readNutrientInputs();
-    (((e.nutrients && Object.keys(e.nutrients).length > 0) || (e.concentrations && Object.keys(e.concentrations).length > 0) || null != e.water) && (nutrientDrafts[nutrientActiveTab] = mergeDrafts(nutrientDrafts[nutrientActiveTab], e)), (nutrientActiveTab = t));
-    (writeNutrientInputs(mergeDrafts(nutrientDrafts.__ALL__ || {}, nutrientDrafts[t] || {})),
+    (((e.nutrients && Object.keys(e.nutrients).length > 0) || (e.concentrations && Object.keys(e.concentrations).length > 0) || null != e.water) && (nutrientDrafts[nutrientActiveTab] = mergeDrafts(nutrientDrafts[nutrientActiveTab], e)),
+        (nutrientActiveTab = t),
+        writeNutrientInputs(mergeDrafts(nutrientDrafts.__ALL__ || {}, nutrientDrafts[t] || {})),
         document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((e) => {
             e.classList.toggle("active", e.dataset.tab === t);
         }));
@@ -208,41 +209,42 @@ function renderAddForm() {
                         }));
             });
         }
-    if ((renderNutrientFormRows(), n.length > 0)) {
-        (writeNutrientInputs(mergeDrafts(nutrientDrafts.__ALL__ || {}, nutrientDrafts[nutrientActiveTab] || {})),
-            a &&
-                a.querySelectorAll(".nutrient-tab").forEach((t) => {
-                    t.classList.toggle("active", t.dataset.tab === nutrientActiveTab);
+    (renderNutrientFormRows(),
+        n.length > 0
+            ? (writeNutrientInputs(mergeDrafts(nutrientDrafts.__ALL__ || {}, nutrientDrafts[nutrientActiveTab] || {})),
+              a &&
+                  a.querySelectorAll(".nutrient-tab").forEach((t) => {
+                      t.classList.toggle("active", t.dataset.tab === nutrientActiveTab);
+                  }))
+            : writeNutrientInputs({}),
+        ["lst", "def", "repot"].forEach((a) => {
+            const l = document.getElementById(a + "-plants").querySelector(".plant-picker-list");
+            if (!l) return;
+            if (((l.innerHTML = ""), 0 === t.length)) return void (l.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available.</div>');
+            const i = document.createElement("label");
+            i.className = "plant-picker-opt plant-picker-opt-all";
+            const s = document.createElement("input");
+            ((s.type = "checkbox"),
+                (s.className = `${a}-plant-all`),
+                (s.onchange = () => {
+                    l.querySelectorAll(`.${a}-plant`).forEach((t) => {
+                        ((t.checked = s.checked), (t.disabled = s.checked));
+                    });
+                }),
+                i.appendChild(s),
+                i.appendChild(document.createTextNode("All plants")),
+                l.appendChild(i),
+                n.forEach((t) => {
+                    const n = document.createElement("label");
+                    n.className = "plant-picker-opt";
+                    const i = document.createElement("input");
+                    if (((i.type = "checkbox"), (i.className = `${a}-plant`), (i.value = t), n.appendChild(i), n.appendChild(document.createTextNode(t)), isFavourite(e, t))) {
+                        const t = document.createElement("span");
+                        ((t.innerHTML = icon.star({ size: 11, marginRight: 0, verticalAlign: -1 })), n.appendChild(t.firstChild));
+                    }
+                    l.appendChild(n);
                 }));
-    } else writeNutrientInputs({});
-    (["lst", "def", "repot"].forEach((a) => {
-        const l = document.getElementById(a + "-plants").querySelector(".plant-picker-list");
-        if (!l) return;
-        if (((l.innerHTML = ""), 0 === t.length)) return void (l.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available.</div>');
-        const i = document.createElement("label");
-        i.className = "plant-picker-opt plant-picker-opt-all";
-        const s = document.createElement("input");
-        ((s.type = "checkbox"),
-            (s.className = `${a}-plant-all`),
-            (s.onchange = () => {
-                l.querySelectorAll(`.${a}-plant`).forEach((t) => {
-                    ((t.checked = s.checked), (t.disabled = s.checked));
-                });
-            }),
-            i.appendChild(s),
-            i.appendChild(document.createTextNode("All plants")),
-            l.appendChild(i),
-            n.forEach((t) => {
-                const n = document.createElement("label");
-                n.className = "plant-picker-opt";
-                const i = document.createElement("input");
-                if (((i.type = "checkbox"), (i.className = `${a}-plant`), (i.value = t), n.appendChild(i), n.appendChild(document.createTextNode(t)), isFavourite(e, t))) {
-                    const t = document.createElement("span");
-                    ((t.innerHTML = icon.star({ size: 11, marginRight: 0, verticalAlign: -1 })), n.appendChild(t.firstChild));
-                }
-                l.appendChild(n);
-            }));
-    }),
+        }),
         populatePlantObsTabs(),
         renderPlantObsList());
 }
@@ -418,9 +420,9 @@ function updateLightStatus() {
         d = null,
         c = null;
     a ? ((i = a.parsed.lux ?? l.lux ?? null), (s = a.parsed.dist ?? l.dist ?? null), (d = a.parsed.start ?? l.start ?? null), (c = a.parsed.end ?? l.end ?? null)) : ((i = l.lux || null), (s = l.dist || null), (d = l.start || null), (c = l.end || null));
-    let r = !1;
-    const o = [];
-    if ((i && o.push(i + "K"), d && c)) {
+    let o = !1;
+    const r = [];
+    if ((i && r.push(i + "K"), d && c)) {
         const [t, e] = d.split(":").map(Number),
             [n, a] = c.split(":").map(Number);
         let l = 60 * n + a - (60 * t + e);
@@ -431,23 +433,23 @@ function updateLightStatus() {
             p = 60 * u.getHours() + u.getMinutes(),
             m = 60 * t + e,
             y = 60 * n + a;
-        r = m < y ? p >= m && p < y : p >= m || p < y;
-        const g = (t) => {
+        o = m < y ? p >= m && p < y : p >= m || p < y;
+        const f = (t) => {
             const [e, n] = t.split(":"),
                 a = parseInt(e);
             return (a % 12 || 12) + ("00" !== n ? ":" + n : "") + (a >= 12 ? "PM" : "AM");
         };
-        o.push(g(d) + "–" + g(c) + " (" + i + "/" + s + ")");
+        r.push(f(d) + "–" + f(c) + " (" + i + "/" + s + ")");
     }
-    const u = o.length ? o.join("·") : "no active schedule";
+    const u = r.length ? r.join("·") : "no active schedule";
     if ((e.textContent !== u && (e.textContent = u), n)) {
-        const t = r ? "var(--amber)" : "var(--muted)";
+        const t = o ? "var(--amber)" : "var(--muted)";
         n.style.fill !== t && (n.style.fill = t);
     }
 }
 function _saveLightDefaults() {
     const t = activeCycle();
-    t && ((t.lightDefaults = { lux: document.getElementById("light-lux").value, dist: document.getElementById("light-dist").value, start: document.getElementById("light-start").value, end: document.getElementById("light-end").value }), persist(), renderAfterChange("modal"), updateLightStatus());
+    t && ((t.lightDefaults = { lux: document.getElementById("light-lux").value, dist: document.getElementById("light-dist").value, start: document.getElementById("light-start").value, end: document.getElementById("light-end").value }), persist(), invalidateModal(), updateLightStatus());
 }
 function _loadLightDefaults() {
     const t = getCycleLightDefaults();
@@ -493,7 +495,7 @@ function togglePlantType(t) {
     (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {});
     const n = e.plants[t],
         a = getPlantMeta(e, n).type;
-    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate }), (e.plantTypes[n].type = "auto" === a ? "photo" : "auto"), persist(), renderPlantList());
+    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate }), (e.plantTypes[n].type = "auto" === a ? "photo" : "auto"), persist(), renderPlantList(), invalidateStats(), invalidateModal());
 }
 function toggleFavourite(t) {
     const e = activeCycle();
@@ -501,14 +503,14 @@ function toggleFavourite(t) {
     const n = e.plants[t];
     Array.isArray(e.favourites) || (e.favourites = []);
     const a = e.favourites.indexOf(n);
-    (a >= 0 ? e.favourites.splice(a, 1) : e.favourites.push(n), persist(), renderPlantList(), renderAddForm(), renderAfterChange("log"), renderAfterChange("stats"));
+    (a >= 0 ? e.favourites.splice(a, 1) : e.favourites.push(n), persist(), renderPlantList(), renderAddForm(), invalidateStats());
 }
 function confirmAddPlant() {
     const t = document.getElementById("new-plant-name").value.trim();
     if (!t) return void alert("Enter a plant name.");
     if (!PLANT_NAME_RE.test(t)) return void alert("Plant name can only contain letters, numbers, spaces, dashes, and underscores.");
     const e = activeCycle();
-    e ? (Array.isArray(e.plants) || (e.plants = []), e.plants.includes(t) ? alert("A plant with that name already exists.") : (e.plants.push(t), (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {}), (e.plantTypes[t] = draftState.pendingAddPlantType), persist(), (document.getElementById("add-plant-modal").style.display = "none"), renderPlantList(), renderAddForm(), renderAfterChange("stats"))) : alert("No active cycle.");
+    e ? (Array.isArray(e.plants) || (e.plants = []), e.plants.includes(t) ? alert("A plant with that name already exists.") : (e.plants.push(t), (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {}), (e.plantTypes[t] = draftState.pendingAddPlantType), persist(), (document.getElementById("add-plant-modal").style.display = "none"), renderPlantList(), renderAddForm(), invalidateStats())) : alert("No active cycle.");
 }
 function cancelAddPlant() {
     document.getElementById("add-plant-modal").style.display = "none";
@@ -551,7 +553,7 @@ function confirmRenamePlant() {
                     });
             }));
     }
-    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate }), persist(), (t.style.display = "none"), renderPlantList(), renderAddForm(), renderAfterChange("log"), renderAfterChange("stats"));
+    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate }), persist(), (t.style.display = "none"), renderPlantList(), renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
 }
 function cancelRenamePlant() {
     document.getElementById("rename-plant-modal").style.display = "none";
@@ -560,7 +562,7 @@ function deletePlant(t) {
     const e = activeCycle();
     if (!e) return;
     const n = e.plants[t];
-    confirm(`Remove plant "${n}"? It will disappear from the Add form. Existing entries that reference it keep their data.`) && (e.plants.splice(t, 1), e.plantTypes && delete e.plantTypes[n], persist(), renderPlantList(), renderAddForm());
+    confirm(`Remove plant "${n}"? It will disappear from the Add form. Existing entries that reference it keep their data.`) && (e.plants.splice(t, 1), e.plantTypes && delete e.plantTypes[n], persist(), renderPlantList(), renderAddForm(), invalidateStats());
 }
 function isFavourite(t, e) {
     return Array.isArray(t.favourites) && t.favourites.includes(e);
@@ -604,7 +606,7 @@ function confirmAddNutrient() {
     if (!PLANT_NAME_RE.test(t)) return void alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.");
     if (!activeCycle()) return void alert("No active cycle.");
     const a = cycleNutrients();
-    a.some((e) => e.name === t) ? alert("A nutrient with that name already exists.") : (a.push({ name: t, defaultConcentration: n }), persist(), (document.getElementById("add-nutrient-modal").style.display = "none"), renderNutrientList(), renderAddForm(), renderAfterChange("stats"));
+    a.some((e) => e.name === t) ? alert("A nutrient with that name already exists.") : (a.push({ name: t, defaultConcentration: n }), persist(), (document.getElementById("add-nutrient-modal").style.display = "none"), renderNutrientList(), renderAddForm());
 }
 function cancelAddNutrient() {
     document.getElementById("add-nutrient-modal").style.display = "none";
@@ -646,8 +648,9 @@ function confirmRenameNutrient() {
                       (t.style.display = "none"),
                       renderNutrientList(),
                       renderAddForm(),
-                      renderAfterChange("log"),
-                      renderAfterChange("stats"))
+                      invalidateLog(),
+                      invalidateStats(),
+                      invalidateModal())
                 : alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.")
             : (t.style.display = "none")
         : alert("Nutrient name can't be empty.");
@@ -667,7 +670,8 @@ function deleteNutrient(t) {
         persist(),
         renderNutrientList(),
         renderAddForm(),
-        renderAfterChange("stats"));
+        invalidateLog(),
+        invalidateStats());
 }
 function editNutrientDefault(t) {
     if (!activeCycle()) return;
@@ -695,7 +699,7 @@ function confirmEditNutrientDefault() {
         if (isNaN(t) || t < 0) return void alert("Concentration must be a non-negative number.");
         e.defaultConcentration = t;
     }
-    (persist(), (t.style.display = "none"), renderNutrientList(), renderAddForm(), renderAfterChange("modal"));
+    (persist(), (t.style.display = "none"), renderNutrientList(), renderAddForm(), invalidateModal());
 }
 function cancelEditNutrientDefault() {
     document.getElementById("edit-nutrient-default-modal").style.display = "none";
@@ -709,134 +713,96 @@ function openPlantDetail(t) {
     }
     renderPlantDetailModal(e, t);
 }
-function renderPlantDetailModal(t, e) {
+function computePlantDetail(t, e) {
     const n = getPlantMeta(t, e),
-        a = n.type,
-        l = "auto" === a ? "AUTO" : "PHOTO",
-        i = "auto" === a ? "plant-type-badge auto" : "plant-type-badge photo",
-        s = t.nutrients || [],
-        d = { nutrients: {}, concentrations: {}, concDate: {}, water: 0 };
-    let c = null,
-        r = null,
-        o = null,
-        u = null,
-        p = 0,
-        m = 0,
-        y = 0,
-        g = 0,
-        f = 0,
-        v = 0,
-        b = 0,
-        h = 0,
-        E = 0;
-    const I = Date.now() - 6048e5,
-        w = [];
-    (t.entries.forEach((t) => {
-        new Date(t.dt).getTime() >= I && E++;
-        const n = t.plants?.[e];
-        if (n) {
-            (Object.entries(n.nutrients || {}).forEach(([t, e]) => {
-                d.nutrients[t] = (d.nutrients[t] || 0) + (e || 0);
-            }),
-                Object.entries(n.concentrations || {}).forEach(([e, n]) => {
-                    n && (!d.concDate[e] || new Date(t.dt) > new Date(d.concDate[e])) && ((d.concentrations[e] = n), (d.concDate[e] = t.dt));
-                }),
-                (d.water += n.water || 0));
-            const e = n.nutrients && Object.values(n.nutrients).some((t) => t && t > 0),
-                a = n.water;
-            (e && (p++, (!c || new Date(t.dt) > new Date(c)) && (c = t.dt), new Date(t.dt).getTime() >= I && f++), a && (m++, (!r || new Date(t.dt) > new Date(r)) && (r = t.dt), new Date(t.dt).getTime() >= I && v++));
+        a = t.nutrients || [],
+        l = Date.now() - 6048e5,
+        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: t.defaultConcentration ?? null }])), totalWaterCups: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [] };
+    for (const n of t.entries || []) {
+        const t = new Date(n.dt),
+            a = t.getTime() >= l;
+        a && i.logCountLast7d++;
+        const s = n.plants?.[e],
+            d = n.plantObs?.[e];
+        if ((d && d.trim() && i.notes.push({ dt: n.dt, text: d }), s)) {
+            for (const [t, e] of Object.entries(s.nutrients || {})) {
+                const n = i.nutrients[t];
+                n && (n.totalCups += e || 0);
+            }
+            for (const [e, a] of Object.entries(s.concentrations || {})) {
+                const l = i.nutrients[e];
+                l && (null == l.activeSinceDt || t > new Date(l.activeSinceDt)) && ((l.activeMlPerL = a), (l.activeSinceDt = n.dt), (l._runningMlPerL = a));
+            }
+            const e = s.water || 0;
+            e && ((i.totalWaterCups += e), i.waterCount++, a && i.waterCountLast7d++, (!i.lastWaterDt || t > new Date(i.lastWaterDt)) && (i.lastWaterDt = n.dt));
+            Object.values(s.nutrients || {}).some((t) => t && t > 0) && (i.feedCount++, a && i.feedCountLast7d++, (!i.lastFeedDt || t > new Date(i.lastFeedDt)) && (i.lastFeedDt = n.dt));
         }
-        (t.plantObs && t.plantObs[e] && t.plantObs[e].trim() && w.push({ dt: t.dt, text: t.plantObs[e] }),
-            (t.actions || []).forEach((n) => {
-                if (!n || ("lst" !== n.type && "def" !== n.type)) return;
-                const a = n.plants || [];
-                if (a.length > 0 && !a.includes(e)) return;
-                const l = new Date(t.dt);
-                "lst" === n.type ? (y++, (!o || l > new Date(o)) && (o = t.dt), l.getTime() >= I && b++) : (g++, (!u || l > new Date(u)) && (u = t.dt), l.getTime() >= I && h++);
-            }));
-    }),
-        w.sort((t, e) => new Date(e.dt) - new Date(t.dt)));
-    const A = {};
-    s.forEach((n) => {
-        let a = n.defaultConcentration ?? null,
-            l = 0;
-        const i = [...t.entries].sort((t, e) => new Date(t.dt) - new Date(e.dt));
-        for (const t of i) {
-            const i = t.plants?.[e];
-            if (!i) continue;
-            const s = i.nutrients?.[n.name],
-                d = s && s > 0,
-                c = i.concentrations?.[n.name] ?? null;
-            (null != c && c !== a && ((a = c), (l = 0)), d && null != c && c === a && l++);
-        }
-        A[n.name] = l;
-    });
-    const C = n.repottedAt || t.startDate,
-        P = C ? new Date(C) : new Date(t.startDate),
-        k = Math.max(0, Math.floor((new Date() - P) / 864e5)),
-        N = Math.max(1, Math.ceil(k / 7)),
-        T = document.getElementById("plant-detail-name");
-    if (((T.innerHTML = ""), isFavourite(t, e))) {
-        const t = document.createElement("span");
-        ((t.innerHTML = icon.star({ size: 14, marginRight: 6 })), T.appendChild(t.firstChild));
+        for (const t of n.actions || []) t && ("lst" === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.lstCount++, a && i.lstCountLast7d++, i.lstActions.push(n.dt)) : "def" === t.type && ((t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.defCount++, a && i.defCountLast7d++, i.defActions.push(n.dt))));
     }
-    T.appendChild(document.createTextNode(e));
-    const B = document.getElementById("plant-detail-type");
-    ((B.className = i), (B.textContent = l));
-    const L = new Date(),
-        D = (t) => {
-            const e = new Date(t),
-                n = L - e,
-                a = n < 0,
-                l = Math.abs(n),
-                i = Math.round(l / 6e4),
-                s = Math.round(l / 36e5),
-                d = Math.floor(l / 864e5);
-            let c;
-            if (i < 1) c = "just now";
-            else if (i < 60) c = `${i} min${1 === i ? "" : "s"} ago`;
-            else if (s < 24) c = `${s} hour${1 === s ? "" : "s"} ago`;
-            else if (d < 30) c = `${d} day${1 === d ? "" : "s"} ago`;
-            else {
-                const t = Math.floor(d / 30);
-                c = a ? `in ${t} mo` : `${t} mo ago`;
-            }
-            if (a) {
-                return `in ${c.replace(/^in /, "").replace(/ ago$/, "")}`;
-            }
-            return c;
+    for (const t of i.lstActions) (!i.lastLstDt || new Date(t) > new Date(i.lastLstDt)) && (i.lastLstDt = t);
+    for (const t of i.defActions) (!i.lastDefDt || new Date(t) > new Date(i.lastDefDt)) && (i.lastDefDt = t);
+    (delete i.lstActions, delete i.defActions, i.notes.sort((t, e) => new Date(e.dt) - new Date(t.dt)));
+    const s = [...(t.entries || [])].sort((t, e) => new Date(t.dt) - new Date(e.dt));
+    for (const [t, n] of Object.entries(i.nutrients)) {
+        let a = 0;
+        for (const l of s) {
+            const i = l.plants?.[e];
+            if (!i) continue;
+            const s = i.nutrients?.[t],
+                d = i.concentrations?.[t] ?? null;
+            (null != d && d !== n._runningMlPerL && ((n._runningMlPerL = d), (a = 0)), s && s > 0 && null != d && d === n._runningMlPerL && a++);
+        }
+        ((n.feedsAtCurrent = a), delete n._runningMlPerL);
+    }
+    const d = n.repottedAt || t.startDate,
+        c = Math.max(0, new Date() - new Date(d));
+    return ((i.repottedAt = d), (i.daysSinceRepot = Math.floor(c / 864e5)), (i.weeksSinceRepot = Math.max(1, Math.ceil(i.daysSinceRepot / 7))), i);
+}
+function renderPlantDetailModal(t, e) {
+    const n = getPlantMeta(t, e).type,
+        a = "auto" === n ? "AUTO" : "PHOTO",
+        l = "auto" === n ? "plant-type-badge auto" : "plant-type-badge photo",
+        i = t.nutrients || [],
+        s = computePlantDetail(t, e),
+        d = document.getElementById("plant-detail-name");
+    if (((d.innerHTML = ""), isFavourite(t, e))) {
+        const t = document.createElement("span");
+        ((t.innerHTML = icon.star({ size: 14, marginRight: 6 })), d.appendChild(t.firstChild));
+    }
+    d.appendChild(document.createTextNode(e));
+    const c = document.getElementById("plant-detail-type");
+    ((c.className = l), (c.textContent = a));
+    const o = new Date(),
+        r = (t) => {
+            const e = o - new Date(t),
+                n = e >= 0,
+                a = Math.abs(e),
+                l = Math.round(a / 6e4),
+                i = Math.round(a / 36e5),
+                s = Math.floor(a / 864e5);
+            let d;
+            return ((d = l < 1 ? "just now" : l < 60 ? `${l} min${1 === l ? "" : "s"} ago` : i < 24 ? `${i} hour${1 === i ? "" : "s"} ago` : s < 30 ? `${s} day${1 === s ? "" : "s"} ago` : `${Math.floor(s / 30)} mo${n ? " ago" : ""}`), n ? d : `in ${d.replace(/^in /, "").replace(/ ago$/, "")}`);
         },
-        $ = (t, e = !1) => {
+        u = (t, e = !1) => {
             if (!t) return "—";
             const n = fmtDate(t);
-            return e ? `<span class="plant-detail-rel">${D(t)}</span> ${n}` : n;
+            return e ? `<span class="plant-detail-rel">${r(t)}</span> ${n}` : n;
         },
-        S = P.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-        O = 0 === w.length ? '<div class="plant-detail-empty">No plant-specific notes yet.</div>' : w.map((t) => `\n        <div class="plant-detail-obs">\n            <div class="plant-detail-obs-date">${$(t.dt)}</div>\n            <div class="plant-detail-obs-text">${escapeHtml(t.text)}</div>\n        </div>`).join(""),
-        x = s
+        p = new Date(s.repottedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        m = 0 === s.notes.length ? '<div class="plant-detail-empty">No plant-specific notes yet.</div>' : s.notes.map((t) => `\n        <div class="plant-detail-obs">\n            <div class="plant-detail-obs-date">${u(t.dt)}</div>\n            <div class="plant-detail-obs-text">${escapeHtml(t.text)}</div>\n        </div>`).join(""),
+        y = i
             .map((e) => {
-                const n = getNutrientColor(t, e.name),
-                    a = d.nutrients[e.name] || 0,
-                    l = d.concentrations[e.name],
-                    i = d.concDate[e.name],
-                    s = null == l && null != e.defaultConcentration,
-                    c = null != l ? l : (e.defaultConcentration ?? null),
-                    r = i || (s ? t.startDate : null),
-                    o = A[e.name] || 0;
-                return ((t, e, n, a, l, i, s) =>
-                    `\n        <div class="plant-detail-nutrient-block">\n            <div class="plant-detail-nutrient-name ${e}">${t}</div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Active dilution</div>\n                <div class="plant-detail-value">${null != a ? a + " ml/l" : "—"}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Used for</div>\n                <div class="plant-detail-value">${i} feed${1 === i ? "" : "s"}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Date</div>\n                <div class="plant-detail-value">${l ? `<span class="plant-detail-rel">${D(l)}</span> since ${fmtDate(l)}` : s ? '<span class="plant-detail-rel">since cycle start</span>' : "—"}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Cycle total</div>\n                <div class="plant-detail-value ${e}">${n.toFixed(1)} cup${1 === n ? "" : "s"}</div>\n            </div>\n        </div>`)(
-                    e.name,
-                    `nutrient--${n}`,
-                    a,
-                    c,
-                    r,
-                    o,
-                    s
-                );
+                const n = s.nutrients[e.name] || { totalCups: 0, activeMlPerL: null, activeSinceDt: null, feedsAtCurrent: 0 },
+                    a = `nutrient--${getNutrientColor(t, e.name)}`,
+                    l = null == n.activeMlPerL && null != e.defaultConcentration,
+                    i = n.activeSinceDt || (l ? t.startDate : null),
+                    d = i ? `<span class="plant-detail-rel">${r(i)}</span> since ${fmtDate(i)}` : l ? '<span class="plant-detail-rel">since cycle start</span>' : "—";
+                return `\n        <div class="plant-detail-nutrient-block">\n            <div class="plant-detail-nutrient-name ${a}">${escapeHtml(e.name)}</div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Active dilution</div>\n                <div class="plant-detail-value">${null != n.activeMlPerL ? n.activeMlPerL + " ml/l" : "—"}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Used for</div>\n                <div class="plant-detail-value">${n.feedsAtCurrent} feed${1 === n.feedsAtCurrent ? "" : "s"}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Date</div>\n                <div class="plant-detail-value">${d}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Cycle total</div>\n                <div class="plant-detail-value ${a}">${n.totalCups.toFixed(1)} cup${1 === n.totalCups ? "" : "s"}</div>\n            </div>\n        </div>`;
             })
             .join(""),
-        M = `\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Type</div>\n            <div class="plant-detail-value">${l}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Repotted</div>\n            <div class="plant-detail-value">${S}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Age (since repot)</div>\n            <div class="plant-detail-value"><span class="plant-detail-rel">${N} week${1 === N ? "" : "s"}</span> ${k} day${1 === k ? "" : "s"}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>\n        ${s.length > 0 ? `\n           <div class="plant-detail-row">\n               <div class="plant-detail-label">Total water</div>\n               <div class="plant-detail-value nutrient--water">${d.water.toFixed(1)} cup${1 === d.water ? "" : "s"}</div>\n           </div>\n           ${x}` : `<div class="plant-detail-row">\n               <div class="plant-detail-label">Total water</div>\n               <div class="plant-detail-value nutrient--water">${d.water.toFixed(1)} cup${1 === d.water ? "" : "s"}</div>\n           </div>\n           <div class="plant-detail-empty">No nutrients configured for this cycle. Add some via the Nutrient Manager to track per-nutrient stats.</div>`}\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Recount</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last fed</div>\n            <div class="plant-detail-value">${$(c, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last watered</div>\n            <div class="plant-detail-value">${$(r, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last LST'd</div>\n            <div class="plant-detail-value">${$(o, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last defoliated</div>\n            <div class="plant-detail-value">${$(u, !0)}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Last 7 days</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times fed</div>\n            <div class="plant-detail-value${0 === f ? " plant-detail-value--muted" : ""}">${f}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times watered</div>\n            <div class="plant-detail-value${0 === v ? " plant-detail-value--muted" : ""}">${v}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times LST'd</div>\n            <div class="plant-detail-value${0 === b ? " plant-detail-value--muted" : ""}">${b}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times defoliated</div>\n            <div class="plant-detail-value${0 === h ? " plant-detail-value--muted" : ""}">${h}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Log entries</div>\n            <div class="plant-detail-value${0 === E ? " plant-detail-value--muted" : ""}">${E}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Cycle recap</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Feed sessions</div>\n            <div class="plant-detail-value">${p}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Water sessions</div>\n            <div class="plant-detail-value">${m}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times LST'd</div>\n            <div class="plant-detail-value">${y}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times defoliated</div>\n            <div class="plant-detail-value">${g}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Notes</div>\n        ${O}\n    `;
-    ((document.getElementById("plant-detail-stats").innerHTML = M), (document.getElementById("plant-detail-modal").style.display = "flex"));
+        f = (t) => (0 === t ? " plant-detail-value--muted" : ""),
+        g = `\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Type</div>\n            <div class="plant-detail-value">${a}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Repotted</div>\n            <div class="plant-detail-value">${p}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Age (since repot)</div>\n            <div class="plant-detail-value"><span class="plant-detail-rel">${s.weeksSinceRepot} week${1 === s.weeksSinceRepot ? "" : "s"}</span> ${s.daysSinceRepot} day${1 === s.daysSinceRepot ? "" : "s"}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>\n        ${i.length > 0 ? `\n           <div class="plant-detail-row">\n               <div class="plant-detail-label">Total water</div>\n               <div class="plant-detail-value nutrient--water">${s.totalWaterCups.toFixed(1)} cup${1 === s.totalWaterCups ? "" : "s"}</div>\n           </div>\n           ${y}` : `<div class="plant-detail-row">\n               <div class="plant-detail-label">Total water</div>\n               <div class="plant-detail-value nutrient--water">${s.totalWaterCups.toFixed(1)} cup${1 === s.totalWaterCups ? "" : "s"}</div>\n           </div>\n           <div class="plant-detail-empty">No nutrients configured for this cycle. Add some via the Nutrient Manager to track per-nutrient stats.</div>`}\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Recount</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last fed</div>\n            <div class="plant-detail-value">${u(s.lastFeedDt, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last watered</div>\n            <div class="plant-detail-value">${u(s.lastWaterDt, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last LST'd</div>\n            <div class="plant-detail-value">${u(s.lastLstDt, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last defoliated</div>\n            <div class="plant-detail-value">${u(s.lastDefDt, !0)}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Last 7 days</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times fed</div>\n            <div class="plant-detail-value${f(s.feedCountLast7d)}">${s.feedCountLast7d}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times watered</div>\n            <div class="plant-detail-value${f(s.waterCountLast7d)}">${s.waterCountLast7d}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times LST'd</div>\n            <div class="plant-detail-value${f(s.lstCountLast7d)}">${s.lstCountLast7d}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times defoliated</div>\n            <div class="plant-detail-value${f(s.defCountLast7d)}">${s.defCountLast7d}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Log entries</div>\n            <div class="plant-detail-value${f(s.logCountLast7d)}">${s.logCountLast7d}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Cycle recap</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Feed sessions</div>\n            <div class="plant-detail-value">${s.feedCount}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Water sessions</div>\n            <div class="plant-detail-value">${s.waterCount}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times LST'd</div>\n            <div class="plant-detail-value">${s.lstCount}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times defoliated</div>\n            <div class="plant-detail-value">${s.defCount}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Notes</div>\n        ${m}\n    `;
+    ((document.getElementById("plant-detail-stats").innerHTML = g), (document.getElementById("plant-detail-modal").style.display = "flex"));
 }
 function closePlantDetail() {
     document.getElementById("plant-detail-modal").style.display = "none";
@@ -852,7 +818,7 @@ function confirmNewCycle() {
         n = (t) => String(t).padStart(2, "0"),
         a = `${e.getFullYear()}-${n(e.getMonth() + 1)}-${n(e.getDate())}`,
         l = { id: cycleUid(), name: t, startDate: a, plants: [], plantTypes: {}, entries: [], lightDefaults: {}, nutrients: [] };
-    (cycles.push(l), (activeCycleId = l.id), persist(), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), syncHeaderActions(), resetAddForm(), setDateDefault(), showTab("log", !0), renderAfterChange("log"), renderAfterChange("stats"));
+    (cycles.push(l), (activeCycleId = l.id), persist(), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), syncHeaderActions(), resetAddForm(), setDateDefault(), showTab("log", !0), invalidateLog(), invalidateStats());
 }
 function cancelNewCycle() {
     document.getElementById("new-cycle-modal").style.display = "none";
@@ -871,7 +837,7 @@ function confirmRenameCycle() {
     if (!e) return void alert("Cycle name can't be empty.");
     if (e === t._currentName) return void (t.style.display = "none");
     const n = cycles.find((e) => e.id === t._cycleId);
-    (n && ((n.name = e), persist(), renderAfterChange("log"), renderAfterChange("stats")), (t.style.display = "none"));
+    (n && ((n.name = e), persist(), invalidateLog(), invalidateStats()), (t.style.display = "none"));
 }
 function setStatsCycle(t) {
     (setStatsMode("all" === t ? "all" : t), renderStats(cycles, activeCycleId));
@@ -1023,13 +989,13 @@ function saveEntry() {
     draftState.pendingPlantObs.forEach((t) => {
         t.plant && d.has(t.plant) && t.text && t.text.trim() && (c[t.plant] = t.text.trim());
     });
-    const r = document.getElementById("new-obs").value.trim();
+    const o = document.getElementById("new-obs").value.trim();
     if (draftState.editingEntryId) {
         const n = e.entries.find((t) => t.id === draftState.editingEntryId);
         if (!n) return void alert("Couldn't find the entry to update. Please try editing it again.");
-        ((n.dt = t), (n.plants = i), (n.actions = a), (n.obs = r || void 0), (n.plantObs = Object.keys(c).length ? c : {}), resetDraft());
-    } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: r || void 0, plantObs: Object.keys(c).length ? c : {} });
-    (persist(), resetAddForm(), showTab("log", !0), renderAfterChange("log"), renderAfterChange("stats"));
+        ((n.dt = t), (n.plants = i), (n.actions = a), (n.obs = o || void 0), (n.plantObs = Object.keys(c).length ? c : {}), resetDraft());
+    } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: o || void 0, plantObs: Object.keys(c).length ? c : {} });
+    (persist(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats());
 }
 function cancelEdit() {
     (resetDraft(), resetAddForm(), setDateDefault(), showTab("log", !0));
@@ -1039,7 +1005,7 @@ function duplicateEntry(t) {
         const n = e.entries.find((e) => e.id === t);
         if (n) {
             const t = JSON.parse(JSON.stringify(n));
-            return ((t.id = uid()), e.entries.unshift(t), persist(), renderAfterChange("log"), void renderAfterChange("stats"));
+            return ((t.id = uid()), e.entries.unshift(t), persist(), invalidateLog(), void invalidateStats());
         }
     }
 }
@@ -1049,12 +1015,12 @@ function deleteEntry(t) {
             e.entries = e.entries.filter((e) => e.id !== t);
         }),
         persist(),
-        renderAfterChange("log"),
-        renderAfterChange("stats"));
+        invalidateLog(),
+        invalidateStats());
 }
 function deleteCycle(t) {
     const e = cycles.find((e) => e.id === t);
-    e && confirm(`Delete "${e.name}" and all its entries? This cannot be undone.`) && ((cycles = cycles.filter((e) => e.id !== t)), activeCycleId === t && ((activeCycleId = cycles.length ? cycles[cycles.length - 1].id : null), saveActiveCycleId(activeCycleId)), persist(), updateGrowAge(), renderAddForm(), renderAfterChange("log"), renderAfterChange("stats"));
+    e && confirm(`Delete "${e.name}" and all its entries? This cannot be undone.`) && ((cycles = cycles.filter((e) => e.id !== t)), activeCycleId === t && ((activeCycleId = cycles.length ? cycles[cycles.length - 1].id : null), saveActiveCycleId(activeCycleId)), persist(), updateGrowAge(), renderAddForm(), invalidateLog(), invalidateStats());
 }
 function exportBackup() {
     const t = JSON.stringify(cycles, null, 2),
@@ -1092,8 +1058,14 @@ function refreshOpenPlantDetail() {
     const n = cycles.find((t) => t.plants && t.plants.includes(e));
     n && renderPlantDetailModal(n, e);
 }
-function renderAfterChange(t) {
-    (("log" !== t && "all" !== t) || renderLog(cycles, activeCycleId), ("stats" !== t && "all" !== t) || renderStats(cycles, activeCycleId), ("modal" !== t && "all" !== t) || refreshOpenPlantDetail(), "all" === t && updateLightStatus());
+function invalidateLog() {
+    renderLog(cycles, activeCycleId);
+}
+function invalidateStats() {
+    renderStats(cycles, activeCycleId);
+}
+function invalidateModal() {
+    refreshOpenPlantDetail();
 }
 function persist() {
     saveCycles(cycles);
@@ -1164,6 +1136,6 @@ function persist() {
         document.hidden || updateLightStatus();
     }));
 try {
-    renderAfterChange("all");
+    (invalidateLog(), invalidateStats(), updateLightStatus());
 } catch (t) {}
 registerServiceWorker();
