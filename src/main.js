@@ -4,6 +4,7 @@ import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadColla
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { on, closeHeaderMenu } from "./actions.js";
+import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
 
 let cycles = loadCycles();
@@ -24,8 +25,7 @@ initLog(collapsedWeeks, collapsedCycles);
 initStats("active");
 initObsCollapsed(collapsedObs);
 
-function toggleHeaderMenu(e) {
-    if (e) e.stopPropagation();
+function toggleHeaderMenu() {
     const menu = document.getElementById("header-menu");
     const btn = document.getElementById("header-menu-btn");
     const isOpen = menu.classList.toggle("open");
@@ -306,7 +306,7 @@ function renderAddForm() {
                 tab.dataset.tab = p;
                 if (isFavourite(cycle, p)) {
                     const star = document.createElement("span");
-                    star.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:10px;height:10px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                    star.innerHTML = icon.star({ size: 10, marginRight: 4, verticalAlign: -1 });
                     tab.appendChild(star.firstChild);
                 }
                 tab.appendChild(document.createTextNode(p));
@@ -430,7 +430,7 @@ function populatePlantObsTabs() {
         .map((p) => {
             const used = tagged.has(p);
             const cls = "plant-obs-tab" + (used ? " used" : "");
-            const starSvg = isFavourite(cycle, p) ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:4px;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
+            const starSvg = isFavourite(cycle, p) ? icon.star({ size: 11, marginRight: 4, verticalAlign: -1 }) : "";
             return `<button type="button" class="${cls}" data-plant="${escapeHtml(p)}"${used ? " disabled" : ""}>${starSvg}${escapeHtml(p)}</button>`;
         })
         .join("");
@@ -464,10 +464,10 @@ function renderPlantObsList() {
                 <span class="plant-obs-item-name">${escapeHtml(o.plant)}</span>
                 <div>
                     <button class="plant-obs-item-edit" type="button" data-action="editPlantObs" data-index="${i}" title="Edit note" aria-label="Edit note for ${escapeHtml(o.plant)}">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg>
+                        ${icon.edit()}
                     </button>
                     <button class="plant-obs-item-remove" type="button" data-action="removePlantObs" data-index="${i}" title="Remove note" aria-label="Remove note for ${escapeHtml(o.plant)}">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
+                        ${icon.trash()}
                     </button>
                 </div>
             </div>
@@ -790,9 +790,9 @@ function renderPlantList() {
             <div class="plant-manage-name">${escapeHtml(p)}</div>
             <div class="plant-manage-actions">
                 <span class="${badgeClass}" data-action="togglePlantType" data-index="${i}" title="Click to toggle type">${badgeLabel}</span>
-                <button class="settings-btn blue-btn" data-action="renamePlant" data-index="${i}" aria-label="Rename ${escapeHtml(p)}" title="Rename"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;" fill="none"><path stroke="var(--blue)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 7.5l3 3M4 20v-3.5L15.293 5.207a1 1 0 011.414 0l2.086 2.086a1 1 0 010 1.414L7.5 20H4z"></path></svg></button>
-                <button class="settings-btn red-btn" data-action="deletePlant" data-index="${i}" aria-label="Delete ${escapeHtml(p)}" title="Delete"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
-                <button class="settings-btn favourite-btn ${isFavourite(cycle, p) ? "is-favourite" : ""}" data-action="toggleFavourite" data-index="${i}" aria-label="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"} ${escapeHtml(p)}" title="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"}"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;${isFavourite(cycle, p) ? "fill:var(--amber);stroke:var(--amber)" : "fill:none;stroke:var(--muted)"}" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+                <button class="settings-btn blue-btn" data-action="renamePlant" data-index="${i}" aria-label="Rename ${escapeHtml(p)}" title="Rename">${icon.editStroke()}</button>
+                <button class="settings-btn red-btn" data-action="deletePlant" data-index="${i}" aria-label="Delete ${escapeHtml(p)}" title="Delete">${icon.trashStroke()}</button>
+                <button class="settings-btn favourite-btn ${isFavourite(cycle, p) ? "is-favourite" : ""}" data-action="toggleFavourite" data-index="${i}" aria-label="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"} ${escapeHtml(p)}" title="${isFavourite(cycle, p) ? "Unfavourite" : "Favourite"}">${icon.star({ size: 18, filled: isFavourite(cycle, p) })}</button>
             </div>
         `;
         list.appendChild(row);
@@ -1021,13 +1021,13 @@ function renderNutrientList() {
             </div>
             <div class="plant-manage-actions">
                 <button class="settings-btn blue-btn" data-action="renameNutrient" data-index="${i}" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></svg>
+                    ${icon.edit()}
                 </button>
                 <button class="settings-btn red-btn" data-action="deleteNutrient" data-index="${i}" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
+                    ${icon.trash()}
                 </button>
                 <button class="settings-btn amber-btn" data-action="editNutrientDefault" data-index="${i}" title="Set starting dilution for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M480-100q-133 0-226.5-92T160-416q0-63 24.5-120.5T254-638l226-222 226 222q45 44 69.5 101.5T800-416q0 132-93.5 224T480-100ZM240-416h480q0-47-18-89.5T650-580L480-748 310-580q-34 32-52 74.5T240-416Z"/></svg>
+                    ${icon.waterDropLine()}
                 </button>
             </div>
         `;
@@ -1345,7 +1345,7 @@ function renderPlantDetailModal(cycle, name) {
     nameEl.innerHTML = "";
     if (isFavourite(cycle, name)) {
         const starWrap = document.createElement("span");
-        starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;margin-right:6px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+        starWrap.innerHTML = icon.star({ size: 14, marginRight: 6 });
         nameEl.appendChild(starWrap.firstChild);
     }
     nameEl.appendChild(document.createTextNode(name));
@@ -2022,6 +2022,7 @@ on("cancelAddPlant", "click", () => cancelAddPlant());
 on("confirmRenamePlant", "click", () => confirmRenamePlant());
 on("cancelRenamePlant", "click", () => cancelRenamePlant());
 on("closePlantManager", "click", () => closePlantManager());
+on("closeNutrientManager", "click", () => closeNutrientManager());
 on("openAddPlant", "click", () => openAddPlant());
 on("closePlantDetail", "click", () => closePlantDetail());
 on("confirmAddNutrient", "click", () => confirmAddNutrient());
@@ -2034,7 +2035,7 @@ on("cancelEditNutrientDefault", "click", () => cancelEditNutrientDefault());
 on("selectPlantType", "click", (el) => selectPlantType(el.dataset.scope, el.dataset.type));
 on("openPlantDetail", "click", (el) => openPlantDetail(el.dataset.id));
 
-on("toggleHeaderMenu", "click", (e) => toggleHeaderMenu(e));
+on("toggleHeaderMenu", "click", () => toggleHeaderMenu());
 
 updateGrowAge();
 setDateDefault();

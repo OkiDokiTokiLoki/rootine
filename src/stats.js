@@ -1,6 +1,7 @@
 import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getNutrientColor, abbrevNutrient, fmtQty } from "./utils.js";
 import { saveCollapsedObs } from "./storage.js";
 import { on } from "./actions.js";
+import { icon } from "./icons.js";
 
 let statsMode = "active";
 
@@ -79,7 +80,7 @@ function countPlantNotes(cycle, name) {
 }
 
 function renderPlantCard(name, totals, type, isFav, noteCount, cycle) {
-    const starSvg = isFav ? `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:12px;height:12px;fill:var(--amber);stroke:var(--amber);flex-shrink:0" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` : "";
+    const starSvg = isFav ? icon.star({ size: 12 }) : "";
     const typeBadge = type === "auto" ? "AUTO" : "PHOTO";
     const badgeClass = type === "auto" ? "plant-type-badge auto" : "plant-type-badge photo";
 
