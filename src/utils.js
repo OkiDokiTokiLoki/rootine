@@ -62,3 +62,27 @@ export function getPlantMeta(cycle, name) {
 export function fmtQty(n) {
     return n % 1 === 0 ? String(n) : n.toFixed(1);
 }
+
+export function formatAction(action) {
+    if (action == null) return "";
+    if (typeof action === "string") return escapeHtml(action);
+
+    switch (action.type) {
+        case "lst":
+        case "def":
+        case "repot": {
+            const labels = { lst: "LST", def: "Defoliate", repot: "Repot / transplant" };
+            const prefix = labels[action.type];
+            if (!action.plants || action.plants.length === 0) {
+                return `${prefix} (All plants)`;
+            }
+            return `${prefix} (${action.plants.map(escapeHtml).join(", ")})`;
+        }
+        case "light": {
+            const parts = [action.lux ? `${action.lux}k lux` : null, action.dist ? `${action.dist}cm` : null, action.start && action.end ? `${action.start}–${action.end}` : null].filter(Boolean);
+            return parts.length ? `Light adjusted (${parts.join(", ")})` : "Light adjusted";
+        }
+        default:
+            return escapeHtml(JSON.stringify(action));
+    }
+}

@@ -1,5 +1,62 @@
 // Each migration takes cycles, returns cycles. Migrations[0] is v1→v2, [1] is
 // v2→v3, etc. To bump the version: write a function, append it. That's it.
+
+// Helpers for the v8 → v9 migration. Actions used to be display strings
+// ("LST (Plant A, Plant B)"), which forced the rest of the code to
+// regex-parse them back into structured form every time it read an
+// entry, and regex-rewrite them on plant rename. The migration
+// converts once-and-for-all; everything downstream reads objects.
+function migrateActionString(a) {
+    if (a == null || typeof a === "object") return a;
+    if (typeof a !== "string") return a;
+
+    let m;
+
+    // LST (Plant A, Plant B) — possibly no parens at all
+    if ((m = a.match(/^LST\s*(?:\((.*)\))?\s*$/))) {
+        return { type: "lst", plants: parseLegacyPlantList(m[1]) };
+    }
+
+    // Defoliate (Plant A, Plant B)
+    if ((m = a.match(/^Defoliate\s*(?:\((.*)\))?\s*$/))) {
+        return { type: "def", plants: parseLegacyPlantList(m[1]) };
+    }
+
+    // Repot / transplant (Plant A, Plant B)
+    if ((m = a.match(/^Repot \/ transplant\s*(?:\((.*)\))?\s*$/))) {
+        return { type: "repot", plants: parseLegacyPlantList(m[1]) };
+    }
+
+    // Light adjusted (30k lux, 30cm, 18:00–06:00)
+    if ((m = a.match(/^Light adjusted\s*(?:\((.*)\))?\s*$/))) {
+        const out = { type: "light", lux: null, dist: null, start: null, end: null };
+        if (m[1]) {
+            m[1].split(", ").forEach((part) => {
+                if (part.includes("lux")) out.lux = part.replace("k lux", "").trim();
+                else if (part.includes("cm")) out.dist = part.replace("cm", "").trim();
+                else if (part.includes("–")) {
+                    const [start, end] = part.split("–");
+                    out.start = start.trim();
+                    out.end = end.trim();
+                }
+            });
+        }
+        return out;
+    }
+
+    // Unrecognized string — leave alone so formatAction's defensive
+    // fallback can decide what to do.
+    return a;
+}
+
+function parseLegacyPlantList(s) {
+    if (!s || s === "All plants") return [];
+    return s
+        .split(", ")
+        .map((p) => p.trim())
+        .filter(Boolean);
+}
+
 const migrations = [
     // v1 → v2: ensure every cycle has a plants array. Older cycles didn't
     // track plants, so leave the array empty — the user adds plants through
@@ -155,6 +212,21 @@ const migrations = [
         cycles.map((c) => ({
             ...c,
             nutrients: Array.isArray(c.nutrients) ? c.nutrients.map((n) => ({ defaultConcentration: null, ...n })) : c.nutrients,
+        })),
+
+    // v8 → v9: entry actions become structured objects instead of display
+    // strings. The old format ("LST (Plant A, Plant B)") had to be
+    // regex-parsed to read back which plants were tagged, and regex-
+    // rewritten on plant rename with another regex. The new format keys
+    // off `type` and stores the plant list directly; render-time
+    // formatting is the only string logic left in the rest of the code.
+    (cycles) =>
+        cycles.map((c) => ({
+            ...c,
+            entries: (c.entries || []).map((e) => ({
+                ...e,
+                actions: (e.actions || []).map(migrateActionString),
+            })),
         })),
 ];
 

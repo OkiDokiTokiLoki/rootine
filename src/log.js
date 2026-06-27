@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
@@ -85,8 +85,8 @@ function renderEntryCard(e, cycle) {
         return Object.values(p.nutrients).some((v) => v && v > 0);
     });
     const hasWater = vals.some((p) => p && p.water > 0);
-    const hasLight = (e.actions || []).some((a) => a.startsWith("Light adjusted"));
-    const hasNonLightAction = (e.actions || []).some((a) => a.startsWith("LST") || a.startsWith("Defoliate") || a.startsWith("Repot / transplant"));
+    const hasLight = (e.actions || []).some((a) => a && a.type === "light");
+    const hasNonLightAction = (e.actions || []).some((a) => a && (a.type === "lst" || a.type === "def" || a.type === "repot"));
     const hasObs = !!(e.obs && e.obs.trim()) || hasPlantObs(e);
 
     let badgeHtml = "";
@@ -115,7 +115,7 @@ function renderEntryCard(e, cycle) {
         body += "</div>";
     }
     if (e.actions && e.actions.length) {
-        body += `<div class="action-list">` + e.actions.map((a) => `<span class="action-tag">${escapeHtml(a)}</span>`).join("") + "</div>";
+        body += `<div class="action-list">` + e.actions.map((a) => `<span class="action-tag">${formatAction(a)}</span>`).join("") + "</div>";
     }
     if (e.obs) body += `<div class="obs-box">${escapeHtml(e.obs)}</div>`;
     if (hasPlantObs(e)) {

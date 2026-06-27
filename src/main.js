@@ -394,7 +394,7 @@ function renderAddForm() {
             label.appendChild(document.createTextNode(p));
             if (isFavourite(cycle, p)) {
                 const starWrap = document.createElement("span");
-                starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+                starWrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:11px;height:11px;fill:var(--amber);stroke:var(--amber);flex-shrink:0;vertical-align:-1px" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
                 label.appendChild(starWrap.firstChild);
             }
             list.appendChild(label);
@@ -646,28 +646,20 @@ function getCycleLightDefaults() {
 }
 
 function parseLightAction(action) {
-    if (!action || !action.startsWith("Light adjusted")) return null;
-    const m = action.match(/\((.*?)\)\s*$/);
-    if (!m) return { lux: null, dist: null, start: null, end: null };
-    const parts = m[1].split(", ");
-    const out = { lux: null, dist: null, start: null, end: null };
-    parts.forEach((part) => {
-        if (part.includes("lux")) out.lux = part.replace("k lux", "").trim();
-        else if (part.includes("cm")) out.dist = part.replace("cm", "").trim();
-        else if (part.includes("–")) {
-            const [s, e] = part.split("–");
-            out.start = s.trim();
-            out.end = e.trim();
-        }
-    });
-    return out;
+    if (!action || action.type !== "light") return null;
+    return {
+        lux: action.lux || null,
+        dist: action.dist || null,
+        start: action.start || null,
+        end: action.end || null,
+    };
 }
 
 function latestLoggedLight(cycle) {
     if (!cycle) return null;
     const sorted = [...(cycle.entries || [])].sort((a, b) => new Date(b.dt) - new Date(a.dt));
     for (const e of sorted) {
-        const action = (e.actions || []).find((a) => a.startsWith("Light adjusted"));
+        const action = (e.actions || []).find((a) => a && a.type === "light");
         if (action) return { parsed: parseLightAction(action), dt: e.dt };
     }
     return null;
@@ -937,12 +929,14 @@ function confirmRenamePlant() {
                     delete e.plants[oldName];
                 }
                 if (Array.isArray(e.actions)) {
+                    // Walk structured actions and swap the name in each
+                    // plant list. No more regex on prose — a "light"
+                    // action is left alone since it never names plants.
                     e.actions = e.actions.map((a) => {
-                        const m = a.match(/^(.*?)\s*\((.*?)\)\s*$/);
-                        if (!m) return a;
-                        const prefix = m[1];
-                        const items = m[2].split(", ").map((p) => (p === oldName ? newName : p));
-                        return `${prefix} (${items.join(", ")})`;
+                        if (a && (a.type === "lst" || a.type === "def" || a.type === "repot") && Array.isArray(a.plants)) {
+                            return { ...a, plants: a.plants.map((p) => (p === oldName ? newName : p)) };
+                        }
+                        return a;
                     });
                 }
                 if (e.plantObs && typeof e.plantObs === "object" && e.plantObs[oldName]) {
@@ -1287,19 +1281,15 @@ function renderPlantDetailModal(cycle, name) {
         if (e.plantObs && e.plantObs[name] && e.plantObs[name].trim()) {
             plantObsItems.push({ dt: e.dt, text: e.plantObs[name] });
         }
+        // Structured actions: no regex parsing, just type + plants array.
+        // An empty plants array still counts as "applied to this plant",
+        // matching the legacy "All plants" semantic.
         (e.actions || []).forEach((a) => {
-            const m = a.match(/^(LST|Defoliate)\s*(?:\(([^)]*)\))?\s*$/);
-            if (!m) return;
-            const kind = m[1];
-            const items = m[2]
-                ? m[2]
-                      .split(", ")
-                      .map((s) => s.trim())
-                      .filter(Boolean)
-                : [];
+            if (!a || (a.type !== "lst" && a.type !== "def")) return;
+            const items = a.plants || [];
             if (items.length > 0 && !items.includes(name)) return;
             const entryDt = new Date(e.dt);
-            if (kind === "LST") {
+            if (a.type === "lst") {
                 lstCount++;
                 if (!lastLst || entryDt > new Date(lastLst)) lastLst = e.dt;
                 if (entryDt.getTime() >= sevenDaysAgo) weeklyLst++;
@@ -1610,6 +1600,24 @@ function setStatsCycle(id) {
     renderStats(cycles, activeCycleId);
 }
 
+function restorePlants(action, itemSelector, allSelector, autoCheckAll) {
+    if (!action || !Array.isArray(action.plants)) return;
+    const allCb = document.querySelector(allSelector);
+    const individual = document.querySelectorAll(itemSelector);
+    if (action.plants.length === 0) {
+        individual.forEach((cb) => (cb.checked = true));
+    } else {
+        const selected = new Set(action.plants);
+        individual.forEach((cb) => {
+            if (selected.has(cb.value)) cb.checked = true;
+        });
+    }
+    if (autoCheckAll && allCb && individual.length > 0 && [...individual].every((cb) => cb.checked)) {
+        allCb.checked = true;
+        individual.forEach((cb) => (cb.disabled = true));
+    }
+}
+
 function editEntry(id) {
     let entry = null;
     let entryCycle = null;
@@ -1645,71 +1653,52 @@ function editEntry(id) {
     });
 
     const actions = entry.actions || [];
-    document.getElementById("ck-lst").checked = actions.some((a) => a.startsWith("LST"));
-    document.getElementById("ck-def").checked = actions.some((a) => a.startsWith("Defoliate"));
-    document.getElementById("ck-light").checked = actions.some((a) => a.startsWith("Light adjusted"));
-    document.getElementById("ck-repot").checked = actions.some((a) => a.startsWith("Repot / transplant"));
+    document.getElementById("ck-lst").checked = actions.some((a) => a && a.type === "lst");
+    document.getElementById("ck-def").checked = actions.some((a) => a && a.type === "def");
+    document.getElementById("ck-light").checked = actions.some((a) => a && a.type === "light");
+    document.getElementById("ck-repot").checked = actions.some((a) => a && a.type === "repot");
 
     if (document.getElementById("ck-lst").checked) {
-        const lstAction = actions.find((a) => a.startsWith("LST"));
-        const lstMatch = lstAction && lstAction.match(/\((.*?)\)/);
-        if (lstMatch) {
-            lstMatch[1].split(", ").forEach((p) => {
-                const el = document.querySelector(`.lst-plant[value="${p.trim()}"]`);
-                if (el) el.checked = true;
-            });
-        }
+        restorePlants(
+            actions.find((a) => a.type === "lst"),
+            ".lst-plant",
+            ".lst-plant-all",
+            true
+        );
         document.getElementById("lst-plants").style.display = "block";
-        const allCb = document.querySelector(`.lst-plant-all`);
-        const individual = document.querySelectorAll(`.lst-plant`);
-        if (allCb && individual.length && [...individual].every((cb) => cb.checked)) {
-            allCb.checked = true;
-            individual.forEach((cb) => (cb.disabled = true));
-        }
     } else {
         document.getElementById("lst-plants").style.display = "none";
     }
 
     if (document.getElementById("ck-def").checked) {
-        const defAction = actions.find((a) => a.startsWith("Defoliate"));
-        const defMatch = defAction && defAction.match(/\((.*?)\)/);
-        if (defMatch) {
-            defMatch[1].split(", ").forEach((p) => {
-                const el = document.querySelector(`.def-plant[value="${p.trim()}"]`);
-                if (el) el.checked = true;
-            });
-        }
+        restorePlants(
+            actions.find((a) => a.type === "def"),
+            ".def-plant",
+            ".def-plant-all",
+            false
+        );
         document.getElementById("def-plants").style.display = "block";
     } else {
         document.getElementById("def-plants").style.display = "none";
     }
 
     if (document.getElementById("ck-repot").checked) {
-        const repotAction = actions.find((a) => a.startsWith("Repot / transplant"));
-        const repotMatch = repotAction && repotAction.match(/\((.*?)\)/);
-        if (repotMatch) {
-            repotMatch[1].split(", ").forEach((p) => {
-                const el = document.querySelector(`.repot-plant[value="${p.trim()}"]`);
-                if (el) el.checked = true;
-            });
-        }
+        restorePlants(
+            actions.find((a) => a.type === "repot"),
+            ".repot-plant",
+            ".repot-plant-all",
+            false
+        );
         document.getElementById("repot-plants").style.display = "block";
     } else {
         document.getElementById("repot-plants").style.display = "none";
     }
 
     if (document.getElementById("ck-light").checked) {
-        const lightAction = actions.find((a) => a.startsWith("Light adjusted"));
-        const lightMatch = lightAction && lightAction.match(/\((.*?)\)/);
-        if (lightMatch) {
-            const parts = lightMatch[1].split(", ");
-            parts.forEach((part) => {
-                if (part.includes("lux")) {
-                    document.getElementById("light-lux").value = part.replace("k lux", "");
-                } else if (part.includes("cm")) {
-                    document.getElementById("light-dist").value = part.replace("cm", "");
-                }
-            });
+        const lightAction = actions.find((a) => a.type === "light");
+        if (lightAction) {
+            document.getElementById("light-lux").value = lightAction.lux || "";
+            document.getElementById("light-dist").value = lightAction.dist || "";
         }
         document.getElementById("light-inputs").style.display = "block";
     } else {
@@ -1750,32 +1739,27 @@ function saveEntry() {
         return aFav - bFav;
     });
 
-    const totalPlantCount = cyclePlants().length;
+    // Build actions as structured objects. formatAction (in utils.js)
+    // is the only place that turns these back into display strings.
     const actions = [];
     if (document.getElementById("ck-lst").checked) {
         const plants = [...document.querySelectorAll(".lst-plant:checked")].map((el) => el.value);
-        const label = plants.length === totalPlantCount ? "All plants" : plants.join(", ");
-        actions.push("LST" + (label ? " (" + label + ")" : ""));
+        actions.push({ type: "lst", plants });
     }
     if (document.getElementById("ck-def").checked) {
         const plants = [...document.querySelectorAll(".def-plant:checked")].map((el) => el.value);
-        const label = plants.length === totalPlantCount ? "All plants" : plants.join(", ");
-        actions.push("Defoliate" + (label ? " (" + label + ")" : ""));
+        actions.push({ type: "def", plants });
     }
     if (document.getElementById("ck-light").checked) {
         const lux = document.getElementById("light-lux").value;
         const dist = document.getElementById("light-dist").value;
         const start = document.getElementById("light-start").value;
         const end = document.getElementById("light-end").value;
-        let label = "Light adjusted";
-        const parts = [lux ? lux + "k lux" : null, dist ? dist + "cm" : null, start && end ? start + "–" + end : null].filter(Boolean);
-        if (parts.length) label += " (" + parts.join(", ") + ")";
-        actions.push(label);
+        actions.push({ type: "light", lux, dist, start, end });
     }
     if (document.getElementById("ck-repot").checked) {
         const repottedPlants = [...document.querySelectorAll(".repot-plant:checked")].map((el) => el.value);
-        const label = repottedPlants.length === totalPlantCount ? "All plants" : repottedPlants.join(", ");
-        actions.push("Repot / transplant" + (label ? " (" + label + ")" : ""));
+        actions.push({ type: "repot", plants: repottedPlants });
 
         const repotDate = dt.slice(0, 10);
         repottedPlants.forEach((name) => {
