@@ -24,7 +24,7 @@ const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT].map
     collapsedObs = loadCollapsedObs();
 let nutrientDrafts = {},
     nutrientActiveTab = NUTRIENT_TAB_ALL;
-const draftState = { editingEntryId: null, pendingAddPlantType: PLANT_TYPE.AUTO, pendingRenamePlantType: PLANT_TYPE.AUTO, pendingPlantObs: [], selectedPlantObsTab: null, editingPlantObsIndex: null };
+const draftState = { editingEntryId: null, pendingAddPlantType: PLANT_TYPE.AUTO, pendingRenamePlantType: PLANT_TYPE.AUTO, pendingPlantObs: [], selectedPlantObsTab: null, editingPlantObsIndex: null, orphanedEdits: {} };
 function resetDraft() {
     ((draftState.editingEntryId = null), (draftState.pendingAddPlantType = PLANT_TYPE.AUTO), (draftState.pendingRenamePlantType = PLANT_TYPE.AUTO), (draftState.pendingPlantObs = []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
 }
@@ -123,6 +123,90 @@ function writeNutrientInputs(t) {
             n = null != t && "" !== t;
         ((i.value = n ? String(t) : ""), n ? (i.dataset.previewHadValue = "1") : delete i.dataset.previewHadValue);
     }
+}
+
+// snapshotEditForm returns a self-contained, JSON-safe blob of everything
+// the Add form carries while the user is mid-edit. Used to recover the
+// user's work when saveEntry can't find the entry they're editing (e.g.
+// it was deleted in another tab while they were typing).
+function snapshotEditForm() {
+    return {
+        cycleId: activeCycleId,
+        dt: document.getElementById("new-dt").value,
+        nutrientDrafts: JSON.parse(JSON.stringify(nutrientDrafts)),
+        nutrientActiveTab,
+        light: {
+            checked: document.getElementById("ck-light").checked,
+            lux: document.getElementById("light-lux").value,
+            dist: document.getElementById("light-dist").value,
+            start: document.getElementById("light-start").value,
+            end: document.getElementById("light-end").value,
+        },
+        pickers: PICKER_ACTIONS.map((p) => ({
+            id: p.id,
+            checked: p.checkbox.checked,
+            plants: p.checked(),
+            allChecked: !!(p.allCheckbox() && p.allCheckbox().checked),
+        })),
+        obs: document.getElementById("new-obs").value,
+        pendingPlantObs: draftState.pendingPlantObs.map((o) => ({ ...o })),
+        selectedPlantObsTab: draftState.selectedPlantObsTab,
+        editingPlantObsIndex: draftState.editingPlantObsIndex,
+    };
+}
+
+// restoreEditForm is the inverse of snapshotEditForm. Assumes the Add
+// form's DOM is already shaped for the target cycle — editEntry()
+// switches activeCycleId and calls renderAddForm() before invoking this.
+function restoreEditForm(snap) {
+    ((document.getElementById("new-dt").value = snap.dt || ""),
+        (nutrientDrafts = snap.nutrientDrafts || {}),
+        (nutrientActiveTab = snap.nutrientActiveTab || NUTRIENT_TAB_ALL),
+        document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
+            t.classList.toggle("active", t.dataset.tab === nutrientActiveTab);
+        }),
+        writeNutrientInputs(mergeDrafts(nutrientDrafts[NUTRIENT_TAB_ALL] || {}, nutrientDrafts[nutrientActiveTab] || {})));
+    const light = snap.light || {};
+    ((document.getElementById("ck-light").checked = !!light.checked), (document.getElementById("light-lux").value = light.lux || ""), (document.getElementById("light-dist").value = light.dist || ""), (document.getElementById("light-start").value = light.start || ""), (document.getElementById("light-end").value = light.end || ""), (document.getElementById("light-inputs").style.display = light.checked ? "block" : "none"));
+    const pickerMap = new Map((snap.pickers || []).map((p) => [p.id, p]));
+    PICKER_ACTIONS.forEach((p) => {
+        const found = pickerMap.get(p.id);
+        // Reset the picker's own state first so the orphan's view is
+        // authoritative, not a merge on top of whatever was there.
+        (p.items().forEach((cb) => {
+            cb.disabled = false;
+            cb.checked = false;
+        }),
+            p.allCheckbox() && (p.allCheckbox().checked = false),
+            (p.checkbox.checked = !!(found && found.checked)),
+            (p.pickerWrap.style.display = found && found.checked ? "block" : "none"));
+        if (!found || !found.checked) return;
+        if (found.allChecked) {
+            (p.items().forEach((cb) => {
+                cb.checked = true;
+                cb.disabled = true;
+            }),
+                p.allCheckbox() && (p.allCheckbox().checked = true));
+        } else {
+            found.plants.forEach((plantName) => {
+                p.items().forEach((cb) => {
+                    cb.value === plantName && (cb.checked = true);
+                });
+            });
+            // All individuals ended up checked → mirror the "All plants"
+            // toggle so the visual matches what the user clicked before.
+            // Matches restorePlants()'s LST-only quirk so behaviour is
+            // identical whether the form was filled from storage or from
+            // an orphan snapshot.
+            if (p.allCheckbox() && p.items().length > 0 && [...p.items()].every((cb) => cb.checked) && ACTION_TYPE.LST === p.id) {
+                ((p.allCheckbox().checked = true),
+                    p.items().forEach((cb) => {
+                        cb.disabled = true;
+                    }));
+            }
+        }
+    });
+    ((document.getElementById("new-obs").value = snap.obs || ""), (draftState.pendingPlantObs = (snap.pendingPlantObs || []).map((o) => ({ ...o }))), (draftState.selectedPlantObsTab = snap.selectedPlantObsTab || null), (draftState.editingPlantObsIndex = snap.editingPlantObsIndex ?? null), renderPlantObsList());
 }
 function mergeDrafts(t, e) {
     const n = { nutrients: {}, concentrations: {}, water: null },
@@ -1064,45 +1148,58 @@ function editEntry(t) {
             n = a;
             break;
         }
-    if (!e) return;
-    (n && n.id !== activeCycleId && ((activeCycleId = n.id), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), updateLightStatus()),
-        (draftState.editingEntryId = t),
-        (document.getElementById("new-dt").value = e.dt),
-        (nutrientDrafts = {}),
-        Object.entries(e.plants || {}).forEach(([t, e]) => {
-            nutrientDrafts[t] = { ...e };
-        }),
-        (nutrientActiveTab = NUTRIENT_TAB_ALL),
-        writeNutrientInputs({}),
-        document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
-            t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
-        }));
-    const a = e.actions || [];
-    if (
-        ((document.getElementById("ck-light").checked = a.some((t) => t && ACTION_TYPE.LIGHT === t.type)),
-        PICKER_ACTIONS.forEach((t) => {
-            const e = a.find((e) => e && e.type === t.id);
-            ((t.checkbox.checked = !!e), e ? (restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, ACTION_TYPE.LST === t.id), (t.pickerWrap.style.display = "block")) : (t.pickerWrap.style.display = "none"));
-        }),
-        document.getElementById("ck-light").checked)
-    ) {
-        const t = a.find((t) => ACTION_TYPE.LIGHT === t.type);
-        (t && ((document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-dist").value = t.dist || "")), (document.getElementById("light-inputs").style.display = "block"));
-    } else document.getElementById("light-inputs").style.display = "none";
-    document.getElementById("new-obs").value = e.obs || "";
-    const l = new Set(cyclePlants()),
-        i = [];
-    (cyclePlants().forEach((t) => {
-        const n = e.plantObs?.[t];
-        n && n.trim() && i.push({ plant: t, text: n });
-    }),
-        e.plantObs &&
-            "object" == typeof e.plantObs &&
-            Object.entries(e.plantObs).forEach(([t, e]) => {
-                !l.has(t) && e && e.trim() && i.push({ plant: t, text: e });
+
+    const orphaned = draftState.orphanedEdits[t];
+    if (!e && !orphaned) return;
+
+    // Resolve which cycle the edit belongs to: prefer the entry's cycle,
+    // then the cycle the orphan was taken from, then the current active
+    // cycle as a last resort.
+    const targetCycle = n || (orphaned && cycles.find((c) => c.id === orphaned.cycleId)) || activeCycle();
+
+    (targetCycle && targetCycle.id !== activeCycleId && ((activeCycleId = targetCycle.id), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), updateLightStatus()), (draftState.editingEntryId = t));
+
+    if (orphaned) {
+        restoreEditForm(orphaned);
+    } else {
+        ((document.getElementById("new-dt").value = e.dt),
+            (nutrientDrafts = {}),
+            Object.entries(e.plants || {}).forEach(([t, e]) => {
+                nutrientDrafts[t] = { ...e };
             }),
-        resetPlantNotesDraft(i),
-        showTab("add"));
+            (nutrientActiveTab = NUTRIENT_TAB_ALL),
+            writeNutrientInputs({}),
+            document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
+                t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
+            }));
+        const a = e.actions || [];
+        if (
+            ((document.getElementById("ck-light").checked = a.some((t) => t && ACTION_TYPE.LIGHT === t.type)),
+            PICKER_ACTIONS.forEach((t) => {
+                const e = a.find((e) => e && e.type === t.id);
+                ((t.checkbox.checked = !!e), e ? (restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, ACTION_TYPE.LST === t.id), (t.pickerWrap.style.display = "block")) : (t.pickerWrap.style.display = "none"));
+            }),
+            document.getElementById("ck-light").checked)
+        ) {
+            const t = a.find((t) => ACTION_TYPE.LIGHT === t.type);
+            (t && ((document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-dist").value = t.dist || "")), (document.getElementById("light-inputs").style.display = "block"));
+        } else document.getElementById("light-inputs").style.display = "none";
+        document.getElementById("new-obs").value = e.obs || "";
+        const l = new Set(cyclePlants()),
+            i = [];
+        (cyclePlants().forEach((t) => {
+            const n = e.plantObs?.[t];
+            n && n.trim() && i.push({ plant: t, text: n });
+        }),
+            e.plantObs &&
+                "object" == typeof e.plantObs &&
+                Object.entries(e.plantObs).forEach(([t, e]) => {
+                    !l.has(t) && e && e.trim() && i.push({ plant: t, text: e });
+                }),
+            resetPlantNotesDraft(i));
+    }
+
+    showTab("add");
 }
 function saveEntry() {
     const t = document.getElementById("new-dt").value;
@@ -1163,8 +1260,23 @@ function saveEntry() {
     const o = document.getElementById("new-obs").value.trim();
     if (draftState.editingEntryId) {
         const n = e.entries.find((t) => t.id === draftState.editingEntryId);
-        if (!n) return void alert("Couldn't find the entry to update. Please try editing it again.");
-        ((n.dt = t), (n.plants = i), (n.actions = a), (n.obs = o || void 0), (n.plantObs = Object.keys(c).length ? c : {}), resetDraft());
+        if (!n) {
+            // The entry vanished mid-edit (deleted in another tab, sync
+            // overwrite, etc.). Park the user's edits under the entry id so
+            // a future editEntry() can restore them — the alert alone would
+            // otherwise silently drop everything they typed.
+            draftState.orphanedEdits[draftState.editingEntryId] = snapshotEditForm();
+            alert("Couldn't find the entry to update. Please try editing it again.");
+            return;
+        }
+        ((n.dt = t),
+            (n.plants = i),
+            (n.actions = a),
+            (n.obs = o || void 0),
+            (n.plantObs = Object.keys(c).length ? c : {}),
+            // Save went through, so the orphan is no longer needed.
+            delete draftState.orphanedEdits[draftState.editingEntryId],
+            resetDraft());
     } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: o || void 0, plantObs: Object.keys(c).length ? c : {} });
     (persist(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats());
 }
