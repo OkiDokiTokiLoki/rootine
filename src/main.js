@@ -24,6 +24,13 @@ const draftState = { editingEntryId: null, pendingAddPlantType: "auto", pendingR
 function resetDraft() {
     ((draftState.editingEntryId = null), (draftState.pendingAddPlantType = "auto"), (draftState.pendingRenamePlantType = "auto"), (draftState.pendingPlantObs = []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
 }
+function showModal(id) {
+    document.getElementById(id)?.classList.add("modal-overlay--visible");
+}
+function hideModal(id) {
+    document.getElementById(id)?.classList.remove("modal-overlay--visible");
+}
+
 function toggleHeaderMenu() {
     const t = document.getElementById("header-menu"),
         e = document.getElementById("header-menu-btn"),
@@ -166,7 +173,15 @@ function renderNutrientFormRows() {
     n.forEach((n) => {
         const a = getNutrientColor(e, n.name),
             l = document.createElement("div");
-        ((l.className = "form-row"), (l.innerHTML = `\n            <label class="form-label nutrient-field-label--${a}">${escapeHtml(n.name)}</label>\n            <div class="nutrient-input-group">\n                <input class="form-input" type="number" min="0" step="0.5" placeholder="cups" data-nutrient="${escapeHtml(n.name)}" data-field="amount" />\n                <input class="form-input form-input--conc" type="number" min="0" step="1" placeholder="ml/l" data-nutrient="${escapeHtml(n.name)}" data-field="conc" title="Concentration (ml/l)" />\n            </div>\n        `), t.appendChild(l));
+        ((l.className = "form-row"),
+            (l.innerHTML = `
+            <label class="form-label nutrient-field-label--${a}">${escapeHtml(n.name)}</label>
+            <div class="nutrient-input-group">
+                <input class="form-input" type="number" min="0" step="0.5" placeholder="cups" data-nutrient="${escapeHtml(n.name)}" data-field="amount" />
+                <input class="form-input form-input--conc" type="number" min="0" step="1" placeholder="ml/l" data-nutrient="${escapeHtml(n.name)}" data-field="conc" title="Concentration (ml/l)" />
+            </div>
+        `),
+            t.appendChild(l));
     });
 }
 function renderAddForm() {
@@ -293,7 +308,25 @@ function renderPlantObsList() {
     t &&
         (0 === draftState.pendingPlantObs.length
             ? (t.innerHTML = "")
-            : (t.innerHTML = draftState.pendingPlantObs.map((t, e) => `\n        <div class="plant-obs-item${draftState.editingPlantObsIndex === e ? " editing" : ""}">\n            <div class="plant-obs-item-header">\n                <span class="plant-obs-item-name">${escapeHtml(t.plant)}</span>\n                <div>\n                    <button class="plant-obs-item-edit" type="button" data-action="editPlantObs" data-index="${e}" title="Edit note" aria-label="Edit note for ${escapeHtml(t.plant)}">\n                        ${icon.edit()}\n                    </button>\n                    <button class="plant-obs-item-remove" type="button" data-action="removePlantObs" data-index="${e}" title="Remove note" aria-label="Remove note for ${escapeHtml(t.plant)}">\n                        ${icon.trash()}\n                    </button>\n                </div>\n            </div>\n            <div class="plant-obs-item-text">${escapeHtml(t.text)}</div>\n        </div>`).join("")),
+            : (t.innerHTML = draftState.pendingPlantObs
+                  .map(
+                      (t, e) => `
+        <div class="plant-obs-item${draftState.editingPlantObsIndex === e ? " editing" : ""}">
+            <div class="plant-obs-item-header">
+                <span class="plant-obs-item-name">${escapeHtml(t.plant)}</span>
+                <div>
+                    <button class="plant-obs-item-edit" type="button" data-action="editPlantObs" data-index="${e}" title="Edit note" aria-label="Edit note for ${escapeHtml(t.plant)}">
+                        ${icon.edit()}
+                    </button>
+                    <button class="plant-obs-item-remove" type="button" data-action="removePlantObs" data-index="${e}" title="Remove note" aria-label="Remove note for ${escapeHtml(t.plant)}">
+                        ${icon.trash()}
+                    </button>
+                </div>
+            </div>
+            <div class="plant-obs-item-text">${escapeHtml(t.text)}</div>
+        </div>`
+                  )
+                  .join("")),
         populatePlantObsTabs());
 }
 function addPlantObs() {
@@ -472,10 +505,10 @@ function _loadLightDefaults() {
     ((document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-dist").value = t.dist || ""), (document.getElementById("light-start").value = t.start || ""), (document.getElementById("light-end").value = t.end || ""));
 }
 function openPlantManager() {
-    (renderPlantList(), (document.getElementById("plant-manage-modal").style.display = "flex"));
+    (renderPlantList(), showModal("plant-manage-modal"));
 }
 function closePlantManager() {
-    document.getElementById("plant-manage-modal").style.display = "none";
+    hideModal("plant-manage-modal");
 }
 function renderPlantList() {
     const t = activeCycle(),
@@ -490,13 +523,21 @@ function renderPlantList() {
                   s = "auto" === l ? "AUTO" : "PHOTO",
                   d = document.createElement("div");
               ((d.className = "plant-manage-row"),
-                  (d.innerHTML = `\n            <div class="plant-manage-name">${escapeHtml(n)}</div>\n            <div class="plant-manage-actions">\n                <span class="${i}" data-action="togglePlantType" data-index="${a}" title="Click to toggle type">${s}</span>\n                <button class="settings-btn blue-btn" data-action="renamePlant" data-index="${a}" aria-label="Rename ${escapeHtml(n)}" title="Rename">${icon.editStroke()}</button>\n                <button class="settings-btn red-btn" data-action="deletePlant" data-index="${a}" aria-label="Delete ${escapeHtml(n)}" title="Delete">${icon.trashStroke()}</button>\n                <button class="settings-btn favourite-btn ${isFavourite(t, n) ? "is-favourite" : ""}" data-action="toggleFavourite" data-index="${a}" aria-label="${isFavourite(t, n) ? "Unfavourite" : "Favourite"} ${escapeHtml(n)}" title="${isFavourite(t, n) ? "Unfavourite" : "Favourite"}">${icon.star({ size: 18, filled: isFavourite(t, n) })}</button>\n            </div>\n        `),
+                  (d.innerHTML = `
+            <div class="plant-manage-name">${escapeHtml(n)}</div>
+            <div class="plant-manage-actions">
+                <span class="${i}" data-action="togglePlantType" data-index="${a}" title="Click to toggle type">${s}</span>
+                <button class="settings-btn blue-btn" data-action="renamePlant" data-index="${a}" aria-label="Rename ${escapeHtml(n)}" title="Rename">${icon.editStroke()}</button>
+                <button class="settings-btn red-btn" data-action="deletePlant" data-index="${a}" aria-label="Delete ${escapeHtml(n)}" title="Delete">${icon.trashStroke()}</button>
+                <button class="settings-btn favourite-btn ${isFavourite(t, n) ? "is-favourite" : ""}" data-action="toggleFavourite" data-index="${a}" aria-label="${isFavourite(t, n) ? "Unfavourite" : "Favourite"} ${escapeHtml(n)}" title="${isFavourite(t, n) ? "Unfavourite" : "Favourite"}">${icon.star({ size: 18, filled: isFavourite(t, n) })}</button>
+            </div>
+        `),
                   e.appendChild(d));
           }))
         : (e.innerHTML = '<div class="plant-empty">No plants yet. Add some to start logging.</div>');
 }
 function openAddPlant() {
-    ((document.getElementById("new-plant-name").value = ""), (draftState.pendingAddPlantType = "auto"), selectPlantType("add", "auto"), (document.getElementById("add-plant-modal").style.display = "flex"), setTimeout(() => document.getElementById("new-plant-name").focus(), 50));
+    ((document.getElementById("new-plant-name").value = ""), (draftState.pendingAddPlantType = "auto"), selectPlantType("add", "auto"), showModal("add-plant-modal"), setTimeout(() => document.getElementById("new-plant-name").focus(), 50));
 }
 function selectPlantType(t, e) {
     "add" === t ? (draftState.pendingAddPlantType = e) : (draftState.pendingRenamePlantType = e);
@@ -526,10 +567,10 @@ function confirmAddPlant() {
     if (!t) return void alert("Enter a plant name.");
     if (!PLANT_NAME_RE.test(t)) return void alert("Plant name can only contain letters, numbers, spaces, dashes, and underscores.");
     const e = activeCycle();
-    e ? (Array.isArray(e.plants) || (e.plants = []), e.plants.includes(t) ? alert("A plant with that name already exists.") : (e.plants.push(t), (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {}), (e.plantTypes[t] = draftState.pendingAddPlantType), persist(), (document.getElementById("add-plant-modal").style.display = "none"), renderPlantList(), renderAddForm(), invalidateStats())) : alert("No active cycle.");
+    e ? (Array.isArray(e.plants) || (e.plants = []), e.plants.includes(t) ? alert("A plant with that name already exists.") : (e.plants.push(t), (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {}), (e.plantTypes[t] = draftState.pendingAddPlantType), persist(), hideModal("add-plant-modal"), renderPlantList(), renderAddForm(), invalidateStats())) : alert("No active cycle.");
 }
 function cancelAddPlant() {
-    document.getElementById("add-plant-modal").style.display = "none";
+    hideModal("add-plant-modal");
 }
 function renamePlant(t) {
     const e = activeCycle();
@@ -539,7 +580,7 @@ function renamePlant(t) {
         l = ("object" == typeof a ? a?.type : a) || "auto";
     ((document.getElementById("rename-plant-input").value = n), (draftState.pendingRenamePlantType = l), selectPlantType("rename", l));
     const i = document.getElementById("rename-plant-modal");
-    ((i.style.display = "flex"),
+    (showModal("rename-plant-modal"),
         (i._plantIndex = t),
         (i._oldName = n),
         setTimeout(() => {
@@ -569,10 +610,10 @@ function confirmRenamePlant() {
                     });
             }));
     }
-    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate }), persist(), (t.style.display = "none"), renderPlantList(), renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
+    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate }), persist(), hideModal("rename-plant-modal"), renderPlantList(), renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
 }
 function cancelRenamePlant() {
-    document.getElementById("rename-plant-modal").style.display = "none";
+    hideModal("rename-plant-modal");
 }
 function deletePlant(t) {
     const e = activeCycle();
@@ -584,10 +625,10 @@ function isFavourite(t, e) {
     return Array.isArray(t.favourites) && t.favourites.includes(e);
 }
 function openNutrientManager() {
-    (renderNutrientList(), (document.getElementById("nutrient-manage-modal").style.display = "flex"));
+    (renderNutrientList(), showModal("nutrient-manage-modal"));
 }
 function closeNutrientManager() {
-    document.getElementById("nutrient-manage-modal").style.display = "none";
+    hideModal("nutrient-manage-modal");
 }
 function renderNutrientList() {
     const t = activeCycle(),
@@ -601,13 +642,30 @@ function renderNutrientList() {
               const l = getNutrientColor(t, n.name),
                   i = document.createElement("div");
               ((i.className = "plant-manage-row"),
-                  (i.innerHTML = `\n            <div class="plant-manage-name">\n                <span class="nutrient-swatch nutrient-swatch--${l}"></span>\n                <span>${escapeHtml(n.name)}</span>\n                ${null != n.defaultConcentration ? `<span class="nutrient-default-hint" title="Starting dilution">${n.defaultConcentration} ml/l</span>` : ""}\n            </div>\n            <div class="plant-manage-actions">\n                <button class="settings-btn blue-btn" data-action="renameNutrient" data-index="${a}" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">\n                    ${icon.edit()}\n                </button>\n                <button class="settings-btn red-btn" data-action="deleteNutrient" data-index="${a}" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">\n                    ${icon.trash()}\n                </button>\n                <button class="settings-btn amber-btn" data-action="editNutrientDefault" data-index="${a}" title="Set starting dilution for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">\n                    ${icon.waterDropLine()}\n                </button>\n            </div>\n        `),
+                  (i.innerHTML = `
+            <div class="plant-manage-name">
+                <span class="nutrient-swatch nutrient-swatch--${l}"></span>
+                <span>${escapeHtml(n.name)}</span>
+                ${null != n.defaultConcentration ? `<span class="nutrient-default-hint" title="Starting dilution">${n.defaultConcentration} ml/l</span>` : ""}
+            </div>
+            <div class="plant-manage-actions">
+                <button class="settings-btn blue-btn" data-action="renameNutrient" data-index="${a}" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
+                    ${icon.edit()}
+                </button>
+                <button class="settings-btn red-btn" data-action="deleteNutrient" data-index="${a}" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
+                    ${icon.trash()}
+                </button>
+                <button class="settings-btn amber-btn" data-action="editNutrientDefault" data-index="${a}" title="Set starting dilution for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">
+                    ${icon.waterDropLine()}
+                </button>
+            </div>
+        `),
                   e.appendChild(i));
           }))
         : (e.innerHTML = '<div class="plant-empty">No nutrients yet. Add some to start logging feeds.</div>');
 }
 function openAddNutrient() {
-    ((document.getElementById("new-nutrient-name").value = ""), (document.getElementById("new-nutrient-conc").value = ""), (document.getElementById("add-nutrient-modal").style.display = "flex"), setTimeout(() => document.getElementById("new-nutrient-name").focus(), 50));
+    ((document.getElementById("new-nutrient-name").value = ""), (document.getElementById("new-nutrient-conc").value = ""), showModal("add-nutrient-modal"), setTimeout(() => document.getElementById("new-nutrient-name").focus(), 50));
 }
 function confirmAddNutrient() {
     const t = document.getElementById("new-nutrient-name").value.trim(),
@@ -622,17 +680,17 @@ function confirmAddNutrient() {
     if (!PLANT_NAME_RE.test(t)) return void alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.");
     if (!activeCycle()) return void alert("No active cycle.");
     const a = cycleNutrients();
-    a.some((e) => e.name === t) ? alert("A nutrient with that name already exists.") : (a.push({ name: t, defaultConcentration: n }), persist(), (document.getElementById("add-nutrient-modal").style.display = "none"), renderNutrientList(), renderAddForm());
+    a.some((e) => e.name === t) ? alert("A nutrient with that name already exists.") : (a.push({ name: t, defaultConcentration: n }), persist(), hideModal("add-nutrient-modal"), renderNutrientList(), renderAddForm());
 }
 function cancelAddNutrient() {
-    document.getElementById("add-nutrient-modal").style.display = "none";
+    hideModal("add-nutrient-modal");
 }
 function renameNutrient(t) {
     if (!activeCycle()) return;
     const e = cycleNutrients()[t].name;
     document.getElementById("rename-nutrient-input").value = e;
     const n = document.getElementById("rename-nutrient-modal");
-    ((n.style.display = "flex"),
+    (showModal("rename-nutrient-modal"),
         (n._nutrientIndex = t),
         (n._oldName = e),
         setTimeout(() => {
@@ -661,18 +719,18 @@ function confirmRenameNutrient() {
                       }),
                       nutrientDrafts[a] && ((nutrientDrafts[e] = nutrientDrafts[a]), delete nutrientDrafts[a]),
                       persist(),
-                      (t.style.display = "none"),
+                      hideModal("rename-nutrient-modal"),
                       renderNutrientList(),
                       renderAddForm(),
                       invalidateLog(),
                       invalidateStats(),
                       invalidateModal())
                 : alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.")
-            : (t.style.display = "none")
+            : hideModal("rename-nutrient-modal")
         : alert("Nutrient name can't be empty.");
 }
 function cancelRenameNutrient() {
-    document.getElementById("rename-nutrient-modal").style.display = "none";
+    hideModal("rename-nutrient-modal");
 }
 function deleteNutrient(t) {
     if (!activeCycle()) return;
@@ -697,7 +755,7 @@ function editNutrientDefault(t) {
     const n = document.getElementById("edit-nutrient-default-input");
     n.value = null != e.defaultConcentration ? String(e.defaultConcentration) : "";
     const a = document.getElementById("edit-nutrient-default-modal");
-    ((a.style.display = "flex"),
+    (showModal("edit-nutrient-default-modal"),
         (a._nutrientIndex = t),
         setTimeout(() => {
             (n.focus(), n.select());
@@ -707,7 +765,7 @@ function confirmEditNutrientDefault() {
     const t = document.getElementById("edit-nutrient-default-modal");
     if (!activeCycle()) return;
     const e = cycleNutrients()[t._nutrientIndex];
-    if (!e) return void (t.style.display = "none");
+    if (!e) return void hideModal("edit-nutrient-default-modal");
     const n = document.getElementById("edit-nutrient-default-input").value.trim();
     if ("" === n) e.defaultConcentration = null;
     else {
@@ -715,10 +773,10 @@ function confirmEditNutrientDefault() {
         if (isNaN(t) || t < 0) return void alert("Concentration must be a non-negative number.");
         e.defaultConcentration = t;
     }
-    (persist(), (t.style.display = "none"), renderNutrientList(), renderAddForm(), invalidateModal());
+    (persist(), hideModal("edit-nutrient-default-modal"), renderNutrientList(), renderAddForm(), invalidateModal());
 }
 function cancelEditNutrientDefault() {
-    document.getElementById("edit-nutrient-default-modal").style.display = "none";
+    hideModal("edit-nutrient-default-modal");
 }
 function openPlantDetail(t) {
     const e = activeCycle();
@@ -804,7 +862,18 @@ function renderPlantDetailModal(t, e) {
             return e ? `<span class="plant-detail-rel">${r(t)}</span> ${n}` : n;
         },
         p = new Date(s.repottedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-        m = 0 === s.notes.length ? '<div class="plant-detail-empty">No plant-specific notes yet.</div>' : s.notes.map((t) => `\n        <div class="plant-detail-obs">\n            <div class="plant-detail-obs-date">${u(t.dt)}</div>\n            <div class="plant-detail-obs-text">${escapeHtml(t.text)}</div>\n        </div>`).join(""),
+        m =
+            0 === s.notes.length
+                ? '<div class="plant-detail-empty">No plant-specific notes yet.</div>'
+                : s.notes
+                      .map(
+                          (t) => `
+        <div class="plant-detail-obs">
+            <div class="plant-detail-obs-date">${u(t.dt)}</div>
+            <div class="plant-detail-obs-text">${escapeHtml(t.text)}</div>
+        </div>`
+                      )
+                      .join(""),
         y = i
             .map((e) => {
                 const n = s.nutrients[e.name] || { totalCups: 0, activeMlPerL: null, activeSinceDt: null, feedsAtCurrent: 0 },
@@ -812,23 +881,132 @@ function renderPlantDetailModal(t, e) {
                     l = null == n.activeMlPerL && null != e.defaultConcentration,
                     i = n.activeSinceDt || (l ? t.startDate : null),
                     d = i ? `<span class="plant-detail-rel">${r(i)}</span> since ${fmtDate(i)}` : l ? '<span class="plant-detail-rel">since cycle start</span>' : "—";
-                return `\n        <div class="plant-detail-nutrient-block">\n            <div class="plant-detail-nutrient-name ${a}">${escapeHtml(e.name)}</div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Active dilution</div>\n                <div class="plant-detail-value">${null != n.activeMlPerL ? n.activeMlPerL + " ml/l" : "—"}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Used for</div>\n                <div class="plant-detail-value">${n.feedsAtCurrent} feed${1 === n.feedsAtCurrent ? "" : "s"}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Date</div>\n                <div class="plant-detail-value">${d}</div>\n            </div>\n            <div class="plant-detail-row">\n                <div class="plant-detail-label">Cycle total</div>\n                <div class="plant-detail-value ${a}">${n.totalCups.toFixed(1)} cup${1 === n.totalCups ? "" : "s"}</div>\n            </div>\n        </div>`;
+                return `
+        <div class="plant-detail-nutrient-block">
+            <div class="plant-detail-nutrient-name ${a}">${escapeHtml(e.name)}</div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Active dilution</div>
+                <div class="plant-detail-value">${null != n.activeMlPerL ? n.activeMlPerL + " ml/l" : "—"}</div>
+            </div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Used for</div>
+                <div class="plant-detail-value">${n.feedsAtCurrent} feed${1 === n.feedsAtCurrent ? "" : "s"}</div>
+            </div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Date</div>
+                <div class="plant-detail-value">${d}</div>
+            </div>
+            <div class="plant-detail-row">
+                <div class="plant-detail-label">Cycle total</div>
+                <div class="plant-detail-value ${a}">${n.totalCups.toFixed(1)} cup${1 === n.totalCups ? "" : "s"}</div>
+            </div>
+        </div>`;
             })
             .join(""),
         f = (t) => (0 === t ? " plant-detail-value--muted" : ""),
-        g = `\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Type</div>\n            <div class="plant-detail-value">${a}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Repotted</div>\n            <div class="plant-detail-value">${p}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Age (since repot)</div>\n            <div class="plant-detail-value"><span class="plant-detail-rel">${s.weeksSinceRepot} week${1 === s.weeksSinceRepot ? "" : "s"}</span> ${s.daysSinceRepot} day${1 === s.daysSinceRepot ? "" : "s"}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>\n        ${i.length > 0 ? `\n           <div class="plant-detail-row">\n               <div class="plant-detail-label">Total water</div>\n               <div class="plant-detail-value nutrient--water">${s.totalWaterCups.toFixed(1)} cup${1 === s.totalWaterCups ? "" : "s"}</div>\n           </div>\n           ${y}` : `<div class="plant-detail-row">\n               <div class="plant-detail-label">Total water</div>\n               <div class="plant-detail-value nutrient--water">${s.totalWaterCups.toFixed(1)} cup${1 === s.totalWaterCups ? "" : "s"}</div>\n           </div>\n           <div class="plant-detail-empty">No nutrients configured for this cycle. Add some via the Nutrient Manager to track per-nutrient stats.</div>`}\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Recount</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last fed</div>\n            <div class="plant-detail-value">${u(s.lastFeedDt, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last watered</div>\n            <div class="plant-detail-value">${u(s.lastWaterDt, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last LST'd</div>\n            <div class="plant-detail-value">${u(s.lastLstDt, !0)}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Last defoliated</div>\n            <div class="plant-detail-value">${u(s.lastDefDt, !0)}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Last 7 days</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times fed</div>\n            <div class="plant-detail-value${f(s.feedCountLast7d)}">${s.feedCountLast7d}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times watered</div>\n            <div class="plant-detail-value${f(s.waterCountLast7d)}">${s.waterCountLast7d}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times LST'd</div>\n            <div class="plant-detail-value${f(s.lstCountLast7d)}">${s.lstCountLast7d}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times defoliated</div>\n            <div class="plant-detail-value${f(s.defCountLast7d)}">${s.defCountLast7d}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Log entries</div>\n            <div class="plant-detail-value${f(s.logCountLast7d)}">${s.logCountLast7d}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Cycle recap</div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Feed sessions</div>\n            <div class="plant-detail-value">${s.feedCount}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Water sessions</div>\n            <div class="plant-detail-value">${s.waterCount}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times LST'd</div>\n            <div class="plant-detail-value">${s.lstCount}</div>\n        </div>\n        <div class="plant-detail-row">\n            <div class="plant-detail-label">Times defoliated</div>\n            <div class="plant-detail-value">${s.defCount}</div>\n        </div>\n        <div class="plant-detail-divider"></div>\n        <div class="plant-detail-section-label">Notes</div>\n        ${m}\n    `;
-    ((document.getElementById("plant-detail-stats").innerHTML = g), (document.getElementById("plant-detail-modal").style.display = "flex"));
+        g = `
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Type</div>
+            <div class="plant-detail-value">${a}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Repotted</div>
+            <div class="plant-detail-value">${p}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Age (since repot)</div>
+            <div class="plant-detail-value"><span class="plant-detail-rel">${s.weeksSinceRepot} week${1 === s.weeksSinceRepot ? "" : "s"}</span> ${s.daysSinceRepot} day${1 === s.daysSinceRepot ? "" : "s"}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
+        ${
+            i.length > 0
+                ? `
+           <div class="plant-detail-row">
+               <div class="plant-detail-label">Total water</div>
+               <div class="plant-detail-value nutrient--water">${s.totalWaterCups.toFixed(1)} cup${1 === s.totalWaterCups ? "" : "s"}</div>
+           </div>
+           ${y}`
+                : `<div class="plant-detail-row">
+               <div class="plant-detail-label">Total water</div>
+               <div class="plant-detail-value nutrient--water">${s.totalWaterCups.toFixed(1)} cup${1 === s.totalWaterCups ? "" : "s"}</div>
+           </div>
+           <div class="plant-detail-empty">No nutrients configured for this cycle. Add some via the Nutrient Manager to track per-nutrient stats.</div>`
+        }
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Recount</div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last fed</div>
+            <div class="plant-detail-value">${u(s.lastFeedDt, !0)}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last watered</div>
+            <div class="plant-detail-value">${u(s.lastWaterDt, !0)}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last LST'd</div>
+            <div class="plant-detail-value">${u(s.lastLstDt, !0)}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last defoliated</div>
+            <div class="plant-detail-value">${u(s.lastDefDt, !0)}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Last 7 days</div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times fed</div>
+            <div class="plant-detail-value${f(s.feedCountLast7d)}">${s.feedCountLast7d}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times watered</div>
+            <div class="plant-detail-value${f(s.waterCountLast7d)}">${s.waterCountLast7d}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times LST'd</div>
+            <div class="plant-detail-value${f(s.lstCountLast7d)}">${s.lstCountLast7d}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times defoliated</div>
+            <div class="plant-detail-value${f(s.defCountLast7d)}">${s.defCountLast7d}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Log entries</div>
+            <div class="plant-detail-value${f(s.logCountLast7d)}">${s.logCountLast7d}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Cycle recap</div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Feed sessions</div>
+            <div class="plant-detail-value">${s.feedCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Water sessions</div>
+            <div class="plant-detail-value">${s.waterCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times LST'd</div>
+            <div class="plant-detail-value">${s.lstCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times defoliated</div>
+            <div class="plant-detail-value">${s.defCount}</div>
+        </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Notes</div>
+        ${m}
+    `;
+    ((document.getElementById("plant-detail-stats").innerHTML = g), showModal("plant-detail-modal"));
 }
 function closePlantDetail() {
-    document.getElementById("plant-detail-modal").style.display = "none";
+    hideModal("plant-detail-modal");
 }
 function newCycle() {
     const t = `Grow #${cycles.length + 1}`;
-    ((document.getElementById("new-cycle-input").value = t), (document.getElementById("new-cycle-modal").style.display = "flex"), document.getElementById("new-cycle-input").select());
+    ((document.getElementById("new-cycle-input").value = t), showModal("new-cycle-modal"), document.getElementById("new-cycle-input").select());
 }
 function confirmNewCycle() {
     const t = document.getElementById("new-cycle-input").value.trim() || `Grow #${cycles.length + 1}`;
-    ((document.getElementById("new-cycle-modal").style.display = "none"), cycles.forEach((t) => collapsedCycles.add(t.id)), saveCollapsedCycles(collapsedCycles));
+    (hideModal("new-cycle-modal"), cycles.forEach((t) => collapsedCycles.add(t.id)), saveCollapsedCycles(collapsedCycles));
     const e = new Date(),
         n = (t) => String(t).padStart(2, "0"),
         a = `${e.getFullYear()}-${n(e.getMonth() + 1)}-${n(e.getDate())}`,
@@ -836,23 +1014,23 @@ function confirmNewCycle() {
     (cycles.push(l), (activeCycleId = l.id), persist(), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), syncHeaderActions(), resetAddForm(), setDateDefault(), showTab("log", !0), invalidateLog(), invalidateStats());
 }
 function cancelNewCycle() {
-    document.getElementById("new-cycle-modal").style.display = "none";
+    hideModal("new-cycle-modal");
 }
 function editCycleName(t, e) {
     const n = document.getElementById("rename-cycle-modal"),
         a = document.getElementById("rename-cycle-input");
-    ((a.value = e), (n.style.display = "flex"), a.focus(), (n._cycleId = t), (n._currentName = e));
+    ((a.value = e), showModal("rename-cycle-modal"), a.focus(), (n._cycleId = t), (n._currentName = e));
 }
 function cancelRenameCycle() {
-    document.getElementById("rename-cycle-modal").style.display = "none";
+    hideModal("rename-cycle-modal");
 }
 function confirmRenameCycle() {
     const t = document.getElementById("rename-cycle-modal"),
         e = document.getElementById("rename-cycle-input").value.trim();
     if (!e) return void alert("Cycle name can't be empty.");
-    if (e === t._currentName) return void (t.style.display = "none");
+    if (e === t._currentName) return void hideModal("rename-cycle-modal");
     const n = cycles.find((e) => e.id === t._cycleId);
-    (n && ((n.name = e), persist(), invalidateLog(), invalidateStats()), (t.style.display = "none"));
+    (n && ((n.name = e), persist(), invalidateLog(), invalidateStats()), hideModal("rename-cycle-modal"));
 }
 function setStatsCycle(t) {
     (setStatsMode("all" === t ? "all" : t), renderStats(cycles, activeCycleId));
@@ -1037,7 +1215,7 @@ function triggerImport() {
 }
 function refreshOpenPlantDetail() {
     const t = document.getElementById("plant-detail-modal");
-    if (!t || "none" === t.style.display) return;
+    if (!t || !t.classList.contains("modal-overlay--visible")) return;
     const e = document.getElementById("plant-detail-name").textContent;
     if (!e) return;
     const n = cycles.find((t) => t.plants && t.plants.includes(e));
