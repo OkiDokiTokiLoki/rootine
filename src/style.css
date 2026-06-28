@@ -574,8 +574,7 @@ textarea.form-input {
     border-color: var(--border2);
 }
 .cycle-header.collapsed .settings-btn {
-    opacity: 0.25;
-    pointer-events: none;
+    display: none;
 }
 .cycle-header-left {
     display: flex;

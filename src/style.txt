@@ -1,84 +1,55 @@
-/* =================================================================
-   ROOTINE — DESIGN SYSTEM
-   =================================================================
-   Color:     --green / --blue / --amber / --red (semantic)
-              --fish / --grow / --bloom (nutrient-specific)
-              + matching -bg variants
-   Radius:    --r-sm (8) | --r-md (12) | --r-lg (16) | --r-pill
-   Icons:     --icon-sm (14) | --icon-md (18) | --icon-lg (22)
-   ================================================================= */
-
 :root {
     --bg: #0f0f0f;
     --surface: #1a1a1a;
     --surface2: #242424;
     --surface3: #2c2c2c;
-
     --border: rgba(255, 255, 255, 0.08);
     --border2: rgba(255, 255, 255, 0.14);
-
     --text: #f0f0f0;
     --muted: #888;
     --muted2: #5a5a5a;
-
     --green: #4caf6e;
     --green-bg: rgba(76, 175, 110, 0.14);
     --green-border: rgba(76, 175, 110, 0.4);
-
     --blue: #4a9eff;
     --blue-bg: rgba(74, 158, 255, 0.14);
     --blue-border: rgba(74, 158, 255, 0.4);
-
     --amber: #f0a500;
     --amber-bg: rgba(240, 165, 0, 0.14);
     --amber-border: rgba(240, 165, 0, 0.4);
-
     --red: #e05555;
     --red-bg: rgba(224, 85, 85, 0.14);
     --red-border: rgba(224, 85, 85, 0.4);
-
     --pink: #a94aec;
     --pink-bg: #2d204e;
     --pink-border: rgba(169, 74, 236, 0.4);
-
     --fish: #3aa3cc;
     --fish-bg: rgba(58, 163, 204, 0.14);
     --grow: #6ecf6e;
     --grow-bg: rgba(110, 207, 110, 0.14);
     --bloom: #c07df0;
     --bloom-bg: rgba(192, 125, 240, 0.14);
-
     --neutral: #999;
     --neutral-bg: rgba(255, 255, 255, 0.06);
     --neutral-border: rgba(255, 255, 255, 0.18);
-
     --overlay: rgba(0, 0, 0, 0.6);
-
-    /* Radius scale */
     --r-sm: 8px;
     --r-md: 12px;
     --r-lg: 16px;
     --r-pill: 999px;
-
-    /* Icon scale */
     --icon-sm: 14px;
     --icon-md: 18px;
     --icon-lg: 22px;
-
-    /* Layout */
-    --safe-top: env(safe-area-inset-top, 0px);
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0);
+    --safe-bottom: env(safe-area-inset-bottom, 0);
     --tab-h: 60px;
 }
-
-/* ===== Reset ===== */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
     -webkit-tap-highlight-color: transparent;
 }
-
 html,
 body {
     height: 100%;
@@ -88,60 +59,49 @@ body {
     font-size: 15px;
     overscroll-behavior: none;
 }
-
 button {
     font-family: inherit;
 }
-
 input[type="datetime-local"] {
     color-scheme: dark;
 }
-
-/* ===== Layout ===== */
 #app {
     display: flex;
     flex-direction: column;
     height: 100%;
 }
-
 #header {
     padding: calc(var(--safe-top) + 14px) 18px 12px;
     background: var(--bg);
     border-bottom: 0.5px solid var(--border);
     flex-shrink: 0;
 }
-
 #header h1 {
     font-size: 20px;
     font-weight: 600;
     letter-spacing: -0.3px;
 }
-
 #header .subtitle {
     font-size: 12px;
     color: var(--muted);
     margin-top: 2px;
 }
-
 .header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
-
 .subtitle-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
 }
-
 #content {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
-
 #tabs {
     display: flex;
     background: var(--bg);
@@ -150,18 +110,14 @@ input[type="datetime-local"] {
     flex-shrink: 0;
     height: calc(var(--tab-h) + var(--safe-bottom));
 }
-
 .section {
     display: none;
     padding: 14px 16px;
     padding-bottom: 24px;
 }
-
 .section.active {
     display: block;
 }
-
-/* ===== Section title ===== */
 .section-title {
     font-size: 13px;
     font-weight: 600;
@@ -170,7 +126,6 @@ input[type="datetime-local"] {
     letter-spacing: 0.06em;
     margin-bottom: 8px;
 }
-
 .section-title.collapsible-section {
     display: flex;
     align-items: center;
@@ -178,12 +133,9 @@ input[type="datetime-local"] {
     cursor: pointer;
     user-select: none;
 }
-
 #obs-list.collapsed {
     display: none;
 }
-
-/* ===== Chevrons ===== */
 .chevron,
 .week-chevron,
 .section-chev {
@@ -194,35 +146,28 @@ input[type="datetime-local"] {
     flex-shrink: 0;
     transition: transform 0.2s;
 }
-
 .chevron {
     width: 16px;
     height: 16px;
     stroke-width: 2;
 }
-
 .chevron.open {
     transform: rotate(180deg);
 }
-
 .week-chevron {
     width: 14px;
     height: 14px;
     stroke-width: 2;
 }
-
 .week-chevron.collapsed,
 .section-chev.collapsed {
     transform: rotate(-90deg);
 }
-
 .section-chev {
     width: 14px;
     height: 14px;
     stroke-width: 2;
 }
-
-/* ===== Cards (entry, stat, form-section, cycle-header) ===== */
 .entry-card,
 .stat-card,
 .form-section,
@@ -231,12 +176,10 @@ input[type="datetime-local"] {
     border: 0.5px solid var(--border);
     border-radius: var(--r-md);
 }
-
 .entry-card {
     margin-bottom: 8px;
     overflow: hidden;
 }
-
 .entry-header {
     display: flex;
     align-items: center;
@@ -244,27 +187,22 @@ input[type="datetime-local"] {
     padding: 12px 14px;
     cursor: pointer;
 }
-
 .entry-date {
     font-size: 14px;
     font-weight: 500;
 }
-
 .entry-time {
     font-size: 12px;
     color: var(--muted);
 }
-
 .entry-body {
     display: none;
     border-top: 0.5px solid var(--border);
     padding: 12px 14px;
 }
-
 .entry-body.open {
     display: block;
 }
-
 .plant-row {
     display: grid;
     grid-template-columns: 46px 1fr;
@@ -273,31 +211,26 @@ input[type="datetime-local"] {
     padding: 6px 0;
     border-bottom: 0.5px solid var(--border);
 }
-
 .plant-row:last-child {
     border-bottom: none;
 }
-
 .pname {
     font-size: 12px;
     font-weight: 600;
     color: var(--muted);
     padding-top: 3px;
 }
-
 .pills {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
 }
-
 .action-list {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
     margin-top: 8px;
 }
-
 .action-tag {
     font-size: 11px;
     padding: 2px 8px;
@@ -306,8 +239,6 @@ input[type="datetime-local"] {
     color: var(--muted);
     font-weight: 500;
 }
-
-/* ===== Observation box (entry body) ===== */
 .obs-box {
     margin-top: 10px;
     padding: 8px 10px;
@@ -317,14 +248,12 @@ input[type="datetime-local"] {
     color: var(--amber);
     line-height: 1.5;
 }
-
 .obs-box-plant {
     border-left: 2px solid var(--green);
     padding-left: 10px;
     background: var(--surface2);
     color: var(--muted);
 }
-
 .obs-box-plant-name {
     font-size: 11px;
     font-weight: 600;
@@ -332,44 +261,34 @@ input[type="datetime-local"] {
     letter-spacing: 0.3px;
     margin-bottom: 3px;
 }
-
-/* ===== Stat ===== */
 .stat-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     margin-bottom: 14px;
 }
-
 .stat-card {
     padding: 14px;
 }
-
 .stat-val {
     font-size: 28px;
     font-weight: 600;
     letter-spacing: -0.5px;
 }
-
 .stat-lbl {
     font-size: 12px;
     color: var(--muted);
     margin-top: 2px;
 }
-
 .stat-val.green {
     color: var(--green);
 }
-
 .stat-val.blue {
     color: var(--blue);
 }
-
 .stat-val.amber {
     color: var(--amber);
 }
-
-/* ===== Stats plants (list) ===== */
 .plant-stat-row {
     display: flex;
     align-items: center;
@@ -381,23 +300,18 @@ input[type="datetime-local"] {
     margin: 0 -8px;
     transition: background-color 0.12s ease;
 }
-
 .plant-stat-row:last-child {
     border-bottom: none;
 }
-
 .plant-stat-row-clickable {
     cursor: pointer;
 }
-
 .plant-stat-row-clickable:hover {
     background: var(--surface2);
 }
-
 .stats-cycle-block {
     margin-bottom: 14px;
 }
-
 .stats-cycle-block-label {
     font-size: 12px;
     font-weight: 600;
@@ -409,13 +323,10 @@ input[type="datetime-local"] {
     align-items: center;
     gap: 8px;
 }
-
-/* ===== Form ===== */
 .form-section {
     padding: 14px;
     margin-bottom: 12px;
 }
-
 .form-section-title {
     font-size: 12px;
     font-weight: 600;
@@ -424,23 +335,19 @@ input[type="datetime-local"] {
     letter-spacing: 0.06em;
     margin-bottom: 10px;
 }
-
 .form-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
 }
-
 .form-row:last-child {
     margin-bottom: 0;
 }
-
 .form-label {
     font-size: 14px;
     color: var(--text);
 }
-
 .form-input {
     background: var(--surface2);
     border: 0.5px solid var(--border2);
@@ -452,38 +359,31 @@ input[type="datetime-local"] {
     text-align: right;
     -webkit-appearance: none;
 }
-
 .form-input:focus {
     outline: none;
     border-color: var(--green);
 }
-
 .form-input-full {
     width: 100%;
     text-align: left;
 }
-
 .nutrient-input-group {
     display: flex;
     align-items: center;
     gap: 6px;
 }
-
 .nutrient-input-group .form-input {
     width: 70px;
 }
-
 .form-input--conc {
     font-size: 13px;
     color: var(--muted);
 }
-
 textarea.form-input {
     resize: vertical;
     min-height: 72px;
     line-height: 1.5;
 }
-
 .nutrient-plant-row {
     background: var(--surface2);
     border: 0.5px solid var(--border2);
@@ -491,11 +391,9 @@ textarea.form-input {
     padding: 10px 12px;
     margin-bottom: 8px;
 }
-
 .nutrient-plant-row:last-child {
     margin-bottom: 0;
 }
-
 .nutrient-plant-row-header {
     display: flex;
     align-items: center;
@@ -503,19 +401,16 @@ textarea.form-input {
     padding-bottom: 6px;
     border-bottom: 0.5px solid var(--border);
 }
-
 .nutrient-plant-row-name {
     font-size: 13px;
     font-weight: 600;
     color: var(--text);
 }
-
 .nutrient-plant-row-fields {
     display: flex;
     flex-direction: column;
     gap: 1px;
 }
-
 .nutrient-field {
     display: flex;
     align-items: center;
@@ -523,7 +418,6 @@ textarea.form-input {
     gap: 8px;
     padding: 3px 0;
 }
-
 .nutrient-field-label {
     font-size: 13px;
     color: var(--muted);
@@ -531,7 +425,6 @@ textarea.form-input {
     flex-shrink: 0;
     min-width: 50px;
 }
-
 .nutrient-field-label--fish {
     color: var(--fish);
 }
@@ -544,33 +437,28 @@ textarea.form-input {
 .nutrient-field-label--water {
     color: var(--blue);
 }
-
 .nutrient-field-inputs {
     display: flex;
     gap: 4px;
     align-items: center;
     justify-content: flex-end;
 }
-
 .nutrient-field-inputs .form-input {
     width: 56px;
     padding: 5px 8px;
     font-size: 13px;
     text-align: right;
 }
-
 .nutrient-field-inputs .form-input--conc {
     width: 50px;
     font-size: 12px;
     color: var(--muted);
 }
-
 .nutrient-empty {
     font-size: 12px;
     color: var(--muted);
     padding: 4px 0;
 }
-
 .checkbox-row {
     display: flex;
     align-items: center;
@@ -580,11 +468,9 @@ textarea.form-input {
     font-size: 14px;
     cursor: pointer;
 }
-
 .checkbox-row:last-child {
     border-bottom: none;
 }
-
 .checkbox-row input[type="checkbox"] {
     width: 20px;
     height: 20px;
@@ -592,14 +478,11 @@ textarea.form-input {
     cursor: pointer;
     flex-shrink: 0;
 }
-
-/* ===== Plant tabs (nutrient/amount) ===== */
 .plant-tabs {
     display: flex;
     gap: 6px;
     margin-bottom: 12px;
 }
-
 .plant-tab {
     flex: 1;
     padding: 8px 4px;
@@ -616,27 +499,22 @@ textarea.form-input {
     justify-content: center;
     gap: 4px;
 }
-
 .plant-tab.active {
     background: var(--green-bg);
     color: var(--green);
     border-color: transparent;
 }
-
 .plant-panel {
     display: none;
 }
-
 .plant-panel.active {
     display: block;
 }
-
 .plant-picker-list {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
 }
-
 .plant-picker-list--scroll {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -650,19 +528,15 @@ textarea.form-input {
     cursor: grab;
     user-select: none;
 }
-
 .plant-picker-list--scroll::-webkit-scrollbar {
     display: none;
 }
-
 .plant-picker-list--scroll .plant-picker-opt {
     flex-shrink: 0;
 }
-
 .plant-picker-list--scroll.dragging {
     cursor: grabbing;
 }
-
 .plant-picker-opt {
     display: flex;
     align-items: center;
@@ -676,7 +550,6 @@ textarea.form-input {
     padding: 5px 12px;
     color: var(--text);
 }
-
 .plant-picker-opt input[type="checkbox"] {
     width: 16px;
     height: 16px;
@@ -684,16 +557,12 @@ textarea.form-input {
     cursor: pointer;
     flex-shrink: 0;
 }
-
 .plant-picker-opt-all {
     font-weight: 600;
 }
-
-/* ===== Cycle (log) ===== */
 .cycle-block {
     margin-bottom: 6px;
 }
-
 .cycle-header {
     display: flex;
     align-items: center;
@@ -704,38 +573,30 @@ textarea.form-input {
     margin-bottom: 4px;
     border-color: var(--border2);
 }
-
 .cycle-header.collapsed .settings-btn {
     opacity: 0.25;
     pointer-events: none;
 }
-
 .cycle-header-left {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
 }
-
 .cycle-name {
     font-size: 14px;
     font-weight: 600;
 }
-
 .cycle-start {
     font-size: 11px;
     color: var(--muted);
 }
-
 .cycle-entries {
     padding-left: 8px;
 }
-
 .cycle-entries.collapsed {
     display: none;
 }
-
-/* ===== Week ===== */
 .week-header {
     font-size: 11px;
     font-weight: 600;
@@ -748,15 +609,12 @@ textarea.form-input {
     cursor: pointer;
     user-select: none;
 }
-
 .week-entries {
     overflow: hidden;
 }
-
 .week-entries.collapsed {
     display: none;
 }
-
 .nutrient-plant-tabs {
     display: flex;
     flex-wrap: nowrap;
@@ -773,15 +631,12 @@ textarea.form-input {
     cursor: grab;
     user-select: none;
 }
-
 .nutrient-plant-tabs::-webkit-scrollbar {
     display: none;
 }
-
 .nutrient-plant-tabs.dragging {
     cursor: grabbing;
 }
-
 .nutrient-tab {
     flex-shrink: 0;
     display: inline-flex;
@@ -800,27 +655,22 @@ textarea.form-input {
         border-color 0.12s ease,
         color 0.12s ease;
 }
-
 .nutrient-tab.active {
     background: var(--green-bg);
     border-color: var(--green);
     color: var(--green);
     font-weight: 600;
 }
-
 .nutrient-active-name {
     font-size: 12px;
     color: var(--muted);
     margin: -6px 0 10px;
 }
-
 .nutrient-empty {
     font-size: 12px;
     color: var(--muted);
     padding: 4px 0;
 }
-
-/* ===== Observation (stats page) ===== */
 .obs-entry {
     background: var(--surface);
     border: 0.5px solid var(--border);
@@ -828,20 +678,16 @@ textarea.form-input {
     padding: 10px 12px;
     margin-bottom: 6px;
 }
-
 .obs-entry-date {
     font-size: 11px;
     color: var(--muted);
     margin-bottom: 4px;
 }
-
 .obs-entry-text {
     font-size: 13px;
     color: var(--amber);
     line-height: 1.5;
 }
-
-/* ===== Plant manage modal ===== */
 .plant-manage-row {
     display: flex;
     align-items: center;
@@ -853,7 +699,6 @@ textarea.form-input {
     margin-bottom: 6px;
     gap: 8px;
 }
-
 .plant-manage-name {
     font-size: 14px;
     font-weight: 500;
@@ -862,13 +707,11 @@ textarea.form-input {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .plant-manage-actions {
     display: flex;
     gap: 4px;
     flex-shrink: 0;
 }
-
 .plant-empty {
     color: var(--muted);
     font-size: 13px;
@@ -879,8 +722,6 @@ textarea.form-input {
     border-radius: var(--r-md);
     margin-bottom: 6px;
 }
-
-/* ===== Type toggle ===== */
 .type-toggle {
     display: flex;
     background: var(--surface2);
@@ -890,7 +731,6 @@ textarea.form-input {
     margin-bottom: 14px;
     gap: 2px;
 }
-
 .type-toggle-opt {
     flex: 1;
     padding: 9px 12px;
@@ -905,14 +745,11 @@ textarea.form-input {
         background 0.15s,
         color 0.15s;
 }
-
 .type-toggle-opt.active {
     background: var(--green);
     color: #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-
-/* ===== Plant detail modal ===== */
 .plant-detail-row {
     display: flex;
     justify-content: space-between;
@@ -921,18 +758,15 @@ textarea.form-input {
     font-size: 14px;
     border-bottom: 0.5px solid var(--border2);
 }
-
 .plant-detail-row:last-child {
     border-bottom: none;
 }
-
 .plant-detail-rel {
     color: var(--muted);
     font-size: 12px;
     margin-left: 4px;
     font-weight: 400;
 }
-
 .plant-detail-label {
     color: var(--muted);
     font-size: 12px;
@@ -940,7 +774,6 @@ textarea.form-input {
     letter-spacing: 0.3px;
     flex-shrink: 0;
 }
-
 .plant-detail-value {
     font-weight: 600;
     font-size: 14px;
@@ -950,18 +783,15 @@ textarea.form-input {
     margin-left: 12px;
     word-break: break-word;
 }
-
 .plant-detail-value--muted {
     color: var(--muted);
     font-weight: 500;
 }
-
 .plant-detail-divider {
     height: 1px;
     background: var(--border2);
     margin: 8px 0;
 }
-
 .plant-detail-section-label {
     font-size: 11px;
     color: var(--muted);
@@ -970,7 +800,6 @@ textarea.form-input {
     margin-bottom: 5px;
     padding: 0 2px;
 }
-
 .plant-detail-nutrient-block {
     margin-top: 10px;
     padding: 10px;
@@ -978,11 +807,9 @@ textarea.form-input {
     border: 0.5px solid var(--border2);
     border-radius: var(--r-sm);
 }
-
 .plant-detail-nutrient-block:first-of-type {
     margin-top: 6px;
 }
-
 .plant-detail-nutrient-name {
     font-size: 13px;
     font-weight: 700;
@@ -990,11 +817,9 @@ textarea.form-input {
     letter-spacing: 0.4px;
     margin-bottom: 4px;
 }
-
 .plant-detail-nutrient-block .plant-detail-row {
     padding: 5px 0;
 }
-
 .plant-detail-obs {
     background: var(--surface2);
     border: 0.5px solid var(--border2);
@@ -1002,60 +827,50 @@ textarea.form-input {
     padding: 8px 10px;
     margin-bottom: 6px;
 }
-
 .plant-detail-obs-date {
     font-size: 11px;
     color: var(--muted);
     margin-bottom: 3px;
 }
-
 .plant-detail-obs-text {
     font-size: 13px;
     color: var(--text);
     white-space: pre-wrap;
     word-wrap: break-word;
 }
-
 .plant-detail-empty {
     font-size: 12px;
     color: var(--muted);
     padding: 8px 0;
 }
-
 #plant-detail-name {
     display: flex;
     align-items: center;
 }
-
-/* ===== Plant obs (add form) ===== */
 .plant-obs-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin-bottom: 10px;
 }
-
 .plant-obs-item {
     background: var(--surface2);
     border: 0.5px solid var(--border2);
     border-radius: var(--r-md);
     padding: 9px 10px;
 }
-
 .plant-obs-item-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 4px;
 }
-
 .plant-obs-item-name {
     font-size: 12px;
     font-weight: 600;
     color: var(--green);
     letter-spacing: 0.2px;
 }
-
 .plant-obs-item-remove {
     background: none;
     border: none;
@@ -1065,14 +880,12 @@ textarea.form-input {
     line-height: 1;
     cursor: pointer;
 }
-
 .plant-obs-item-text {
     font-size: 13px;
     color: var(--text);
     white-space: pre-wrap;
     word-wrap: break-word;
 }
-
 .plant-obs-item-edit {
     background: none;
     border: none;
@@ -1082,21 +895,18 @@ textarea.form-input {
     line-height: 1;
     cursor: pointer;
 }
-
 .plant-obs-item.editing {
     outline: 1.5px solid var(--blue);
     outline-offset: -1px;
     background: var(--surface2);
     border-radius: 10px;
 }
-
 .plant-obs-tabs {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     margin-bottom: 8px;
 }
-
 .plant-obs-tab {
     display: inline-flex;
     align-items: center;
@@ -1113,21 +923,18 @@ textarea.form-input {
         border-color 0.12s ease,
         color 0.12s ease;
 }
-
 .plant-obs-tab.active {
     background: var(--grow-bg);
     border-color: var(--green);
     color: var(--green);
     font-weight: 600;
 }
-
 .plant-obs-tab.used,
 .plant-obs-tab[disabled] {
     opacity: 0.45;
     cursor: not-allowed;
     text-decoration: line-through;
 }
-
 .plant-obs-input {
     min-height: 60px;
     resize: vertical;
@@ -1135,8 +942,6 @@ textarea.form-input {
     width: 100%;
     text-align: left;
 }
-
-/* ===== Animations ===== */
 @keyframes plant-obs-tabs-shake {
     0%,
     100% {
@@ -1149,26 +954,15 @@ textarea.form-input {
         transform: translateX(3px);
     }
 }
-
 .plant-obs-tabs-shake {
     animation: plant-obs-tabs-shake 0.3s ease;
 }
-
-/* ===== Empty state ===== */
 .empty {
     text-align: center;
     padding: 40px 20px;
     color: var(--muted);
     font-size: 14px;
 }
-
-/* =================================================================
-   UNIFIED COMPONENTS
-   ================================================================= */
-
-/* ----- Buttons ----- */
-
-/* Base */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -1186,12 +980,9 @@ textarea.form-input {
     white-space: nowrap;
     -webkit-tap-highlight-color: transparent;
 }
-
 .btn:active {
     opacity: 0.8;
 }
-
-/* Primary CTA */
 .btn-primary {
     width: 100%;
     padding: 14px;
@@ -1203,8 +994,6 @@ textarea.form-input {
 .btn-primary:active {
     opacity: 0.85;
 }
-
-/* Secondary (surface + border) */
 .btn-secondary {
     padding: 11px;
     background: var(--surface2);
@@ -1213,14 +1002,10 @@ textarea.form-input {
     font-size: 14px;
     font-weight: 500;
 }
-
-/* Small secondary (settings rows, compact) */
 .btn-secondary--sm {
     padding: 8px 14px;
     font-size: 13px;
 }
-
-/* Pill (small green chip) */
 .btn-pill {
     padding: 6px 12px;
     background: var(--green-bg);
@@ -1230,8 +1015,6 @@ textarea.form-input {
     font-size: 12px;
     font-weight: 600;
 }
-
-/* Modal confirm (green, takes 1fr in row) */
 .btn-confirm {
     flex: 1;
     padding: 11px;
@@ -1243,8 +1026,6 @@ textarea.form-input {
     border-radius: var(--r-md);
     cursor: pointer;
 }
-
-/* Modal cancel (secondary, takes 1fr in row) */
 .btn-cancel {
     flex: 1;
     padding: 11px;
@@ -1255,8 +1036,6 @@ textarea.form-input {
     border-radius: var(--r-md);
     cursor: pointer;
 }
-
-/* Icon button (32x32) */
 .icon-btn {
     display: inline-flex;
     align-items: center;
@@ -1271,11 +1050,9 @@ textarea.form-input {
     cursor: pointer;
     transition: opacity 0.12s;
 }
-
 .icon-btn:active {
     opacity: 0.7;
 }
-
 .icon-btn svg {
     width: var(--icon-md);
     height: var(--icon-md);
@@ -1285,33 +1062,26 @@ textarea.form-input {
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-
 .icon-btn--green {
     background: var(--green-bg);
     color: var(--green);
 }
-
 .icon-btn--blue {
     background: var(--blue-bg);
     color: var(--blue);
 }
-
 .icon-btn--red {
     background: var(--red-bg);
     color: var(--red);
 }
-
 .icon-btn--amber {
     background: var(--amber-bg);
     color: var(--amber);
 }
-
 .icon-btn--neutral {
     background: var(--surface2);
     color: var(--muted);
 }
-
-/* Tab (bottom bar) */
 .tab-btn {
     flex: 1;
     display: flex;
@@ -1327,11 +1097,9 @@ textarea.form-input {
     padding-bottom: 4px;
     transition: color 0.15s;
 }
-
 .tab-btn.active {
     color: var(--green);
 }
-
 .tab-btn svg {
     width: var(--icon-lg);
     height: var(--icon-lg);
@@ -1341,15 +1109,12 @@ textarea.form-input {
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-
-/* Stats cycle toggle (segmented pill row) */
 .stats-cycle-toggle {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
     margin-bottom: 14px;
 }
-
 .stats-cycle-toggle--scroll {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -1363,19 +1128,15 @@ textarea.form-input {
     cursor: grab;
     user-select: none;
 }
-
 .stats-cycle-toggle--scroll.dragging {
     cursor: grabbing;
 }
-
 .stats-cycle-toggle--scroll::-webkit-scrollbar {
     display: none;
 }
-
 .stats-cycle-toggle--scroll .stats-cycle-btn {
     flex-shrink: 0;
 }
-
 .stats-cycle-btn {
     padding: 6px 14px;
     font-size: 12px;
@@ -1386,14 +1147,11 @@ textarea.form-input {
     color: var(--muted);
     cursor: pointer;
 }
-
 .stats-cycle-btn.active {
     background: var(--green-bg);
     color: var(--green);
     border-color: transparent;
 }
-
-/* Plant obs add button */
 .plant-obs-add-btn {
     align-self: flex-start;
     padding: 8px 14px;
@@ -1405,17 +1163,13 @@ textarea.form-input {
     color: var(--green);
     cursor: pointer;
 }
-
 .plant-obs-add-btn:active {
     background: var(--border2);
 }
-
 .plant-obs-add-btn[disabled] {
     opacity: 0.5;
     cursor: not-allowed;
 }
-
-/* ----- Badges (round pill indicators, used in entry card) ----- */
 .badge {
     display: inline-flex;
     align-items: center;
@@ -1427,7 +1181,6 @@ textarea.form-input {
     margin-left: auto;
     gap: 4px;
 }
-
 .badge svg {
     width: var(--icon-sm);
     height: var(--icon-sm);
@@ -1437,43 +1190,35 @@ textarea.form-input {
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-
 .badge--green,
 .badge-feed {
     background: var(--green-bg);
     color: var(--green);
 }
-
 .badge--blue,
 .badge-water {
     background: var(--blue-bg);
     color: var(--blue);
 }
-
 .badge--amber,
 .badge-light {
     background: var(--amber-bg);
     color: var(--amber);
 }
-
 .badge--red {
     background: var(--red-bg);
     color: var(--red);
 }
-
 .badge--note,
 .badge-note {
     background: var(--pink-bg);
     color: var(--pink);
 }
-
 .badge--neutral,
 .badge-scissors {
     background: var(--neutral-bg);
     color: var(--neutral);
 }
-
-/* ----- Chips ----- */
 .chip {
     display: inline-flex;
     align-items: center;
@@ -1492,21 +1237,16 @@ textarea.form-input {
         transform 0.1s;
     cursor: default;
 }
-
 .chip--clickable {
     cursor: pointer;
 }
-
 .chip--clickable:hover {
     opacity: 0.75;
 }
-
 .chip--clickable:active {
     transform: scale(0.95);
 }
-
 .plant-type-badge {
-    /* === chip--clickable with auto/photo variants */
     display: inline-flex;
     justify-content: center;
     align-items: center;
@@ -1523,28 +1263,22 @@ textarea.form-input {
         opacity 0.15s,
         transform 0.1s;
 }
-
 .plant-type-badge:hover {
     opacity: 0.75;
 }
-
 .plant-type-badge:active {
     transform: scale(0.95);
 }
-
 .plant-type-badge.auto {
     background: var(--grow-bg);
     color: var(--grow);
     border-color: var(--grow-border);
 }
-
 .plant-type-badge.photo {
     background: var(--blue-bg);
     color: var(--blue);
     border-color: var(--blue-border);
 }
-
-/* Active cycle badge (round pill) */
 .cycle-active-badge {
     font-size: 10px;
     font-weight: 600;
@@ -1553,8 +1287,6 @@ textarea.form-input {
     background: var(--green-bg);
     color: var(--green);
 }
-
-/* Plant note count (small round pill) */
 .plant-note-count {
     display: inline-flex;
     align-items: center;
@@ -1568,7 +1300,6 @@ textarea.form-input {
     border: 0.5px solid var(--green-border);
     line-height: 1;
 }
-
 .plant-note-count svg {
     width: 11px;
     height: 11px;
@@ -1578,36 +1309,28 @@ textarea.form-input {
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-
-/* ----- Nutrient pills (in entry body) ----- */
 .pill {
     font-size: 11px;
     padding: 2px 8px;
     border-radius: var(--r-pill);
     font-weight: 500;
 }
-
 .pill-fish {
     background: var(--fish-bg);
     color: var(--fish);
 }
-
 .pill-grow {
     background: var(--grow-bg);
     color: var(--grow);
 }
-
 .pill-bloom {
     background: var(--bloom-bg);
     color: var(--bloom);
 }
-
 .pill-water {
     background: var(--blue-bg);
     color: var(--blue);
 }
-
-/* ----- Legacy class aliases (existing markup still works) ----- */
 .submit-btn {
     width: 100%;
     padding: 14px;
@@ -1620,11 +1343,9 @@ textarea.form-input {
     cursor: pointer;
     margin-bottom: 8px;
 }
-
 .submit-btn:active {
     opacity: 0.85;
 }
-
 .header-menu-btn {
     display: inline-flex;
     align-items: center;
@@ -1637,7 +1358,6 @@ textarea.form-input {
     border: none;
     cursor: pointer;
 }
-
 .header-menu {
     position: absolute;
     top: calc(100% + 6px);
@@ -1652,7 +1372,6 @@ textarea.form-input {
     gap: 2px;
     z-index: 50;
     display: flex;
-
     opacity: 0;
     transform: translateY(-12px);
     pointer-events: none;
@@ -1662,7 +1381,6 @@ textarea.form-input {
         opacity 0.18s ease,
         visibility 0s linear 0.22s;
 }
-
 .header-menu.open {
     opacity: 1;
     transform: translateY(0);
@@ -1673,7 +1391,6 @@ textarea.form-input {
         opacity 0.18s ease,
         visibility 0s linear 0s;
 }
-
 .header-menu-icon__line {
     transform-box: fill-box;
     transform-origin: center;
@@ -1681,20 +1398,16 @@ textarea.form-input {
         transform 0.25s ease,
         opacity 0.18s ease;
 }
-
 .header-menu-btn.is-open .header-menu-icon__line--top {
     transform: translateY(5px) rotate(45deg);
 }
-
 .header-menu-btn.is-open .header-menu-icon__line--middle {
     opacity: 0;
     transform: scaleX(0);
 }
-
 .header-menu-btn.is-open .header-menu-icon__line--bottom {
     transform: translateY(-5px) rotate(-45deg);
 }
-
 .header-menu-item {
     display: flex;
     align-items: center;
@@ -1710,16 +1423,13 @@ textarea.form-input {
     text-align: left;
     cursor: pointer;
 }
-
 .header-menu-item:active {
     background: var(--surface3, rgba(255, 255, 255, 0.06));
 }
-
 .header-menu-item svg {
     flex-shrink: 0;
     color: var(--green);
 }
-
 .settings-btn {
     display: inline-flex;
     align-items: center;
@@ -1734,60 +1444,45 @@ textarea.form-input {
     cursor: pointer;
     transition: opacity 0.12s;
 }
-
 .settings-btn:active {
     opacity: 0.7;
 }
-
 .blue-btn {
     background: var(--blue-bg);
     color: var(--blue);
 }
-
 .red-btn {
     background: var(--red-bg);
     color: var(--red);
 }
-
 .green-btn {
     background: var(--green-bg);
     color: var(--green);
 }
-
 .pink-btn {
     background: var(--pink-bg);
     color: var(--pink);
 }
-
 .favourite-btn {
     background: var(--surface2);
     color: var(--muted);
 }
-
 .favourite-btn.is-favourite,
 .amber-btn {
     background: var(--amber-bg);
     color: var(--amber);
 }
-
 .favourite-btn.is-favourite svg {
     filter: drop-shadow(0 0 4px rgba(240, 165, 0, 0.35));
 }
-
 .entry-card:not(.open) .green-btn,
 .entry-card:not(.open) .red-btn,
 .entry-card:not(.open) .blue-btn {
     display: none;
 }
-
 .entry-card.open .badge {
     display: none;
 }
-
-/* =================================================================
-   MODALS
-   ================================================================= */
-
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -1798,7 +1493,6 @@ textarea.form-input {
     justify-content: center;
     padding: 24px;
 }
-
 .modal-content {
     background: var(--surface);
     border: 0.5px solid var(--border2);
@@ -1807,66 +1501,54 @@ textarea.form-input {
     width: 100%;
     max-width: 320px;
 }
-
 .modal-content--wide {
     max-width: 360px;
 }
-
 .modal-content--detail {
     max-width: min(400px, calc(100% - 3rem));
 }
-
 .modal-content--tall {
     max-height: 80vh;
     display: flex;
     flex-direction: column;
 }
-
 .modal-title {
     font-size: 15px;
     font-weight: 600;
     margin-bottom: 14px;
 }
-
 .modal-title--lg {
     font-size: 16px;
 }
-
 .modal-subtitle {
     font-size: 12px;
     color: var(--muted);
     margin-bottom: 12px;
 }
-
 .modal-label {
     font-size: 12px;
     color: var(--muted);
     margin-bottom: 6px;
 }
-
 .modal-hint {
     font-size: 12px;
     color: var(--muted);
     margin: -8px 0 14px;
 }
-
 .modal-actions {
     display: flex;
     gap: 8px;
 }
-
 .modal-divider {
     border-top: 0.5px solid var(--border2);
     margin: 12px 0;
 }
-
 .modal-detail-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 14px;
 }
-
 .nutrient-default-hint {
     font-size: 11px;
     color: var(--muted);
@@ -1876,40 +1558,31 @@ textarea.form-input {
     margin-left: 6px;
     font-weight: 500;
 }
-
-/* Settings rows (export/import list) */
 .settings-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
 }
-
 .settings-row__label {
     flex: 1;
     min-width: 0;
 }
-
 .settings-row__title {
     font-size: 13px;
     font-weight: 500;
 }
-
 .settings-row__desc {
     font-size: 12px;
     color: var(--muted);
     margin-top: 2px;
 }
-
-/* Header */
 .header-actions {
     display: flex;
     gap: 8px;
     align-items: center;
     position: relative;
 }
-
-/* Light status (header subtitle row) */
 .light-status {
     display: flex;
     align-items: center;
@@ -1918,7 +1591,6 @@ textarea.form-input {
     color: var(--muted);
     margin-top: 5px;
 }
-
 .light-status-bulb {
     width: 13px;
     height: 13px;
@@ -1926,25 +1598,18 @@ textarea.form-input {
     flex-shrink: 0;
     transition: stroke 0.2s;
 }
-
-/* Section title spacing variant */
 .section-title--spaced {
     margin-top: 24px;
 }
-
-/* Hidden file input */
 .hidden-input {
     display: none;
 }
-
-/* Checkbox row (block-style: full-width label + nested picker) */
 .checkbox-row--block {
     flex-wrap: wrap;
     cursor: default;
     display: block;
     padding: 9px 0;
 }
-
 .checkbox-row__label {
     display: flex;
     align-items: center;
@@ -1953,7 +1618,6 @@ textarea.form-input {
     cursor: pointer;
     font-size: 14px;
 }
-
 .checkbox-row__label input[type="checkbox"] {
     width: 20px;
     height: 20px;
@@ -1961,72 +1625,58 @@ textarea.form-input {
     cursor: pointer;
     flex-shrink: 0;
 }
-
 .plant-picker-wrap {
     display: none;
     width: 100%;
     padding: 8px 0 10px 30px;
 }
-
 .plant-picker-hint {
     font-size: 12px;
     color: var(--muted);
     margin-bottom: 6px;
 }
-
-/* Light inputs block */
 .light-inputs-wrap {
     display: none;
     width: 100%;
     padding: 10px 0 4px 30px;
 }
-
 .light-label {
     font-size: 13px;
     color: var(--muted);
 }
-
 .form-row--last {
     margin-bottom: 0;
 }
-
 .settings-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
 }
-
 .settings-row__label {
     flex: 1;
     min-width: 0;
 }
-
 .settings-row__title {
     font-size: 13px;
     font-weight: 500;
 }
-
 .settings-row__desc {
     font-size: 12px;
     color: var(--muted);
     margin-top: 2px;
 }
-
 .modal-scroll {
     flex: 1;
     overflow-y: auto;
     margin-bottom: 14px;
 }
-
 .modal-overlay--higher {
     z-index: 110;
 }
-
 .modal-overlay--mid {
     z-index: 105;
 }
-
 .nutrient-totals {
     font-size: 12px;
     color: var(--muted);
@@ -2034,34 +1684,25 @@ textarea.form-input {
     display: inline-flex;
     gap: 8px;
 }
-
 .nutrient-totals__item {
     font-weight: 500;
 }
-
 .nutrient--fish,
 .nutrient-totals__item--fish {
     color: var(--fish);
 }
-
 .nutrient--grow,
 .nutrient-totals__item--grow {
     color: var(--grow);
 }
-
 .nutrient--bloom,
 .nutrient-totals__item--bloom {
     color: var(--bloom);
 }
-
 .nutrient--water,
 .nutrient-totals__item--water {
     color: var(--blue);
 }
-/* =================================================================
-   NUTRIENT MANAGER 
-   ================================================================= */
-
 .nutrient-swatch {
     display: inline-block;
     width: 10px;
@@ -2071,7 +1712,6 @@ textarea.form-input {
     flex-shrink: 0;
     vertical-align: middle;
 }
-
 .nutrient-swatch--fish {
     background: var(--fish);
 }
@@ -2093,7 +1733,6 @@ textarea.form-input {
 .nutrient-swatch--neutral {
     background: var(--muted);
 }
-
 .nutrient--fish {
     color: var(--fish);
 }
@@ -2116,7 +1755,6 @@ textarea.form-input {
 .nutrient--neutral {
     color: var(--muted);
 }
-
 .pill--fish {
     background: var(--fish-bg);
     color: var(--fish);
@@ -2145,13 +1783,10 @@ textarea.form-input {
     background: var(--neutral-bg);
     color: var(--muted);
 }
-
 .pill-water {
     background: var(--blue-bg);
     color: var(--blue);
 }
-
-/* Form-row label colour for dynamic nutrient inputs. */
 .nutrient-field-label--fish {
     color: var(--fish);
 }
@@ -2174,20 +1809,16 @@ textarea.form-input {
 .nutrient-field-label--neutral {
     color: var(--muted);
 }
-
 .nutrient-water-row {
     margin-top: 8px;
 }
-
 #nutrient-rows {
     margin-top: 2px;
 }
-
 .plant-detail-nutrient-block .plant-detail-nutrient-name {
     display: flex;
     align-items: center;
 }
-
 .plant-detail-nutrient-block .plant-detail-nutrient-name::before {
     content: "";
     display: inline-block;

@@ -447,6 +447,24 @@ function updateLightStatus() {
         n.style.fill !== t && (n.style.fill = t);
     }
 }
+let lightStatusTimer = null;
+function clearLightStatusTimer() {
+    if (lightStatusTimer !== null) {
+        clearTimeout(lightStatusTimer);
+        lightStatusTimer = null;
+    }
+}
+function scheduleNextLightCheck() {
+    clearLightStatusTimer();
+    if (document.hidden) return;
+    const now = new Date();
+    const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    lightStatusTimer = setTimeout(() => {
+        lightStatusTimer = null;
+        updateLightStatus();
+        scheduleNextLightCheck();
+    }, msUntilNextMinute);
+}
 function _saveLightDefaults() {
     const t = activeCycle();
     t && ((t.lightDefaults = { lux: document.getElementById("light-lux").value, dist: document.getElementById("light-dist").value, start: document.getElementById("light-start").value, end: document.getElementById("light-end").value }), persist(), invalidateModal(), updateLightStatus());
@@ -1130,10 +1148,17 @@ function persist() {
     setDateDefault(),
     _loadLightDefaults(),
     renderAddForm(),
-    setInterval(updateLightStatus, 6e4),
-    window.addEventListener("focus", updateLightStatus),
+    scheduleNextLightCheck(),
+    window.addEventListener("focus", () => {
+        updateLightStatus();
+        scheduleNextLightCheck();
+    }),
     document.addEventListener("visibilitychange", () => {
-        document.hidden || updateLightStatus();
+        if (document.hidden) clearLightStatusTimer();
+        else {
+            updateLightStatus();
+            scheduleNextLightCheck();
+        }
     }));
 try {
     (invalidateLog(), invalidateStats(), updateLightStatus());
