@@ -2,9 +2,10 @@ import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getN
 import { saveCollapsedObs } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
-let statsMode = "active";
+import { PLANT_TYPE, STATS_MODE } from "./constants.js";
+let statsMode = STATS_MODE.ACTIVE;
 export function initStats(t) {
-    statsMode = t || "active";
+    statsMode = t || STATS_MODE.ACTIVE;
 }
 export function setStatsMode(t) {
     statsMode = t;
@@ -64,8 +65,8 @@ function countPlantNotes(t, e) {
 }
 function renderPlantCard(t, e, s, a, n, l) {
     const o = a ? icon.star({ size: 12 }) : "",
-        c = "auto" === s ? "AUTO" : "PHOTO",
-        i = "auto" === s ? "plant-type-badge auto" : "plant-type-badge photo",
+        c = PLANT_TYPE.AUTO === s ? "AUTO" : "PHOTO",
+        i = PLANT_TYPE.AUTO === s ? "plant-type-badge auto" : "plant-type-badge photo",
         d = ((l && l.nutrients) || [])
             .map((t) => {
                 const s = (e.nutrients || {})[t.name] || 0;
@@ -73,26 +74,51 @@ function renderPlantCard(t, e, s, a, n, l) {
             })
             .join(""),
         r = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${fmtQty(e.water || 0)}</span>`;
-    return `\n    <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(t)}">\n        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">\n            <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t)}</span>\n            ${o}\n            <span class="${i}" style="font-size:10px;padding:2px 6px">${c}</span>\n        </div>\n        <span class="nutrient-totals">\n            ${d}\n            ${r}\n        </span>\n    </div>`;
+    return `
+    <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(t)}">
+        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+            <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t)}</span>
+            ${o}
+            <span class="${i}" style="font-size:10px;padding:2px 6px">${c}</span>
+        </div>
+        <span class="nutrient-totals">
+            ${d}
+            ${r}
+        </span>
+    </div>`;
 }
 on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id));
 export function renderStats(t, e) {
-    const s = `\n    <div class="stats-cycle-toggle${t.length + 1 > 0 ? " stats-cycle-toggle--scroll" : ""}">\n      ${t.map((t) => `\n        <button\n          class="stats-cycle-btn${statsMode === t.id || ("active" === statsMode && t.id === e) ? " active" : ""}"\n          data-action="setStatsCycle"\n          data-id="${escapeHtml(t.id)}"\n        >${escapeHtml(t.name)}</button>\n      `).join("")}\n      <button class="stats-cycle-btn${"all" === statsMode ? " active" : ""}" data-action="setStatsCycle" data-id="all">All cycles</button>\n    </div>`;
+    const s = `
+    <div class="stats-cycle-toggle${t.length + 1 > 0 ? " stats-cycle-toggle--scroll" : ""}">
+      ${t
+          .map(
+              (t) => `
+        <button
+          class="stats-cycle-btn${statsMode === t.id || (STATS_MODE.ACTIVE === statsMode && t.id === e) ? " active" : ""}"
+          data-action="setStatsCycle"
+          data-id="${escapeHtml(t.id)}"
+        >${escapeHtml(t.name)}</button>
+      `
+          )
+          .join("")}
+      <button class="stats-cycle-btn${STATS_MODE.ALL === statsMode ? " active" : ""}" data-action="setStatsCycle" data-id="${STATS_MODE.ALL}">All cycles</button>
+    </div>`;
     let a;
-    if ("all" === statsMode) a = [...t].sort((t, e) => new Date(e.startDate) - new Date(t.startDate));
+    if (STATS_MODE.ALL === statsMode) a = [...t].sort((t, e) => new Date(e.startDate) - new Date(t.startDate));
     else {
-        const s = "active" === statsMode ? e : statsMode,
+        const s = STATS_MODE.ACTIVE === statsMode ? e : statsMode,
             n = t.find((t) => t.id === s) || t.find((t) => t.id === e);
         a = n ? [n] : [];
     }
     const { global: n, perCycle: l } = computeStatsOnce(a),
-        o = "all" === statsMode ? null : a[0]?.startDate || null;
+        o = STATS_MODE.ALL === statsMode ? null : a[0]?.startDate || null;
     ((document.getElementById("s-feeds").textContent = n.feeds), (document.getElementById("s-waters").textContent = n.waters), (document.getElementById("s-days").textContent = n.days.size), (document.getElementById("s-issues").textContent = n.issues), (document.getElementById("stats-cycle-toggle-container").innerHTML = s));
     let c = "";
     (a.forEach((t, s) => {
         const a = l[s].plantTotals,
             n = t.plants || [],
-            o = "all" === statsMode,
+            o = STATS_MODE.ALL === statsMode,
             i = t.id === e ? '<span class="cycle-active-badge">Active</span>' : "",
             d = o ? ' style="margin-bottom: 14px"' : "";
         if (0 === n.length) return ((c += `<div class="stats-cycle-block"${d}>`), o && (c += `<div class="stats-cycle-block-label"><span>${escapeHtml(t.name)}</span>${i}</div>`), (c += '<div style="color:var(--muted);font-size:13px">No plants in this cycle yet.</div>'), void (c += "</div>"));
@@ -115,7 +141,10 @@ export function renderStats(t, e) {
     let d = "";
     (i.forEach((t) => {
         const e = o ? `· Week ${getWeekNum(t.dt, o)}` : "";
-        d += `<div class="obs-entry">\n      <div class="obs-entry-date">${fmtDate(t.dt)} · ${fmtTime(t.dt)} ${e}</div>\n      <div class="obs-entry-text">${escapeHtml(t.obs)}</div>\n    </div>`;
+        d += `<div class="obs-entry">
+      <div class="obs-entry-date">${fmtDate(t.dt)} · ${fmtTime(t.dt)} ${e}</div>
+      <div class="obs-entry-text">${escapeHtml(t.obs)}</div>
+    </div>`;
     }),
         (document.getElementById("obs-list").innerHTML = d || '<div class="empty" style="padding:20px 0">No observations logged yet.</div>'));
 }

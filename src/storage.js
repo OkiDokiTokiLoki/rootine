@@ -1,3 +1,5 @@
+import { STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY, COLLAPSED_OBS_ON, COLLAPSED_OBS_OFF } from "./constants.js";
+
 // Each migration takes cycles, returns cycles. Migrations[0] is v1→v2, [1] is
 // v2→v3, etc. To bump the version: write a function, append it. That's it.
 
@@ -233,13 +235,13 @@ const migrations = [
 const STORAGE_VERSION = migrations.length + 1;
 
 function seed() {
-    localStorage.setItem("grow_cycles", "[]");
-    localStorage.setItem("grow_version", String(STORAGE_VERSION));
+    localStorage.setItem(STORAGE_KEY, "[]");
+    localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
     return [];
 }
 
 export function loadCycles() {
-    const raw = localStorage.getItem("grow_cycles");
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return seed();
 
     let cycles;
@@ -255,7 +257,7 @@ export function loadCycles() {
         return seed();
     }
 
-    const version = parseInt(localStorage.getItem("grow_version") || "1", 10);
+    const version = parseInt(localStorage.getItem(STORAGE_VERSION_KEY) || "1", 10);
     for (let i = version - 1; i < migrations.length; i++) {
         cycles = migrations[i](cycles);
     }
@@ -265,8 +267,8 @@ export function loadCycles() {
         return seed();
     }
 
-    localStorage.setItem("grow_cycles", JSON.stringify(cycles));
-    localStorage.setItem("grow_version", String(STORAGE_VERSION));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cycles));
+    localStorage.setItem(STORAGE_VERSION_KEY, String(STORAGE_VERSION));
     return cycles;
 }
 
@@ -307,44 +309,44 @@ function quarantineCorruptData(raw) {
 }
 
 export function saveCycles(cycles) {
-    localStorage.setItem("grow_cycles", JSON.stringify(cycles));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cycles));
 }
 
 export function loadActiveCycleId(cycles) {
     if (!cycles.length) return null;
-    const stored = localStorage.getItem("active_cycle_id");
+    const stored = localStorage.getItem(ACTIVE_CYCLE_KEY);
     if (stored && cycles.find((c) => c.id === stored)) return stored;
     return cycles[cycles.length - 1].id;
 }
 
 export function saveActiveCycleId(id) {
     if (id == null) {
-        localStorage.removeItem("active_cycle_id");
+        localStorage.removeItem(ACTIVE_CYCLE_KEY);
     } else {
-        localStorage.setItem("active_cycle_id", id);
+        localStorage.setItem(ACTIVE_CYCLE_KEY, id);
     }
 }
 
 export function loadCollapsedCycles() {
-    return new Set(JSON.parse(localStorage.getItem("collapsed_cycles") || "[]"));
+    return new Set(JSON.parse(localStorage.getItem(COLLAPSED_CYCLES_KEY) || "[]"));
 }
 
 export function saveCollapsedCycles(set) {
-    localStorage.setItem("collapsed_cycles", JSON.stringify([...set]));
+    localStorage.setItem(COLLAPSED_CYCLES_KEY, JSON.stringify([...set]));
 }
 
 export function loadCollapsedWeeks() {
-    return new Set(JSON.parse(localStorage.getItem("collapsed_weeks") || "[]"));
+    return new Set(JSON.parse(localStorage.getItem(COLLAPSED_WEEKS_KEY) || "[]"));
 }
 
 export function saveCollapsedWeeks(set) {
-    localStorage.setItem("collapsed_weeks", JSON.stringify([...set]));
+    localStorage.setItem(COLLAPSED_WEEKS_KEY, JSON.stringify([...set]));
 }
 
 export function loadCollapsedObs() {
-    return localStorage.getItem("collapsed_obs") === "1";
+    return localStorage.getItem(COLLAPSED_OBS_KEY) === COLLAPSED_OBS_ON;
 }
 
 export function saveCollapsedObs(state) {
-    localStorage.setItem("collapsed_obs", state ? "1" : "0");
+    localStorage.setItem(COLLAPSED_OBS_KEY, state ? COLLAPSED_OBS_ON : COLLAPSED_OBS_OFF);
 }

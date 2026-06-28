@@ -6,9 +6,13 @@ import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } fro
 import { on, closeHeaderMenu } from "./actions.js";
 import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
+import { PLANT_TYPE, ACTION_TYPE, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY } from "./constants.js";
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
-const PICKER_ACTIONS = ["lst", "def", "repot"].map((t) => {
+
+// Picker ids are also the action-type strings ("lst", "def", "repot"),
+// so we derive the list from ACTION_TYPE rather than duplicating it.
+const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT].map((t) => {
         const e = document.getElementById(`ck-${t}`),
             n = document.getElementById(`${t}-plants`),
             a = n?.querySelector(".plant-picker-list");
@@ -19,11 +23,15 @@ const PICKER_ACTIONS = ["lst", "def", "repot"].map((t) => {
     collapsedWeeks = loadCollapsedWeeks(),
     collapsedObs = loadCollapsedObs();
 let nutrientDrafts = {},
-    nutrientActiveTab = "__ALL__";
-const draftState = { editingEntryId: null, pendingAddPlantType: "auto", pendingRenamePlantType: "auto", pendingPlantObs: [], selectedPlantObsTab: null, editingPlantObsIndex: null };
+    nutrientActiveTab = NUTRIENT_TAB_ALL;
+const draftState = { editingEntryId: null, pendingAddPlantType: PLANT_TYPE.AUTO, pendingRenamePlantType: PLANT_TYPE.AUTO, pendingPlantObs: [], selectedPlantObsTab: null, editingPlantObsIndex: null };
 function resetDraft() {
-    ((draftState.editingEntryId = null), (draftState.pendingAddPlantType = "auto"), (draftState.pendingRenamePlantType = "auto"), (draftState.pendingPlantObs = []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
+    ((draftState.editingEntryId = null), (draftState.pendingAddPlantType = PLANT_TYPE.AUTO), (draftState.pendingRenamePlantType = PLANT_TYPE.AUTO), (draftState.pendingPlantObs = []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
 }
+
+// Modal visibility is driven by a CSS class, not inline `style.display`,
+// so every call site reads as `showModal` / `hideModal` and any future
+// CSS transition picks up the toggle automatically.
 function showModal(id) {
     document.getElementById(id)?.classList.add("modal-overlay--visible");
 }
@@ -38,7 +46,7 @@ function toggleHeaderMenu() {
     (e.classList.toggle("is-open", n), e.setAttribute("aria-expanded", n ? "true" : "false"));
 }
 (initLog(collapsedWeeks, collapsedCycles),
-    initStats("active"),
+    initStats(STATS_MODE.ACTIVE),
     initObsCollapsed(collapsedObs),
     document.addEventListener("click", (t) => {
         const e = document.getElementById("header-menu"),
@@ -136,7 +144,7 @@ function setNutrientTab(t) {
     const e = readNutrientInputs();
     (((e.nutrients && Object.keys(e.nutrients).length > 0) || (e.concentrations && Object.keys(e.concentrations).length > 0) || null != e.water) && (nutrientDrafts[nutrientActiveTab] = mergeDrafts(nutrientDrafts[nutrientActiveTab], e)),
         (nutrientActiveTab = t),
-        writeNutrientInputs(mergeDrafts(nutrientDrafts.__ALL__ || {}, nutrientDrafts[t] || {})),
+        writeNutrientInputs(mergeDrafts(nutrientDrafts[NUTRIENT_TAB_ALL] || {}, nutrientDrafts[t] || {})),
         document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((e) => {
             e.classList.toggle("active", e.dataset.tab === t);
         }));
@@ -201,7 +209,7 @@ function renderAddForm() {
             const t = document.createElement("button");
             ((t.type = "button"),
                 (t.className = "nutrient-tab"),
-                (t.dataset.tab = "__ALL__"),
+                (t.dataset.tab = NUTRIENT_TAB_ALL),
                 (t.textContent = "All"),
                 a.appendChild(t),
                 n.forEach((t) => {
@@ -215,9 +223,9 @@ function renderAddForm() {
                 a.querySelectorAll(".nutrient-tab").forEach((t) => {
                     t.addEventListener("click", () => setNutrientTab(t.dataset.tab));
                 }),
-                "__ALL__" === nutrientActiveTab || n.includes(nutrientActiveTab) || (delete nutrientDrafts[nutrientActiveTab], (nutrientActiveTab = "__ALL__")),
+                NUTRIENT_TAB_ALL === nutrientActiveTab || n.includes(nutrientActiveTab) || (delete nutrientDrafts[nutrientActiveTab], (nutrientActiveTab = NUTRIENT_TAB_ALL)),
                 Object.keys(nutrientDrafts).forEach((t) => {
-                    "__ALL__" === t || n.includes(t) || delete nutrientDrafts[t];
+                    NUTRIENT_TAB_ALL === t || n.includes(t) || delete nutrientDrafts[t];
                 }));
             const l = new Set((e?.nutrients || []).map((t) => t.name));
             Object.values(nutrientDrafts).forEach((t) => {
@@ -233,7 +241,7 @@ function renderAddForm() {
         }
     (renderNutrientFormRows(),
         n.length > 0
-            ? (writeNutrientInputs(mergeDrafts(nutrientDrafts.__ALL__ || {}, nutrientDrafts[nutrientActiveTab] || {})),
+            ? (writeNutrientInputs(mergeDrafts(nutrientDrafts[NUTRIENT_TAB_ALL] || {}, nutrientDrafts[nutrientActiveTab] || {})),
               a &&
                   a.querySelectorAll(".nutrient-tab").forEach((t) => {
                       t.classList.toggle("active", t.dataset.tab === nutrientActiveTab);
@@ -381,7 +389,7 @@ function showTab(t, e = !1) {
     }
 }
 function resetAddForm() {
-    ((nutrientDrafts = {}), (nutrientActiveTab = "__ALL__"));
+    ((nutrientDrafts = {}), (nutrientActiveTab = NUTRIENT_TAB_ALL));
     const t = document.getElementById("nutrient-rows");
     t &&
         t.querySelectorAll("input[data-nutrient]").forEach((t) => {
@@ -391,7 +399,7 @@ function resetAddForm() {
     (e && ((e.value = ""), delete e.dataset.previewHadValue),
         document.querySelector("#nutrient-plant-tabs .nutrient-tab") &&
             document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
-                t.classList.toggle("active", "__ALL__" === t.dataset.tab);
+                t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
             }),
         PICKER_ACTIONS.forEach((t) => {
             ((t.checkbox.checked = !1),
@@ -434,13 +442,13 @@ function getCycleLightDefaults() {
     return (t && t.lightDefaults) || {};
 }
 function parseLightAction(t) {
-    return t && "light" === t.type ? { lux: t.lux || null, dist: t.dist || null, start: t.start || null, end: t.end || null } : null;
+    return t && ACTION_TYPE.LIGHT === t.type ? { lux: t.lux || null, dist: t.dist || null, start: t.start || null, end: t.end || null } : null;
 }
 function latestLoggedLight(t) {
     if (!t) return null;
     const e = [...(t.entries || [])].sort((t, e) => new Date(e.dt) - new Date(t.dt));
     for (const t of e) {
-        const e = (t.actions || []).find((t) => t && "light" === t.type);
+        const e = (t.actions || []).find((t) => t && ACTION_TYPE.LIGHT === t.type);
         if (e) return { parsed: parseLightAction(e), dt: t.dt };
     }
     return null;
@@ -519,8 +527,8 @@ function renderPlantList() {
         ? ((e.innerHTML = ""),
           n.forEach((n, a) => {
               const l = getPlantMeta(t, n).type,
-                  i = "auto" === l ? "plant-type-badge auto" : "plant-type-badge photo",
-                  s = "auto" === l ? "AUTO" : "PHOTO",
+                  i = PLANT_TYPE.AUTO === l ? "plant-type-badge auto" : "plant-type-badge photo",
+                  s = PLANT_TYPE.AUTO === l ? "AUTO" : "PHOTO",
                   d = document.createElement("div");
               ((d.className = "plant-manage-row"),
                   (d.innerHTML = `
@@ -537,7 +545,7 @@ function renderPlantList() {
         : (e.innerHTML = '<div class="plant-empty">No plants yet. Add some to start logging.</div>');
 }
 function openAddPlant() {
-    ((document.getElementById("new-plant-name").value = ""), (draftState.pendingAddPlantType = "auto"), selectPlantType("add", "auto"), showModal("add-plant-modal"), setTimeout(() => document.getElementById("new-plant-name").focus(), 50));
+    ((document.getElementById("new-plant-name").value = ""), (draftState.pendingAddPlantType = PLANT_TYPE.AUTO), selectPlantType("add", PLANT_TYPE.AUTO), showModal("add-plant-modal"), setTimeout(() => document.getElementById("new-plant-name").focus(), 50));
 }
 function selectPlantType(t, e) {
     "add" === t ? (draftState.pendingAddPlantType = e) : (draftState.pendingRenamePlantType = e);
@@ -552,7 +560,7 @@ function togglePlantType(t) {
     (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {});
     const n = e.plants[t],
         a = getPlantMeta(e, n).type;
-    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate }), (e.plantTypes[n].type = "auto" === a ? "photo" : "auto"), persist(), renderPlantList(), invalidateStats(), invalidateModal());
+    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate }), (e.plantTypes[n].type = PLANT_TYPE.AUTO === a ? PLANT_TYPE.PHOTO : PLANT_TYPE.AUTO), persist(), renderPlantList(), invalidateStats(), invalidateModal());
 }
 function toggleFavourite(t) {
     const e = activeCycle();
@@ -577,7 +585,7 @@ function renamePlant(t) {
     if (!e) return;
     const n = e.plants[t],
         a = (e.plantTypes || {})[n],
-        l = ("object" == typeof a ? a?.type : a) || "auto";
+        l = ("object" == typeof a ? a?.type : a) || PLANT_TYPE.AUTO;
     ((document.getElementById("rename-plant-input").value = n), (draftState.pendingRenamePlantType = l), selectPlantType("rename", l));
     const i = document.getElementById("rename-plant-modal");
     (showModal("rename-plant-modal"),
@@ -606,7 +614,7 @@ function confirmRenamePlant() {
             cycles.forEach((t) => {
                 t.id === e.id &&
                     t.entries.forEach((t) => {
-                        (t.plants && t.plants[l] && ((t.plants[s] = t.plants[l]), delete t.plants[l]), Array.isArray(t.actions) && (t.actions = t.actions.map((t) => (t && ("lst" === t.type || "def" === t.type || "repot" === t.type) && Array.isArray(t.plants) ? { ...t, plants: t.plants.map((t) => (t === l ? s : t)) } : t))), t.plantObs && "object" == typeof t.plantObs && t.plantObs[l] && ((t.plantObs[s] = t.plantObs[l]), delete t.plantObs[l]));
+                        (t.plants && t.plants[l] && ((t.plants[s] = t.plants[l]), delete t.plants[l]), Array.isArray(t.actions) && (t.actions = t.actions.map((t) => (t && (ACTION_TYPE.LST === t.type || ACTION_TYPE.DEF === t.type || ACTION_TYPE.REPOT === t.type) && Array.isArray(t.plants) ? { ...t, plants: t.plants.map((t) => (t === l ? s : t)) } : t))), t.plantObs && "object" == typeof t.plantObs && t.plantObs[l] && ((t.plantObs[s] = t.plantObs[l]), delete t.plantObs[l]));
                     });
             }));
     }
@@ -810,7 +818,7 @@ function computePlantDetail(t, e) {
             const e = s.water || 0;
             (e && ((i.totalWaterCups += e), i.waterCount++, a && i.waterCountLast7d++, (!i.lastWaterDt || t > new Date(i.lastWaterDt)) && (i.lastWaterDt = n.dt)), Object.values(s.nutrients || {}).some((t) => t && t > 0) && (i.feedCount++, a && i.feedCountLast7d++, (!i.lastFeedDt || t > new Date(i.lastFeedDt)) && (i.lastFeedDt = n.dt)));
         }
-        for (const t of n.actions || []) t && ("lst" === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.lstCount++, a && i.lstCountLast7d++, i.lstActions.push(n.dt)) : "def" === t.type && ((t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.defCount++, a && i.defCountLast7d++, i.defActions.push(n.dt))));
+        for (const t of n.actions || []) t && (ACTION_TYPE.LST === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.lstCount++, a && i.lstCountLast7d++, i.lstActions.push(n.dt)) : ACTION_TYPE.DEF === t.type && ((t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.defCount++, a && i.defCountLast7d++, i.defActions.push(n.dt))));
     }
     for (const t of i.lstActions) (!i.lastLstDt || new Date(t) > new Date(i.lastLstDt)) && (i.lastLstDt = t);
     for (const t of i.defActions) (!i.lastDefDt || new Date(t) > new Date(i.lastDefDt)) && (i.lastDefDt = t);
@@ -833,8 +841,8 @@ function computePlantDetail(t, e) {
 }
 function renderPlantDetailModal(t, e) {
     const n = getPlantMeta(t, e).type,
-        a = "auto" === n ? "AUTO" : "PHOTO",
-        l = "auto" === n ? "plant-type-badge auto" : "plant-type-badge photo",
+        a = PLANT_TYPE.AUTO === n ? "AUTO" : "PHOTO",
+        l = PLANT_TYPE.AUTO === n ? "plant-type-badge auto" : "plant-type-badge photo",
         i = t.nutrients || [],
         s = computePlantDetail(t, e),
         d = document.getElementById("plant-detail-name");
@@ -1033,7 +1041,7 @@ function confirmRenameCycle() {
     (n && ((n.name = e), persist(), invalidateLog(), invalidateStats()), hideModal("rename-cycle-modal"));
 }
 function setStatsCycle(t) {
-    (setStatsMode("all" === t ? "all" : t), renderStats(cycles, activeCycleId));
+    (setStatsMode(STATS_MODE.ALL === t ? STATS_MODE.ALL : t), renderStats(cycles, activeCycleId));
 }
 function restorePlants(t, e, n, a) {
     if (!t || !Array.isArray(t.plants)) return;
@@ -1064,21 +1072,21 @@ function editEntry(t) {
         Object.entries(e.plants || {}).forEach(([t, e]) => {
             nutrientDrafts[t] = { ...e };
         }),
-        (nutrientActiveTab = "__ALL__"),
+        (nutrientActiveTab = NUTRIENT_TAB_ALL),
         writeNutrientInputs({}),
         document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
-            t.classList.toggle("active", "__ALL__" === t.dataset.tab);
+            t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
         }));
     const a = e.actions || [];
     if (
-        ((document.getElementById("ck-light").checked = a.some((t) => t && "light" === t.type)),
+        ((document.getElementById("ck-light").checked = a.some((t) => t && ACTION_TYPE.LIGHT === t.type)),
         PICKER_ACTIONS.forEach((t) => {
             const e = a.find((e) => e && e.type === t.id);
-            ((t.checkbox.checked = !!e), e ? (restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, "lst" === t.id), (t.pickerWrap.style.display = "block")) : (t.pickerWrap.style.display = "none"));
+            ((t.checkbox.checked = !!e), e ? (restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, ACTION_TYPE.LST === t.id), (t.pickerWrap.style.display = "block")) : (t.pickerWrap.style.display = "none"));
         }),
         document.getElementById("ck-light").checked)
     ) {
-        const t = a.find((t) => "light" === t.type);
+        const t = a.find((t) => ACTION_TYPE.LIGHT === t.type);
         (t && ((document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-dist").value = t.dist || "")), (document.getElementById("light-inputs").style.display = "block"));
     } else document.getElementById("light-inputs").style.display = "none";
     document.getElementById("new-obs").value = e.obs || "";
@@ -1106,10 +1114,10 @@ function saveEntry() {
         (PICKER_ACTIONS.forEach((n) => {
             if (!n.checkbox.checked) return;
             const l = n.checked();
-            if ((a.push({ type: n.id, plants: l }), "repot" === n.id)) {
+            if ((a.push({ type: n.id, plants: l }), ACTION_TYPE.REPOT === n.id)) {
                 const n = t.slice(0, 10);
                 l.forEach((t) => {
-                    e.plantTypes[t] && "object" == typeof e.plantTypes[t] ? (e.plantTypes[t].repottedAt = n) : (e.plantTypes[t] = { type: "auto", repottedAt: n });
+                    e.plantTypes[t] && "object" == typeof e.plantTypes[t] ? (e.plantTypes[t].repottedAt = n) : (e.plantTypes[t] = { type: PLANT_TYPE.AUTO, repottedAt: n });
                 });
             }
         }),
@@ -1119,12 +1127,12 @@ function saveEntry() {
             e = document.getElementById("light-dist").value,
             n = document.getElementById("light-start").value,
             l = document.getElementById("light-end").value;
-        a.push({ type: "light", lux: t, dist: e, start: n, end: l });
+        a.push({ type: ACTION_TYPE.LIGHT, lux: t, dist: e, start: n, end: l });
     }
     const l = readNutrientInputs();
     ((l.nutrients && Object.keys(l.nutrients).length > 0) || (l.concentrations && Object.keys(l.concentrations).length > 0) || null != l.water) && (nutrientDrafts[nutrientActiveTab] = mergeDrafts(nutrientDrafts[nutrientActiveTab], l));
     const i = {},
-        s = nutrientDrafts.__ALL__ || {};
+        s = nutrientDrafts[NUTRIENT_TAB_ALL] || {};
     n.forEach((t) => {
         const e = nutrientDrafts[t] || {},
             n = {},
@@ -1206,7 +1214,7 @@ function importBackup(t) {
             return (alert("Invalid backup file."), void (t.target.value = ""));
         }
         if (!isValidCyclesShape(a)) return (alert("Invalid backup file."), void (t.target.value = ""));
-        confirm(`Import ${a.length} cycle(s)? This will replace all current data.`) ? (localStorage.setItem("grow_cycles", JSON.stringify(a)), localStorage.removeItem("grow_version"), location.reload()) : (t.target.value = "");
+        confirm(`Import ${a.length} cycle(s)? This will replace all current data.`) ? (localStorage.setItem(STORAGE_KEY, JSON.stringify(a)), localStorage.removeItem(STORAGE_VERSION_KEY), location.reload()) : (t.target.value = "");
     }),
         n.readAsText(e));
 }
