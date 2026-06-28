@@ -8,7 +8,14 @@ import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
-const collapsedCycles = loadCollapsedCycles(),
+const PICKER_ACTIONS = ["lst", "def", "repot"].map((t) => {
+        const e = document.getElementById(`ck-${t}`),
+            n = document.getElementById(`${t}-plants`),
+            a = n?.querySelector(".plant-picker-list");
+        if (!e || !n || !a) throw new Error(`Missing DOM for picker action "${t}"`);
+        return { id: t, checkbox: e, pickerWrap: n, pickerList: a, items: () => a.querySelectorAll(`.${t}-plant`), allCheckbox: () => a.querySelector(`.${t}-plant-all`), checked: () => [...a.querySelectorAll(`.${t}-plant:checked`)].map((t) => t.value) };
+    }),
+    collapsedCycles = loadCollapsedCycles(),
     collapsedWeeks = loadCollapsedWeeks(),
     collapsedObs = loadCollapsedObs();
 let nutrientDrafts = {},
@@ -217,32 +224,31 @@ function renderAddForm() {
                       t.classList.toggle("active", t.dataset.tab === nutrientActiveTab);
                   }))
             : writeNutrientInputs({}),
-        ["lst", "def", "repot"].forEach((a) => {
-            const l = document.getElementById(a + "-plants").querySelector(".plant-picker-list");
-            if (!l) return;
-            if (((l.innerHTML = ""), 0 === t.length)) return void (l.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available.</div>');
-            const i = document.createElement("label");
-            i.className = "plant-picker-opt plant-picker-opt-all";
-            const s = document.createElement("input");
-            ((s.type = "checkbox"),
-                (s.className = `${a}-plant-all`),
-                (s.onchange = () => {
-                    l.querySelectorAll(`.${a}-plant`).forEach((t) => {
-                        ((t.checked = s.checked), (t.disabled = s.checked));
+        PICKER_ACTIONS.forEach((a) => {
+            const { id: l, pickerList: i, items: s } = a;
+            if (((i.innerHTML = ""), 0 === t.length)) return void (i.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available.</div>');
+            const d = document.createElement("label");
+            d.className = "plant-picker-opt plant-picker-opt-all";
+            const c = document.createElement("input");
+            ((c.type = "checkbox"),
+                (c.className = `${l}-plant-all`),
+                (c.onchange = () => {
+                    s().forEach((t) => {
+                        ((t.checked = c.checked), (t.disabled = c.checked));
                     });
                 }),
-                i.appendChild(s),
-                i.appendChild(document.createTextNode("All plants")),
-                l.appendChild(i),
+                d.appendChild(c),
+                d.appendChild(document.createTextNode("All plants")),
+                i.appendChild(d),
                 n.forEach((t) => {
                     const n = document.createElement("label");
                     n.className = "plant-picker-opt";
-                    const i = document.createElement("input");
-                    if (((i.type = "checkbox"), (i.className = `${a}-plant`), (i.value = t), n.appendChild(i), n.appendChild(document.createTextNode(t)), isFavourite(e, t))) {
+                    const a = document.createElement("input");
+                    if (((a.type = "checkbox"), (a.className = `${l}-plant`), (a.value = t), n.appendChild(a), n.appendChild(document.createTextNode(t)), isFavourite(e, t))) {
                         const t = document.createElement("span");
                         ((t.innerHTML = icon.star({ size: 11, marginRight: 0, verticalAlign: -1 })), n.appendChild(t.firstChild));
                     }
-                    l.appendChild(n);
+                    i.appendChild(n);
                 }));
         }),
         populatePlantObsTabs(),
@@ -354,17 +360,15 @@ function resetAddForm() {
             document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
                 t.classList.toggle("active", "__ALL__" === t.dataset.tab);
             }),
-        ["lst", "def", "repot"].forEach((t) => {
-            const e = document.getElementById("ck-" + t);
+        PICKER_ACTIONS.forEach((t) => {
+            ((t.checkbox.checked = !1),
+                (t.pickerWrap.style.display = "none"),
+                t.items().forEach((t) => {
+                    ((t.checked = !1), (t.disabled = !1));
+                }));
+            const e = t.allCheckbox();
             e && (e.checked = !1);
         }),
-        document.querySelectorAll(".lst-plant, .def-plant, .repot-plant").forEach((t) => {
-            ((t.checked = !1), (t.disabled = !1));
-        }),
-        document.querySelectorAll(".lst-plant-all, .def-plant-all, .repot-plant-all").forEach((t) => (t.checked = !1)),
-        (document.getElementById("lst-plants").style.display = "none"),
-        (document.getElementById("def-plants").style.display = "none"),
-        (document.getElementById("repot-plants").style.display = "none"),
         (document.getElementById("ck-light").checked = !1),
         (document.getElementById("light-inputs").style.display = "none"),
         _loadLightDefaults(),
@@ -386,8 +390,8 @@ function setDateDefault() {
     document.getElementById("new-dt").value = `${t.getFullYear()}-${e(t.getMonth() + 1)}-${e(t.getDate())}T${e(t.getHours())}:${e(t.getMinutes())}`;
 }
 function togglePlantPicker(t) {
-    const e = document.getElementById("ck-" + t).checked;
-    document.getElementById(t + "-plants").style.display = e ? "block" : "none";
+    const e = PICKER_ACTIONS.find((e) => e.id === t);
+    e && (e.pickerWrap.style.display = e.checkbox.checked ? "block" : "none");
 }
 function toggleLightInputs() {
     document.getElementById("light-inputs").style.display = document.getElementById("ck-light").checked ? "block" : "none";
@@ -449,21 +453,15 @@ function updateLightStatus() {
 }
 let lightStatusTimer = null;
 function clearLightStatusTimer() {
-    if (lightStatusTimer !== null) {
-        clearTimeout(lightStatusTimer);
-        lightStatusTimer = null;
-    }
+    null !== lightStatusTimer && (clearTimeout(lightStatusTimer), (lightStatusTimer = null));
 }
 function scheduleNextLightCheck() {
-    clearLightStatusTimer();
-    if (document.hidden) return;
-    const now = new Date();
-    const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    if ((clearLightStatusTimer(), document.hidden)) return;
+    const t = new Date(),
+        e = 1e3 * (60 - t.getSeconds()) - t.getMilliseconds();
     lightStatusTimer = setTimeout(() => {
-        lightStatusTimer = null;
-        updateLightStatus();
-        scheduleNextLightCheck();
-    }, msUntilNextMinute);
+        ((lightStatusTimer = null), updateLightStatus(), scheduleNextLightCheck());
+    }, e);
 }
 function _saveLightDefaults() {
     const t = activeCycle();
@@ -752,8 +750,7 @@ function computePlantDetail(t, e) {
                 l && (null == l.activeSinceDt || t > new Date(l.activeSinceDt)) && ((l.activeMlPerL = a), (l.activeSinceDt = n.dt), (l._runningMlPerL = a));
             }
             const e = s.water || 0;
-            e && ((i.totalWaterCups += e), i.waterCount++, a && i.waterCountLast7d++, (!i.lastWaterDt || t > new Date(i.lastWaterDt)) && (i.lastWaterDt = n.dt));
-            Object.values(s.nutrients || {}).some((t) => t && t > 0) && (i.feedCount++, a && i.feedCountLast7d++, (!i.lastFeedDt || t > new Date(i.lastFeedDt)) && (i.lastFeedDt = n.dt));
+            (e && ((i.totalWaterCups += e), i.waterCount++, a && i.waterCountLast7d++, (!i.lastWaterDt || t > new Date(i.lastWaterDt)) && (i.lastWaterDt = n.dt)), Object.values(s.nutrients || {}).some((t) => t && t > 0) && (i.feedCount++, a && i.feedCountLast7d++, (!i.lastFeedDt || t > new Date(i.lastFeedDt)) && (i.lastFeedDt = n.dt)));
         }
         for (const t of n.actions || []) t && ("lst" === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.lstCount++, a && i.lstCountLast7d++, i.lstActions.push(n.dt)) : "def" === t.type && ((t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.defCount++, a && i.defCountLast7d++, i.defActions.push(n.dt))));
     }
@@ -896,37 +893,11 @@ function editEntry(t) {
         }));
     const a = e.actions || [];
     if (
-        ((document.getElementById("ck-lst").checked = a.some((t) => t && "lst" === t.type)),
-        (document.getElementById("ck-def").checked = a.some((t) => t && "def" === t.type)),
-        (document.getElementById("ck-light").checked = a.some((t) => t && "light" === t.type)),
-        (document.getElementById("ck-repot").checked = a.some((t) => t && "repot" === t.type)),
-        document.getElementById("ck-lst").checked
-            ? (restorePlants(
-                  a.find((t) => "lst" === t.type),
-                  ".lst-plant",
-                  ".lst-plant-all",
-                  !0
-              ),
-              (document.getElementById("lst-plants").style.display = "block"))
-            : (document.getElementById("lst-plants").style.display = "none"),
-        document.getElementById("ck-def").checked
-            ? (restorePlants(
-                  a.find((t) => "def" === t.type),
-                  ".def-plant",
-                  ".def-plant-all",
-                  !1
-              ),
-              (document.getElementById("def-plants").style.display = "block"))
-            : (document.getElementById("def-plants").style.display = "none"),
-        document.getElementById("ck-repot").checked
-            ? (restorePlants(
-                  a.find((t) => "repot" === t.type),
-                  ".repot-plant",
-                  ".repot-plant-all",
-                  !1
-              ),
-              (document.getElementById("repot-plants").style.display = "block"))
-            : (document.getElementById("repot-plants").style.display = "none"),
+        ((document.getElementById("ck-light").checked = a.some((t) => t && "light" === t.type)),
+        PICKER_ACTIONS.forEach((t) => {
+            const e = a.find((e) => e && e.type === t.id);
+            ((t.checkbox.checked = !!e), e ? (restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, "lst" === t.id), (t.pickerWrap.style.display = "block")) : (t.pickerWrap.style.display = "none"));
+        }),
         document.getElementById("ck-light").checked)
     ) {
         const t = a.find((t) => "light" === t.type);
@@ -953,28 +924,24 @@ function saveEntry() {
     const e = activeCycle(),
         n = [...cyclePlants()].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1)),
         a = [];
-    if (document.getElementById("ck-lst").checked) {
-        const t = [...document.querySelectorAll(".lst-plant:checked")].map((t) => t.value);
-        a.push({ type: "lst", plants: t });
-    }
-    if (document.getElementById("ck-def").checked) {
-        const t = [...document.querySelectorAll(".def-plant:checked")].map((t) => t.value);
-        a.push({ type: "def", plants: t });
-    }
-    if (document.getElementById("ck-light").checked) {
+    if (
+        (PICKER_ACTIONS.forEach((n) => {
+            if (!n.checkbox.checked) return;
+            const l = n.checked();
+            if ((a.push({ type: n.id, plants: l }), "repot" === n.id)) {
+                const n = t.slice(0, 10);
+                l.forEach((t) => {
+                    e.plantTypes[t] && "object" == typeof e.plantTypes[t] ? (e.plantTypes[t].repottedAt = n) : (e.plantTypes[t] = { type: "auto", repottedAt: n });
+                });
+            }
+        }),
+        document.getElementById("ck-light").checked)
+    ) {
         const t = document.getElementById("light-lux").value,
             e = document.getElementById("light-dist").value,
             n = document.getElementById("light-start").value,
             l = document.getElementById("light-end").value;
         a.push({ type: "light", lux: t, dist: e, start: n, end: l });
-    }
-    if (document.getElementById("ck-repot").checked) {
-        const n = [...document.querySelectorAll(".repot-plant:checked")].map((t) => t.value);
-        a.push({ type: "repot", plants: n });
-        const l = t.slice(0, 10);
-        n.forEach((t) => {
-            e.plantTypes[t] && "object" == typeof e.plantTypes[t] ? (e.plantTypes[t].repottedAt = l) : (e.plantTypes[t] = { type: "auto", repottedAt: l });
-        });
     }
     const l = readNutrientInputs();
     ((l.nutrients && Object.keys(l.nutrients).length > 0) || (l.concentrations && Object.keys(l.concentrations).length > 0) || null != l.water) && (nutrientDrafts[nutrientActiveTab] = mergeDrafts(nutrientDrafts[nutrientActiveTab], l));
@@ -1150,15 +1117,10 @@ function persist() {
     renderAddForm(),
     scheduleNextLightCheck(),
     window.addEventListener("focus", () => {
-        updateLightStatus();
-        scheduleNextLightCheck();
+        (updateLightStatus(), scheduleNextLightCheck());
     }),
     document.addEventListener("visibilitychange", () => {
-        if (document.hidden) clearLightStatusTimer();
-        else {
-            updateLightStatus();
-            scheduleNextLightCheck();
-        }
+        document.hidden ? clearLightStatusTimer() : (updateLightStatus(), scheduleNextLightCheck());
     }));
 try {
     (invalidateLog(), invalidateStats(), updateLightStatus());
