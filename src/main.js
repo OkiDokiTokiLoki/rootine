@@ -10,8 +10,6 @@ import { PLANT_TYPE, ACTION_TYPE, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STO
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
-// Picker ids are also the action-type strings ("lst", "def", "repot"),
-// so we derive the list from ACTION_TYPE rather than duplicating it.
 const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT].map((t) => {
         const e = document.getElementById(`ck-${t}`),
             n = document.getElementById(`${t}-plants`),
@@ -28,17 +26,12 @@ const draftState = { editingEntryId: null, pendingAddPlantType: PLANT_TYPE.AUTO,
 function resetDraft() {
     ((draftState.editingEntryId = null), (draftState.pendingAddPlantType = PLANT_TYPE.AUTO), (draftState.pendingRenamePlantType = PLANT_TYPE.AUTO), (draftState.pendingPlantObs = []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
 }
-
-// Modal visibility is driven by a CSS class, not inline `style.display`,
-// so every call site reads as `showModal` / `hideModal` and any future
-// CSS transition picks up the toggle automatically.
 function showModal(id) {
     document.getElementById(id)?.classList.add("modal-overlay--visible");
 }
 function hideModal(id) {
     document.getElementById(id)?.classList.remove("modal-overlay--visible");
 }
-
 function toggleHeaderMenu() {
     const t = document.getElementById("header-menu"),
         e = document.getElementById("header-menu-btn"),
@@ -124,11 +117,6 @@ function writeNutrientInputs(t) {
         ((i.value = n ? String(t) : ""), n ? (i.dataset.previewHadValue = "1") : delete i.dataset.previewHadValue);
     }
 }
-
-// snapshotEditForm returns a self-contained, JSON-safe blob of everything
-// the Add form carries while the user is mid-edit. Used to recover the
-// user's work when saveEntry can't find the entry they're editing (e.g.
-// it was deleted in another tab while they were typing).
 function snapshotEditForm() {
     return {
         cycleId: activeCycleId,
@@ -154,10 +142,6 @@ function snapshotEditForm() {
         editingPlantObsIndex: draftState.editingPlantObsIndex,
     };
 }
-
-// restoreEditForm is the inverse of snapshotEditForm. Assumes the Add
-// form's DOM is already shaped for the target cycle — editEntry()
-// switches activeCycleId and calls renderAddForm() before invoking this.
 function restoreEditForm(snap) {
     ((document.getElementById("new-dt").value = snap.dt || ""),
         (nutrientDrafts = snap.nutrientDrafts || {}),
@@ -171,8 +155,6 @@ function restoreEditForm(snap) {
     const pickerMap = new Map((snap.pickers || []).map((p) => [p.id, p]));
     PICKER_ACTIONS.forEach((p) => {
         const found = pickerMap.get(p.id);
-        // Reset the picker's own state first so the orphan's view is
-        // authoritative, not a merge on top of whatever was there.
         (p.items().forEach((cb) => {
             cb.disabled = false;
             cb.checked = false;
@@ -193,11 +175,6 @@ function restoreEditForm(snap) {
                     cb.value === plantName && (cb.checked = true);
                 });
             });
-            // All individuals ended up checked → mirror the "All plants"
-            // toggle so the visual matches what the user clicked before.
-            // Matches restorePlants()'s LST-only quirk so behaviour is
-            // identical whether the form was filled from storage or from
-            // an orphan snapshot.
             if (p.allCheckbox() && p.items().length > 0 && [...p.items()].every((cb) => cb.checked) && ACTION_TYPE.LST === p.id) {
                 ((p.allCheckbox().checked = true),
                     p.items().forEach((cb) => {
@@ -727,6 +704,55 @@ function openNutrientManager() {
 function closeNutrientManager() {
     hideModal("nutrient-manage-modal");
 }
+function openCycleManager() {
+    renderCycleList();
+    showModal("cycle-manage-modal");
+}
+function closeCycleManager() {
+    hideModal("cycle-manage-modal");
+}
+function newCycleFromManager() {
+    newCycle();
+}
+function renderCycleList() {
+    const list = document.getElementById("cycle-list");
+    if (!list) return;
+    if (cycles.length === 0) {
+        list.innerHTML = '<div class="plant-empty">No cycles yet. Start one to begin logging.</div>';
+        return;
+    }
+    const sorted = [...cycles].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+    list.innerHTML = "";
+    sorted.forEach((cycle) => {
+        const isActive = cycle.id === activeCycleId;
+        const startDate = new Date(cycle.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+        const plantCount = (cycle.plants || []).length;
+        const entryCount = (cycle.entries || []).length;
+        const nutrientCount = (cycle.nutrients || []).length;
+        const row = document.createElement("div");
+        row.className = "cycle-manage-row";
+        row.innerHTML = `
+            <div class="cycle-manage-info">
+                <div class="cycle-manage-name">
+                    <span>${escapeHtml(cycle.name)}</span>
+                    ${isActive ? '<span class="cycle-active-badge">Active</span>' : ""}
+                </div>
+                <div class="cycle-manage-meta">
+                    Started ${startDate} · ${plantCount} plant${plantCount === 1 ? "" : "s"}
+                </div>
+            </div>
+            <div class="plant-manage-actions">
+                ${!isActive ? `<button class="settings-btn green-btn" data-action="setActiveCycle" data-id="${escapeHtml(cycle.id)}" title="Set as active">${icon.checkStroke()}</button>` : ""}
+                <button class="settings-btn blue-btn" data-action="editCycleName" data-id="${escapeHtml(cycle.id)}" title="Rename">${icon.edit()}</button>
+                <button class="settings-btn red-btn" data-action="deleteCycle" data-id="${escapeHtml(cycle.id)}" title="Delete">${icon.trash()}</button>
+            </div>`;
+        list.appendChild(row);
+    });
+}
+function refreshOpenCycleManager() {
+    const modal = document.getElementById("cycle-manage-modal");
+    if (modal && modal.classList.contains("modal-overlay--visible")) renderCycleList();
+}
 function renderNutrientList() {
     const t = activeCycle(),
         e = document.getElementById("nutrient-list");
@@ -1108,7 +1134,7 @@ function confirmNewCycle() {
         n = (t) => String(t).padStart(2, "0"),
         a = `${e.getFullYear()}-${n(e.getMonth() + 1)}-${n(e.getDate())}`,
         l = { id: cycleUid(), name: t, startDate: a, plants: [], plantTypes: {}, entries: [], lightDefaults: {}, nutrients: [] };
-    (cycles.push(l), (activeCycleId = l.id), persist(), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), syncHeaderActions(), resetAddForm(), setDateDefault(), showTab("log", !0), invalidateLog(), invalidateStats());
+    (cycles.push(l), (activeCycleId = l.id), persist(), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), syncHeaderActions(), resetAddForm(), setDateDefault(), showTab("log", !0), invalidateLog(), invalidateStats(), hideModal("cycle-manage-modal"));
 }
 function cancelNewCycle() {
     hideModal("new-cycle-modal");
@@ -1127,7 +1153,7 @@ function confirmRenameCycle() {
     if (!e) return void alert("Cycle name can't be empty.");
     if (e === t._currentName) return void hideModal("rename-cycle-modal");
     const n = cycles.find((e) => e.id === t._cycleId);
-    (n && ((n.name = e), persist(), invalidateLog(), invalidateStats()), hideModal("rename-cycle-modal"));
+    (n && ((n.name = e), persist(), invalidateLog(), invalidateStats(), refreshOpenCycleManager()), hideModal("rename-cycle-modal"));
 }
 function setStatsCycle(t) {
     (setStatsMode(STATS_MODE.ALL === t ? STATS_MODE.ALL : t), renderStats(cycles, activeCycleId));
@@ -1157,9 +1183,6 @@ function editEntry(t) {
     const orphaned = draftState.orphanedEdits[t];
     if (!e && !orphaned) return;
 
-    // Resolve which cycle the edit belongs to: prefer the entry's cycle,
-    // then the cycle the orphan was taken from, then the current active
-    // cycle as a last resort.
     const targetCycle = n || (orphaned && cycles.find((c) => c.id === orphaned.cycleId)) || activeCycle();
 
     (targetCycle && targetCycle.id !== activeCycleId && ((activeCycleId = targetCycle.id), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), updateLightStatus()), (draftState.editingEntryId = t));
@@ -1266,22 +1289,11 @@ function saveEntry() {
     if (draftState.editingEntryId) {
         const n = e.entries.find((t) => t.id === draftState.editingEntryId);
         if (!n) {
-            // The entry vanished mid-edit (deleted in another tab, sync
-            // overwrite, etc.). Park the user's edits under the entry id so
-            // a future editEntry() can restore them — the alert alone would
-            // otherwise silently drop everything they typed.
             draftState.orphanedEdits[draftState.editingEntryId] = snapshotEditForm();
             alert("Couldn't find the entry to update. Please try editing it again.");
             return;
         }
-        ((n.dt = t),
-            (n.plants = i),
-            (n.actions = a),
-            (n.obs = o || void 0),
-            (n.plantObs = Object.keys(c).length ? c : {}),
-            // Save went through, so the orphan is no longer needed.
-            delete draftState.orphanedEdits[draftState.editingEntryId],
-            resetDraft());
+        ((n.dt = t), (n.plants = i), (n.actions = a), (n.obs = o || void 0), (n.plantObs = Object.keys(c).length ? c : {}), delete draftState.orphanedEdits[draftState.editingEntryId], resetDraft());
     } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: o || void 0, plantObs: Object.keys(c).length ? c : {} });
     (persist(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats());
 }
@@ -1312,7 +1324,18 @@ function deleteEntry(t) {
 }
 function deleteCycle(t) {
     const e = cycles.find((e) => e.id === t);
-    e && confirm(`Delete "${e.name}" and all its entries? This cannot be undone.`) && ((cycles = cycles.filter((e) => e.id !== t)), activeCycleId === t && ((activeCycleId = cycles.length ? cycles[cycles.length - 1].id : null), saveActiveCycleId(activeCycleId)), persist(), updateGrowAge(), renderAddForm(), invalidateLog(), invalidateStats());
+    e && confirm(`Delete "${e.name}" and all its entries? This cannot be undone.`) && ((cycles = cycles.filter((e) => e.id !== t)), activeCycleId === t && ((activeCycleId = cycles.length ? cycles[cycles.length - 1].id : null), saveActiveCycleId(activeCycleId)), persist(), updateGrowAge(), renderAddForm(), invalidateLog(), invalidateStats(), refreshOpenCycleManager());
+}
+function setActiveCycle(id) {
+    if (!cycles.find((c) => c.id === id)) return;
+    activeCycleId = id;
+    saveActiveCycleId(activeCycleId);
+    updateGrowAge();
+    renderAddForm();
+    updateLightStatus();
+    invalidateLog();
+    invalidateStats();
+    renderCycleList();
 }
 function exportBackup() {
     const t = JSON.stringify(cycles, null, 2),
@@ -1418,6 +1441,10 @@ function persist() {
     on("selectPlantType", "click", (t) => selectPlantType(t.dataset.scope, t.dataset.type)),
     on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id)),
     on("toggleHeaderMenu", "click", () => toggleHeaderMenu()),
+    on("openCycleManager", "click", () => openCycleManager()),
+    on("closeCycleManager", "click", () => closeCycleManager()),
+    on("newCycleFromManager", "click", () => newCycleFromManager()),
+    on("setActiveCycle", "click", (t) => setActiveCycle(t.dataset.id)),
     updateGrowAge(),
     setDateDefault(),
     _loadLightDefaults(),

@@ -86,6 +86,10 @@ export function trashStroke() {
     return cached("s:trashStroke", () => '<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>');
 }
 
+export function checkStroke() {
+    return cached("s:checkStroke", () => '<svg viewBox="0 0 24 24" xmlns="' + NS + '" style="width:18px;height:18px;fill:none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>');
+}
+
 const STAR_POLYGON = "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2";
 export function star({ size: t = 11, filled: e = !0, marginRight: r = null, verticalAlign: n = null } = {}) {
     const o = [`width:${t}px`, `height:${t}px`, `fill:${e ? "var(--amber)" : "none"}`, `stroke:${e ? "var(--amber)" : "var(--muted)"}`, "flex-shrink:0", null != r ? `margin-right:${r}px` : null, null != n ? `vertical-align:${n}px` : null].filter(Boolean).join(";");
@@ -97,4 +101,4 @@ export function chevronDown({ className: t = "chevron", id: e = "", style: r = "
     return cached(key, () => `<svg class="${t}"${e ? ` id="${e}"` : ""} viewBox="0 0 24 24"${r ? ` style="${r}"` : ""}><polyline points="6 9 12 15 18 9"/></svg>`);
 }
 
-export const icon = { edit: edit, trash: trash, duplicate: duplicate, editStroke: editStroke, trashStroke: trashStroke, badgeFeed: badgeFeed, badgeWater: badgeWater, badgeLight: badgeLight, badgeScissors: badgeScissors, badgeNote: badgeNote, waterDropLine: waterDropLine, star: star, chevronDown: chevronDown };
+export const icon = { edit: edit, trash: trash, duplicate: duplicate, editStroke: editStroke, trashStroke: trashStroke, badgeFeed: badgeFeed, badgeWater: badgeWater, badgeLight: badgeLight, badgeScissors: badgeScissors, badgeNote: badgeNote, waterDropLine: waterDropLine, star: star, chevronDown: chevronDown, checkStroke: checkStroke };

@@ -24,16 +24,36 @@
                             </svg>
                         </button>
                         <div class="header-menu" id="header-menu">
-                            <button class="header-menu-item" id="header-add-plants-btn" data-action="newCycle">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor"><path d="M480-120q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-480q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-840q82 0 155.5 35T760-706v-94h80v240H600v-80h110q-41-56-101-88t-129-32q-117 0-198.5 81.5T200-480q0 117 81.5 198.5T480-200q105 0 183.5-68T756-440h82q-15 137-117.5 228.5T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z" /></svg>Start new cycle</button
-                            ><button class="header-menu-item" data-action="openPlantManager">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor"><path d="M440-120v-319q-64 0-123-24.5T213-533q-45-45-69-104t-24-123v-80h80q63 0 122 24.5T426-746q31 31 51.5 68t31.5 79q5-7 11-13.5t13-13.5q45-45 104-69.5T760-720h80v80q0 64-24.5 123T746-413q-45 45-103.5 69T520-320v200h-80Zm0-400q0-48-18.5-91.5T369-689q-34-34-77.5-52.5T200-760q0 48 18 92t52 78q34 34 78 52t92 18Zm80 120q48 0 91.5-18t77.5-52q34-34 52.5-78t18.5-92q-48 0-92 18.5T590-569q-34 34-52 77.5T520-400Zm0 0Zm-80-120Z" /></svg>Plant manager</button
-                            ><button class="header-menu-item" data-action="openNutrientManager">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor"><path d="M200-120q-51 0-72.5-45.5T138-250l222-270v-240h-40q-17 0-28.5-11.5T280-800q0-17 11.5-28.5T320-840h320q17 0 28.5 11.5T680-800q0 17-11.5 28.5T640-760h-40v240l222 270q32 39 10.5 84.5T760-120H200Zm0-80h560L520-492v-268h-80v268L200-200Zm280-280Z" /></svg>Nutrient manager</button
-                            ><button class="header-menu-item" data-action="exportBackup">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z" /></svg>Export</button
-                            ><input type="file" id="import-backup-input" accept=".json" class="hidden-input" data-action="importBackup" /><button class="header-menu-item" data-action="triggerImport">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor"><path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z" /></svg>Import
+                            <button class="header-menu-item" data-action="openCycleManager">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor">
+                                    <path d="M480-120q-75 0-140.5-28.5t-114-77q-48.5-48.5-77-114T120-480q0-75 28.5-140.5t77-114q48.5-48.5 114-77T480-840q82 0 155.5 35T760-706v-94h80v240H600v-80h110q-41-56-101-88t-129-32q-117 0-198.5 81.5T200-480q0 117 81.5 198.5T480-200q105 0 183.5-68T756-440h82q-15 137-117.5 228.5T480-120Zm112-192L440-464v-216h80v184l128 128-56 56Z" />
+                                </svg>
+                                Cycle manager
+                            </button>
+                            <button class="header-menu-item" data-action="openPlantManager">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor">
+                                    <path d="M440-120v-319q-64 0-123-24.5T213-533q-45-45-69-104t-24-123v-80h80q63 0 122 24.5T426-746q31 31 51.5 68t31.5 79q5-7 11-13.5t13-13.5q45-45 104-69.5T760-720h80v80q0 64-24.5 123T746-413q-45 45-103.5 69T520-320v200h-80Zm0-400q0-48-18.5-91.5T369-689q-34-34-77.5-52.5T200-760q0 48 18 92t52 78q34 34 78 52t92 18Zm80 120q48 0 91.5-18t77.5-52q34-34 52.5-78t18.5-92q-48 0-92 18.5T590-569q-34 34-52 77.5T520-400Zm0 0Zm-80-120Z" />
+                                </svg>
+                                Plant manager
+                            </button>
+                            <button class="header-menu-item" data-action="openNutrientManager">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor">
+                                    <path d="M200-120q-51 0-72.5-45.5T138-250l222-270v-240h-40q-17 0-28.5-11.5T280-800q0-17 11.5-28.5T320-840h320q17 0 28.5 11.5T680-800q0 17-11.5 28.5T640-760h-40v240l222 270q32 39 10.5 84.5T760-120H200Zm0-80h560L520-492v-268h-80v268L200-200Zm280-280Z" />
+                                </svg>
+                                Nutrient manager
+                            </button>
+                            <button class="header-menu-item" data-action="exportBackup">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor">
+                                    <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z" />
+                                </svg>
+                                Export
+                            </button>
+                            <input type="file" id="import-backup-input" accept=".json" class="hidden-input" data-action="importBackup" />
+                            <button class="header-menu-item" data-action="triggerImport">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="currentColor">
+                                    <path d="M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z" />
+                                </svg>
+                                Import
                             </button>
                         </div>
                     </div>
@@ -141,14 +161,25 @@
                 </button>
             </div>
         </div>
-        <div id="new-cycle-modal" class="modal-overlay">
+        <div id="cycle-manage-modal" class="modal-overlay">
+            <div class="modal-content modal-content--wide modal-content--tall">
+                <div class="modal-title">Cycle Manager</div>
+                <div class="modal-subtitle">All your grow cycles in one place.</div>
+                <div id="cycle-list" class="modal-scroll"></div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" data-action="closeCycleManager">Close</button>
+                    <button class="btn-confirm" data-action="newCycleFromManager">+ New Cycle</button>
+                </div>
+            </div>
+        </div>
+        <div id="new-cycle-modal" class="modal-overlay modal-overlay--higher">
             <div class="modal-content">
                 <div class="modal-title">New Grow Cycle</div>
                 <input id="new-cycle-input" type="text" class="form-input form-input-full" placeholder="Grow #2" style="margin-bottom: 14px" />
                 <div class="modal-actions"><button class="btn-cancel" data-action="cancelNewCycle">Cancel</button><button class="btn-confirm" data-action="confirmNewCycle">Start Cycle</button></div>
             </div>
         </div>
-        <div id="rename-cycle-modal" class="modal-overlay">
+        <div id="rename-cycle-modal" class="modal-overlay modal-overlay--higher">
             <div class="modal-content">
                 <div class="modal-title">Rename Cycle</div>
                 <input id="rename-cycle-input" type="text" class="form-input form-input-full" style="margin-bottom: 14px" />
