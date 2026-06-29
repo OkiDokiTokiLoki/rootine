@@ -695,6 +695,11 @@ function confirmRenamePlant() {
         if (e.plants.includes(s)) return void alert("A plant with that name already exists.");
         ((e.plants[a] = s),
             delete e.plantTypes[l],
+            nutrientDrafts[l] && !nutrientDrafts[s] && (nutrientDrafts[s] = nutrientDrafts[l]),
+            delete nutrientDrafts[l],
+            nutrientActiveTab === l && (nutrientActiveTab = s),
+            Array.isArray(e.favourites) || (e.favourites = []),
+            e.favourites.indexOf(l) >= 0 && (e.favourites[e.favourites.indexOf(l)] = s),
             cycles.forEach((t) => {
                 t.id === e.id &&
                     t.entries.forEach((t) => {
@@ -1293,13 +1298,17 @@ function duplicateEntry(t) {
     }
 }
 function deleteEntry(t) {
-    confirm("Delete this entry?") &&
-        (cycles.forEach((e) => {
-            e.entries = e.entries.filter((e) => e.id !== t);
-        }),
-        persist(),
-        invalidateLog(),
-        invalidateStats());
+    if (!confirm("Delete this entry?")) return;
+    for (const c of cycles) {
+        const idx = c.entries.findIndex((e) => e.id === t);
+        if (idx >= 0) {
+            c.entries.splice(idx, 1);
+            break;
+        }
+    }
+    persist();
+    invalidateLog();
+    invalidateStats();
 }
 function deleteCycle(t) {
     const e = cycles.find((e) => e.id === t);
