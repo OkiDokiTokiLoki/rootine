@@ -1,3 +1,5 @@
+import { CYCLE_STAGE_LABEL } from "./constants.js";
+
 export const NUTRIENT_PALETTE = ["fish", "grow", "bloom", "blue", "amber", "red"];
 export function getNutrientColor(t, e) {
     if (!t || !Array.isArray(t.nutrients)) return "neutral";
@@ -65,4 +67,9 @@ export function someValue(obj, pred = Boolean) {
         if (Object.prototype.hasOwnProperty.call(obj, k) && pred(obj[k])) return true;
     }
     return false;
+}
+export function cycleStageBadge(stage) {
+    if (stage === "harvest") return `<span class="cycle-harvest-badge">${CYCLE_STAGE_LABEL.harvest}</span>`;
+    if (stage === "complete") return `<span class="cycle-complete-tag">${CYCLE_STAGE_LABEL.complete}</span>`;
+    return `<span class="cycle-grow-badge">${CYCLE_STAGE_LABEL.grow}</span>`;
 }

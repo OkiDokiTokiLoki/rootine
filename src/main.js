@@ -1,12 +1,12 @@
 import "./style.css";
-import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty } from "./utils.js";
+import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty, cycleStageBadge } from "./utils.js";
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs, isValidCyclesShape } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry } from "./log.js";
 import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { on, closeHeaderMenu } from "./actions.js";
 import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
-import { PLANT_TYPE, ACTION_TYPE, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY } from "./constants.js";
+import { PLANT_TYPE, ACTION_TYPE, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, CYCLE_STAGE, CYCLE_STAGE_LABEL } from "./constants.js";
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
@@ -724,30 +724,47 @@ function renderCycleList() {
     const sorted = [...cycles].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
     list.innerHTML = "";
     sorted.forEach((cycle) => {
-        const isActive = cycle.id === activeCycleId;
+        const stage = cycle.stage || CYCLE_STAGE.GROW;
         const startDate = new Date(cycle.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
         const plantCount = (cycle.plants || []).length;
-        const entryCount = (cycle.entries || []).length;
-        const nutrientCount = (cycle.nutrients || []).length;
+        const stageBadge = cycleStageBadge(stage);
+        const nextStage = stage === CYCLE_STAGE.HARVEST ? CYCLE_STAGE.COMPLETE : stage === CYCLE_STAGE.COMPLETE ? CYCLE_STAGE.GROW : CYCLE_STAGE.HARVEST;
+        let nextBtnClass;
+        if (stage === CYCLE_STAGE.HARVEST) nextBtnClass = "green-btn";
+        else if (stage === CYCLE_STAGE.COMPLETE) nextBtnClass = "blue-btn";
+        else nextBtnClass = "amber-btn";
+        const nextBtnTitle = `Advance to ${CYCLE_STAGE_LABEL[nextStage]}`;
         const row = document.createElement("div");
         row.className = "cycle-manage-row";
         row.innerHTML = `
             <div class="cycle-manage-info">
                 <div class="cycle-manage-name">
                     <span>${escapeHtml(cycle.name)}</span>
-                    ${isActive ? '<span class="cycle-active-badge">Active</span>' : ""}
+                    ${stageBadge}
                 </div>
                 <div class="cycle-manage-meta">
                     Started ${startDate} · ${plantCount} plant${plantCount === 1 ? "" : "s"}
                 </div>
             </div>
             <div class="plant-manage-actions">
-                ${!isActive ? `<button class="settings-btn green-btn" data-action="setActiveCycle" data-id="${escapeHtml(cycle.id)}" title="Set as active">${icon.checkStroke()}</button>` : ""}
+                <button class="settings-btn ${nextBtnClass}" data-action="advanceCycleStage" data-id="${escapeHtml(cycle.id)}" title="${nextBtnTitle}">${icon.checkStroke()}</button>
                 <button class="settings-btn blue-btn" data-action="editCycleName" data-id="${escapeHtml(cycle.id)}" title="Rename">${icon.edit()}</button>
                 <button class="settings-btn red-btn" data-action="deleteCycle" data-id="${escapeHtml(cycle.id)}" title="Delete">${icon.trash()}</button>
             </div>`;
         list.appendChild(row);
     });
+}
+function advanceCycleStage(id) {
+    const cycle = cycles.find((c) => c.id === id);
+    if (!cycle) return;
+    const current = cycle.stage || CYCLE_STAGE.GROW;
+    if (current === CYCLE_STAGE.GROW) cycle.stage = CYCLE_STAGE.HARVEST;
+    else if (current === CYCLE_STAGE.HARVEST) cycle.stage = CYCLE_STAGE.COMPLETE;
+    else cycle.stage = CYCLE_STAGE.GROW;
+    persist();
+    invalidateLog();
+    invalidateStats();
+    refreshOpenCycleManager();
 }
 function refreshOpenCycleManager() {
     const modal = document.getElementById("cycle-manage-modal");
@@ -1133,7 +1150,7 @@ function confirmNewCycle() {
     const e = new Date(),
         n = (t) => String(t).padStart(2, "0"),
         a = `${e.getFullYear()}-${n(e.getMonth() + 1)}-${n(e.getDate())}`,
-        l = { id: cycleUid(), name: t, startDate: a, plants: [], plantTypes: {}, entries: [], lightDefaults: {}, nutrients: [] };
+        l = { id: cycleUid(), name: t, startDate: a, plants: [], plantTypes: {}, entries: [], lightDefaults: {}, nutrients: [], stage: CYCLE_STAGE.GROW };
     (cycles.push(l), (activeCycleId = l.id), persist(), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), syncHeaderActions(), resetAddForm(), setDateDefault(), showTab("log", !0), invalidateLog(), invalidateStats(), hideModal("cycle-manage-modal"));
 }
 function cancelNewCycle() {
@@ -1326,17 +1343,6 @@ function deleteCycle(t) {
     const e = cycles.find((e) => e.id === t);
     e && confirm(`Delete "${e.name}" and all its entries? This cannot be undone.`) && ((cycles = cycles.filter((e) => e.id !== t)), activeCycleId === t && ((activeCycleId = cycles.length ? cycles[cycles.length - 1].id : null), saveActiveCycleId(activeCycleId)), persist(), updateGrowAge(), renderAddForm(), invalidateLog(), invalidateStats(), refreshOpenCycleManager());
 }
-function setActiveCycle(id) {
-    if (!cycles.find((c) => c.id === id)) return;
-    activeCycleId = id;
-    saveActiveCycleId(activeCycleId);
-    updateGrowAge();
-    renderAddForm();
-    updateLightStatus();
-    invalidateLog();
-    invalidateStats();
-    renderCycleList();
-}
 function exportBackup() {
     const t = JSON.stringify(cycles, null, 2),
         e = new Blob([t], { type: "application/json" }),
@@ -1444,7 +1450,7 @@ function persist() {
     on("openCycleManager", "click", () => openCycleManager()),
     on("closeCycleManager", "click", () => closeCycleManager()),
     on("newCycleFromManager", "click", () => newCycleFromManager()),
-    on("setActiveCycle", "click", (t) => setActiveCycle(t.dataset.id)),
+    on("advanceCycleStage", "click", (t) => advanceCycleStage(t.dataset.id)),
     updateGrowAge(),
     setDateDefault(),
     _loadLightDefaults(),

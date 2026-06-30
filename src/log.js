@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction, someValue } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction, someValue, cycleStageBadge } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
@@ -81,13 +81,31 @@ function renderEntryCard(e, t) {
 export function renderLog(e, t) {
     const s = [...e].sort((e, t) => new Date(t.startDate) - new Date(e.startDate));
     let a = "";
-    (s.forEach((e, s) => {
+    s.forEach((e, s) => {
         const n = e.id === t,
             l = collapsedCycles.has(e.id),
             c = new Date(e.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-            i = n ? '<span class="cycle-active-badge">Active</span>' : "";
-        a += `\n        <div class="cycle-block">\n            <div class="cycle-header${l ? " collapsed" : ""}"\n                 id="cycle-header-${escapeHtml(e.id)}"\n                 data-action="toggleCycle"\n                 data-id="${escapeHtml(e.id)}">\n                <div class="cycle-header-left">\n                    <span class="cycle-name">${escapeHtml(e.name)}</span>\n                    <span class="cycle-start">${c}</span>\n        ${i}\n        </div>\n                ${icon.chevronDown({ className: "week-chevron" + (l ? " collapsed" : ""), id: `cycle-chev-${escapeHtml(e.id)}`, style: "width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" })}\n            </div>\n            <div class="cycle-entries${l ? " collapsed" : ""}" id="cycle-entries-${escapeHtml(e.id)}">\n                ${renderEntriesForCycle(e)}\n            </div>\n        </div>`;
-    }),
-        a || (a = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging.</div>'),
-        (document.getElementById("log-list").innerHTML = a));
+            stageBadge = cycleStageBadge(e.stage),
+            activeDot = n ? '<span class="cycle-active-dot" title="Active cycle"></span>' : "",
+            i = `${activeDot}${stageBadge}`;
+        a += `
+        <div class="cycle-block">
+            <div class="cycle-header${l ? " collapsed" : ""}"
+                 id="cycle-header-${escapeHtml(e.id)}"
+                 data-action="toggleCycle"
+                 data-id="${escapeHtml(e.id)}">
+                <div class="cycle-header-left">
+                    <span class="cycle-name">${escapeHtml(e.name)}</span>
+                    <span class="cycle-start">${c}</span>
+        ${i}
+        </div>
+                ${icon.chevronDown({ className: "week-chevron" + (l ? " collapsed" : ""), id: `cycle-chev-${escapeHtml(e.id)}`, style: "width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" })}
+            </div>
+            <div class="cycle-entries${l ? " collapsed" : ""}" id="cycle-entries-${escapeHtml(e.id)}">
+                ${renderEntriesForCycle(e)}
+            </div>
+        </div>`;
+    });
+    a || (a = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging.</div>');
+    document.getElementById("log-list").innerHTML = a;
 }

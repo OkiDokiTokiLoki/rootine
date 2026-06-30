@@ -230,6 +230,19 @@ const migrations = [
                 actions: (e.actions || []).map(migrateActionString),
             })),
         })),
+
+    // v9 → v10: each cycle tracks its grow stage (grow/harvest/complete).
+    // Existing cycles default to "grow" so the migration is safe for
+    // data that's already on the latest version. New cycles also start
+    // at "grow" (see confirmNewCycle). Users advance through the
+    // stages via the cycle manager's "advance" button; after
+    // "complete" the stage loops back to "grow" so a single cycle
+    // object can be re-grown without recreating it.
+    (cycles) =>
+        cycles.map((c) => ({
+            ...c,
+            stage: c.stage || "grow",
+        })),
 ];
 
 const STORAGE_VERSION = migrations.length + 1;

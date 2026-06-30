@@ -13,6 +13,8 @@ export const ACTIVE_CYCLE_KEY = "active_cycle_id";
 export const COLLAPSED_CYCLES_KEY = "collapsed_cycles";
 export const COLLAPSED_WEEKS_KEY = "collapsed_weeks";
 export const COLLAPSED_OBS_KEY = "collapsed_obs";
+export const CYCLE_STAGE = { GROW: "grow", HARVEST: "harvest", COMPLETE: "complete" };
+export const CYCLE_STAGE_LABEL = { grow: "Grow", harvest: "Harvest", complete: "Complete" };
 
 // Plant types. "auto" = autoflower, "photo" = photoperiod. These are the
 // canonical lowercase forms; migration code in storage.js also writes them
