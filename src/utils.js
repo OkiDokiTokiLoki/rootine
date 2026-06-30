@@ -69,7 +69,7 @@ export function someValue(obj, pred = Boolean) {
     return false;
 }
 export function cycleStageBadge(stage) {
-    if (stage === "harvest") return `<span class="cycle-harvest-badge">${CYCLE_STAGE_LABEL.harvest}</span>`;
-    if (stage === "complete") return `<span class="cycle-complete-tag">${CYCLE_STAGE_LABEL.complete}</span>`;
-    return `<span class="cycle-grow-badge">${CYCLE_STAGE_LABEL.grow}</span>`;
+    if (stage === "harvest") return `<span class="cycle-badge amber-btn">${CYCLE_STAGE_LABEL.harvest}</span>`;
+    if (stage === "complete") return `<span class="cycle-badge complete-tag">${CYCLE_STAGE_LABEL.complete}</span>`;
+    return `<span class="cycle-badge green-btn">${CYCLE_STAGE_LABEL.grow}</span>`;
 }

@@ -1324,31 +1324,6 @@ textarea.form-input {
     background: var(--green);
     flex-shrink: 0;
 }
-.cycle-grow-badge {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: var(--r-pill);
-    background: var(--green-bg);
-    color: var(--green);
-}
-.cycle-harvest-badge {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: var(--r-pill);
-    background: var(--amber-bg);
-    color: var(--amber);
-}
-.cycle-complete-tag {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: var(--r-pill);
-    background: transparent;
-    color: var(--muted);
-    border: 0.5px solid var(--border2);
-}
 .plant-note-count {
     display: inline-flex;
     align-items: center;
@@ -1528,6 +1503,11 @@ textarea.form-input {
 .favourite-btn {
     background: var(--surface2);
     color: var(--muted);
+}
+.complete-tag {
+    background: transparent;
+    color: var(--muted);
+    border: 0.5px solid var(--border2);
 }
 .favourite-btn.is-favourite,
 .amber-btn {

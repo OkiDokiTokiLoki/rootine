@@ -730,8 +730,8 @@ function renderCycleList() {
         const stageBadge = cycleStageBadge(stage);
         const nextStage = stage === CYCLE_STAGE.HARVEST ? CYCLE_STAGE.COMPLETE : stage === CYCLE_STAGE.COMPLETE ? CYCLE_STAGE.GROW : CYCLE_STAGE.HARVEST;
         let nextBtnClass;
-        if (stage === CYCLE_STAGE.HARVEST) nextBtnClass = "green-btn";
-        else if (stage === CYCLE_STAGE.COMPLETE) nextBtnClass = "blue-btn";
+        if (stage === CYCLE_STAGE.HARVEST) nextBtnClass = "complete-tag";
+        else if (stage === CYCLE_STAGE.COMPLETE) nextBtnClass = "green-btn";
         else nextBtnClass = "amber-btn";
         const nextBtnTitle = `Advance to ${CYCLE_STAGE_LABEL[nextStage]}`;
         const row = document.createElement("div");
@@ -747,7 +747,7 @@ function renderCycleList() {
                 </div>
             </div>
             <div class="plant-manage-actions">
-                <button class="settings-btn ${nextBtnClass}" data-action="advanceCycleStage" data-id="${escapeHtml(cycle.id)}" title="${nextBtnTitle}">${icon.checkStroke()}</button>
+                <button class="settings-btn ${nextBtnClass}" data-action="advanceCycleStage" data-id="${escapeHtml(cycle.id)}" title="${nextBtnTitle}">${icon.arrowUp()}</button>
                 <button class="settings-btn blue-btn" data-action="editCycleName" data-id="${escapeHtml(cycle.id)}" title="Rename">${icon.edit()}</button>
                 <button class="settings-btn red-btn" data-action="deleteCycle" data-id="${escapeHtml(cycle.id)}" title="Delete">${icon.trash()}</button>
             </div>`;
