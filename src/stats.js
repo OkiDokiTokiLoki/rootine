@@ -74,7 +74,7 @@ function renderPlantCard(t, e, s, a, n, l) {
             })
             .join(""),
         yieldTotal = l && (l.stage === "harvest" || l.stage === "complete") ? (l.entries || []).reduce((sum, ent) => sum + (ent.plants?.[t]?.yieldGrams || 0), 0) : 0,
-        y = yieldTotal > 0 ? `<span class="nutrient-totals__item nutrient--water" title="Yield">Y ${fmtQty(yieldTotal)}g</span>` : "",
+        y = yieldTotal > 0 ? `<span class="nutrient-totals__item nutrient--amber" title="Yield">Y ${fmtQty(yieldTotal)}g</span>` : "",
         r = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${fmtQty(e.water || 0)}</span>`;
     return `
     <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(t)}">

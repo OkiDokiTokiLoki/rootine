@@ -1135,7 +1135,7 @@ function renderPlantDetailModal(t, e) {
                         ? `
         <div class="plant-detail-row">
             <div class="plant-detail-label">Yield</div>
-            <div class="plant-detail-value nutrient--water">${s.totalYieldGrams.toFixed(1)} g</div>
+            <div class="plant-detail-value nutrient--amber">${s.totalYieldGrams.toFixed(1)} g</div>
         </div>`
                         : ""
                 }
