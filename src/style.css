@@ -1517,6 +1517,13 @@ textarea.form-input {
 .favourite-btn.is-favourite svg {
     filter: drop-shadow(0 0 4px rgba(240, 165, 0, 0.35));
 }
+.yield-input {
+    color: var(--green);
+}
+.nutrient--yield,
+.nutrient-totals__item--yield {
+    color: var(--green);
+}
 .entry-card:not(.open) .green-btn,
 .entry-card:not(.open) .red-btn,
 .entry-card:not(.open) .blue-btn {

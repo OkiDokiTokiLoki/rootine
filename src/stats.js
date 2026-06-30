@@ -73,6 +73,8 @@ function renderPlantCard(t, e, s, a, n, l) {
                 return s <= 0 ? "" : `<span class="nutrient-totals__item nutrient--${getNutrientColor(l, t.name)}" title="${escapeHtml(t.name)}">${escapeHtml(abbrevNutrient(t.name))} ${fmtQty(s)}</span>`;
             })
             .join(""),
+        yieldTotal = l && (l.stage === "harvest" || l.stage === "complete") ? (l.entries || []).reduce((sum, ent) => sum + (ent.plants?.[t]?.yieldGrams || 0), 0) : 0,
+        y = yieldTotal > 0 ? `<span class="nutrient-totals__item nutrient--water" title="Yield">Y ${fmtQty(yieldTotal)}g</span>` : "",
         r = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${fmtQty(e.water || 0)}</span>`;
     return `
     <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(t)}">
@@ -83,10 +85,12 @@ function renderPlantCard(t, e, s, a, n, l) {
         </div>
         <span class="nutrient-totals">
             ${d}
+            ${y}
             ${r}
         </span>
     </div>`;
 }
+
 on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id));
 export function renderStats(t, e) {
     const s = `

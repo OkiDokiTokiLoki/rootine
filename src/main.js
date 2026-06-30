@@ -22,6 +22,7 @@ const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT].map
     collapsedObs = loadCollapsedObs();
 let nutrientDrafts = {},
     nutrientActiveTab = NUTRIENT_TAB_ALL;
+let yieldDrafts = {};
 const draftState = { editingEntryId: null, pendingAddPlantType: PLANT_TYPE.AUTO, pendingRenamePlantType: PLANT_TYPE.AUTO, pendingPlantObs: [], selectedPlantObsTab: null, editingPlantObsIndex: null, orphanedEdits: {} };
 function resetDraft() {
     ((draftState.editingEntryId = null), (draftState.pendingAddPlantType = PLANT_TYPE.AUTO), (draftState.pendingRenamePlantType = PLANT_TYPE.AUTO), (draftState.pendingPlantObs = []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
@@ -117,11 +118,56 @@ function writeNutrientInputs(t) {
         ((i.value = n ? String(t) : ""), n ? (i.dataset.previewHadValue = "1") : delete i.dataset.previewHadValue);
     }
 }
+function readYieldInputs() {
+    const out = {};
+    document.querySelectorAll("input[data-yield]").forEach((el) => {
+        const plant = el.dataset.yield;
+        const raw = el.value.trim();
+        if (raw === "") {
+            if (el.dataset.previewHadValue === "1") out[plant] = null;
+        } else {
+            const n = parseFloat(raw);
+            if (!isNaN(n)) out[plant] = n;
+        }
+    });
+    return out;
+}
+
+function writeYieldInputs(snap) {
+    const draft = snap || yieldDrafts[NUTRIENT_TAB_ALL] || {};
+    document.querySelectorAll("input[data-yield]").forEach((el) => {
+        const plant = el.dataset.yield;
+        const v = draft[plant];
+        const has = v != null && v !== "" && !isNaN(v);
+        el.value = has ? String(v) : "";
+        if (has) el.dataset.previewHadValue = "1";
+        else delete el.dataset.previewHadValue;
+    });
+}
+
+function renderYieldFormRows() {
+    const t = document.getElementById("yield-rows");
+    if (!t) return;
+    t.innerHTML = "";
+    const plants = cyclePlants();
+    if (plants.length === 0) return;
+    plants.forEach((name) => {
+        const row = document.createElement("div");
+        row.className = "form-row";
+        row.innerHTML = `
+            <label class="form-label">${escapeHtml(name)}</label>
+            <input class="form-input yield-input" type="number" min="0" step="0.1" placeholder="grams" data-yield="${escapeHtml(name)}" />
+        `;
+        t.appendChild(row);
+    });
+    writeYieldInputs();
+}
 function snapshotEditForm() {
     return {
         cycleId: activeCycleId,
         dt: document.getElementById("new-dt").value,
         nutrientDrafts: JSON.parse(JSON.stringify(nutrientDrafts)),
+        yieldDrafts: JSON.parse(JSON.stringify(yieldDrafts)),
         nutrientActiveTab,
         light: {
             checked: document.getElementById("ck-light").checked,
@@ -184,6 +230,15 @@ function restoreEditForm(snap) {
         }
     });
     ((document.getElementById("new-obs").value = snap.obs || ""), (draftState.pendingPlantObs = (snap.pendingPlantObs || []).map((o) => ({ ...o }))), (draftState.selectedPlantObsTab = snap.selectedPlantObsTab || null), (draftState.editingPlantObsIndex = snap.editingPlantObsIndex ?? null), renderPlantObsList());
+
+    yieldDrafts = snap.yieldDrafts || {};
+    const yieldSection = document.getElementById("yield-section");
+    if (yieldSection) {
+        yieldSection.style.display = cycleShowsYield(activeCycle()) ? "" : "none";
+    }
+    if (cycleShowsYield(activeCycle())) {
+        renderYieldFormRows();
+    }
 }
 function mergeDrafts(t, e) {
     const n = { nutrients: {}, concentrations: {}, water: null },
@@ -219,6 +274,10 @@ function cyclePlants() {
 function cycleNutrients() {
     const t = activeCycle();
     return t ? (Array.isArray(t.nutrients) || (t.nutrients = []), t.nutrients) : [];
+}
+function cycleShowsYield(cycle) {
+    const stage = cycle?.stage || CYCLE_STAGE.GROW;
+    return stage === CYCLE_STAGE.HARVEST || stage === CYCLE_STAGE.COMPLETE;
 }
 function resetPlantNotesDraft(t) {
     ((draftState.pendingPlantObs = Array.isArray(t) ? [...t] : []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
@@ -258,6 +317,16 @@ function renderAddForm() {
         e = activeCycle(),
         n = 0 === t.length ? [] : [...t].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1));
     syncHeaderActions();
+
+    const yieldSection = document.getElementById("yield-section");
+    if (yieldSection) {
+        yieldSection.style.display = cycleShowsYield(e) ? "" : "none";
+        if (cycleShowsYield(e)) {
+            const live = new Set(t);
+            Object.keys(yieldDrafts).forEach((k) => live.has(k) || delete yieldDrafts[k]);
+        }
+    }
+
     const a = document.getElementById("nutrient-plant-tabs");
     if (a)
         if (((a.innerHTML = ""), 0 === cycles.length)) {
@@ -337,6 +406,10 @@ function renderAddForm() {
         }),
         populatePlantObsTabs(),
         renderPlantObsList());
+
+    if (cycleShowsYield(e)) {
+        renderYieldFormRows();
+    }
 }
 function populatePlantObsTabs() {
     const t = document.getElementById("plant-obs-tabs");
@@ -450,10 +523,15 @@ function showTab(t, e = !1) {
     }
 }
 function resetAddForm() {
-    ((nutrientDrafts = {}), (nutrientActiveTab = NUTRIENT_TAB_ALL));
+    ((yieldDrafts = {}), (nutrientDrafts = {}), (nutrientActiveTab = NUTRIENT_TAB_ALL));
     const t = document.getElementById("nutrient-rows");
     t &&
         t.querySelectorAll("input[data-nutrient]").forEach((t) => {
+            ((t.value = ""), delete t.dataset.previewHadValue);
+        });
+    const yieldRows = document.getElementById("yield-rows");
+    yieldRows &&
+        yieldRows.querySelectorAll("input[data-yield]").forEach((t) => {
             ((t.value = ""), delete t.dataset.previewHadValue);
         });
     const e = document.getElementById("nutrient-water");
@@ -674,6 +752,8 @@ function confirmRenamePlant() {
             delete e.plantTypes[l],
             nutrientDrafts[l] && !nutrientDrafts[s] && (nutrientDrafts[s] = nutrientDrafts[l]),
             delete nutrientDrafts[l],
+            yieldDrafts[l] != null && !yieldDrafts[s] && (yieldDrafts[s] = yieldDrafts[l]),
+            delete yieldDrafts[l],
             nutrientActiveTab === l && (nutrientActiveTab = s),
             Array.isArray(e.favourites) || (e.favourites = []),
             e.favourites.indexOf(l) >= 0 && (e.favourites[e.favourites.indexOf(l)] = s),
@@ -765,6 +845,7 @@ function advanceCycleStage(id) {
     invalidateLog();
     invalidateStats();
     refreshOpenCycleManager();
+    renderAddForm();
 }
 function refreshOpenCycleManager() {
     const modal = document.getElementById("cycle-manage-modal");
@@ -931,7 +1012,7 @@ function computePlantDetail(t, e) {
     const n = getPlantMeta(t, e),
         a = t.nutrients || [],
         l = Date.now() - 6048e5,
-        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: t.defaultConcentration ?? null }])), totalWaterCups: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [] };
+        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: t.defaultConcentration ?? null }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [] };
     for (const n of t.entries || []) {
         const t = new Date(n.dt),
             a = t.getTime() >= l;
@@ -1049,6 +1130,15 @@ function renderPlantDetailModal(t, e) {
             <div class="plant-detail-label">Type</div>
             <div class="plant-detail-value">${a}</div>
         </div>
+                ${
+                    cycleShowsYield(t)
+                        ? `
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Yield</div>
+            <div class="plant-detail-value nutrient--water">${s.totalYieldGrams.toFixed(1)} g</div>
+        </div>`
+                        : ""
+                }
         <div class="plant-detail-row">
             <div class="plant-detail-label">Repotted</div>
             <div class="plant-detail-value">${p}</div>
@@ -1213,6 +1303,10 @@ function editEntry(t) {
                 nutrientDrafts[t] = { ...e };
             }),
             (nutrientActiveTab = NUTRIENT_TAB_ALL),
+            (yieldDrafts = {}),
+            Object.entries(e.plants || {}).forEach(([t, e]) => {
+                if (e.yieldGrams != null) yieldDrafts[t] = e.yieldGrams;
+            }),
             writeNutrientInputs({}),
             document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
                 t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
@@ -1295,8 +1389,18 @@ function saveEntry() {
             }),
             Object.keys(l).length > 0 && (n.concentrations = l));
         const d = null != e.water ? e.water : s.water;
+        const y = s.yieldGrams || 0;
+        y && (i.totalYieldGrams += y);
         (null != d && "" !== d && (n.water = d), Object.keys(n).length > 0 && (i[t] = n));
     });
+
+    const yieldInputs = readYieldInputs();
+    Object.entries(yieldInputs).forEach(([plant, val]) => {
+        if (val == null) return;
+        const slot = i[plant] || (i[plant] = {});
+        slot.yieldGrams = val;
+    });
+
     const d = new Set(cyclePlants()),
         c = {};
     draftState.pendingPlantObs.forEach((t) => {
