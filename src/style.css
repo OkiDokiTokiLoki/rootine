@@ -1881,3 +1881,53 @@ textarea.form-input {
     background: currentColor;
     flex-shrink: 0;
 }
+.import-choice-summary {
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.import-choice-summary-item {
+    padding: 3px 0;
+}
+.import-choice-summary-item--muted {
+    opacity: 0.6;
+}
+.import-choice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.import-choice-btn {
+    text-align: left;
+    background: transparent;
+    border: 1px solid var(--border, #333);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    width: 100%;
+    display: block;
+    transition:
+        border-color 0.15s,
+        background 0.15s;
+}
+.import-choice-btn:hover,
+.import-choice-btn:focus {
+    border-color: var(--green);
+    outline: none;
+}
+.import-choice-btn--destructive:hover,
+.import-choice-btn--destructive:focus {
+    border-color: var(--red);
+}
+.import-choice-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.import-choice-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+}

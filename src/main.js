@@ -1455,22 +1455,120 @@ function exportBackup() {
         l = new Date().toISOString().slice(0, 10);
     ((a.href = n), (a.download = `rootine-backup-${l}.json`), a.click(), URL.revokeObjectURL(n));
 }
+let pendingImportData = null;
+
 function importBackup(t) {
     const e = t.target.files[0];
     if (!e) return;
     const n = new FileReader();
-    ((n.onload = (e) => {
+    n.onload = (e) => {
         const n = e.target.result;
         let a;
         try {
             a = JSON.parse(n);
         } catch {
-            return (alert("Invalid backup file."), void (t.target.value = ""));
+            alert("Invalid backup file.");
+            t.target.value = "";
+            return;
         }
-        if (!isValidCyclesShape(a)) return (alert("Invalid backup file."), void (t.target.value = ""));
-        confirm(`Import ${a.length} cycle(s)? This will replace all current data.`) ? (localStorage.setItem(STORAGE_KEY, JSON.stringify(a)), localStorage.removeItem(STORAGE_VERSION_KEY), location.reload()) : (t.target.value = "");
-    }),
-        n.readAsText(e));
+        if (!isValidCyclesShape(a)) {
+            alert("Invalid backup file.");
+            t.target.value = "";
+            return;
+        }
+        pendingImportData = a;
+        showImportChoice(a);
+    };
+    n.readAsText(e);
+}
+
+function summarizeImport(imported, existing) {
+    const existingById = new Map(existing.map((c) => [c.id, c]));
+    const newCycles = [];
+    const cyclesWithNewEntries = [];
+    const cyclesUpToDate = [];
+    for (const imp of imported) {
+        const local = existingById.get(imp.id);
+        if (!local) {
+            newCycles.push(imp);
+        } else {
+            const localEntryIds = new Set((local.entries || []).map((e) => e.id));
+            const newEntries = (imp.entries || []).filter((e) => !localEntryIds.has(e.id));
+            if (newEntries.length > 0) cyclesWithNewEntries.push({ cycle: imp, newEntries });
+            else cyclesUpToDate.push(imp);
+        }
+    }
+    return { newCycles, cyclesWithNewEntries, cyclesUpToDate };
+}
+
+function showImportChoice(imported) {
+    const summary = summarizeImport(imported, cycles);
+    const totalEntries = imported.reduce((s, c) => s + (c.entries || []).length, 0);
+    const info = document.getElementById("import-choice-info");
+    if (info) {
+        info.textContent = `Backup contains ${imported.length} cycle${imported.length === 1 ? "" : "s"} with ${totalEntries} total entr${totalEntries === 1 ? "y" : "ies"}.`;
+    }
+    renderImportSummary(summary);
+    showModal("import-choice-modal");
+}
+
+function renderImportSummary(summary) {
+    const el = document.getElementById("import-choice-summary");
+    if (!el) return;
+    const parts = [];
+    if (summary.newCycles.length > 0) {
+        const n = summary.newCycles.length;
+        parts.push(`<div class="import-choice-summary-item">+ ${n} new cycle${n === 1 ? "" : "s"} will be added</div>`);
+    }
+    if (summary.cyclesWithNewEntries.length > 0) {
+        const totalNew = summary.cyclesWithNewEntries.reduce((s, x) => s + x.newEntries.length, 0);
+        const c = summary.cyclesWithNewEntries.length;
+        parts.push(`<div class="import-choice-summary-item">+ ${totalNew} new entr${totalNew === 1 ? "y" : "ies"} added to ${c} existing cycle${c === 1 ? "" : "s"}</div>`);
+    }
+    if (summary.cyclesUpToDate.length > 0) {
+        const n = summary.cyclesUpToDate.length;
+        parts.push(`<div class="import-choice-summary-item import-choice-summary-item--muted">${n} cycle${n === 1 ? "" : "s"} already up to date</div>`);
+    }
+    if (parts.length === 0) {
+        parts.push(`<div class="import-choice-summary-item import-choice-summary-item--muted">Nothing new to add</div>`);
+    }
+    el.innerHTML = parts.join("");
+}
+
+function cancelImport() {
+    pendingImportData = null;
+    hideModal("import-choice-modal");
+    const input = document.getElementById("import-backup-input");
+    if (input) input.value = "";
+}
+
+function applyImport(mode) {
+    if (!pendingImportData) return;
+    const result = mode === "replace" ? pendingImportData : mode === "merge" ? mergeCycles(cycles, pendingImportData) : null;
+    if (!result) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
+    localStorage.removeItem(STORAGE_VERSION_KEY);
+    pendingImportData = null;
+    location.reload();
+}
+function mergeCycles(existing, imported) {
+    const result = existing.map((c) => ({ ...c, entries: [...(c.entries || [])] }));
+    const existingById = new Map(result.map((c) => [c.id, c]));
+    for (const impCycle of imported) {
+        const localCycle = existingById.get(impCycle.id);
+        if (!localCycle) {
+            result.push(impCycle);
+            continue;
+        }
+        const localEntryIds = new Set(localCycle.entries.map((e) => e.id));
+        for (const impEntry of impCycle.entries || []) {
+            if (!localEntryIds.has(impEntry.id)) {
+                localCycle.entries.push(impEntry);
+            }
+        }
+        localCycle.entries.sort((a, b) => new Date(b.dt) - new Date(a.dt));
+    }
+    return result;
 }
 function triggerImport() {
     document.getElementById("import-backup-input").click();
@@ -1529,6 +1627,9 @@ function persist() {
     on("openNutrientManager", "click", () => openNutrientManager()),
     on("exportBackup", "click", () => exportBackup()),
     on("importBackup", "change", (t, e) => importBackup(e)),
+    on("importMerge", "click", () => applyImport("merge")),
+    on("importReplace", "click", () => applyImport("replace")),
+    on("cancelImport", "click", () => cancelImport()),
     on("triggerImport", "click", () => triggerImport()),
     on("confirmNewCycle", "click", () => confirmNewCycle()),
     on("cancelNewCycle", "click", () => cancelNewCycle()),

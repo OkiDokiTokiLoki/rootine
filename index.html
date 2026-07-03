@@ -262,6 +262,26 @@
                 <div class="modal-actions"><button class="btn-cancel" data-action="cancelEditNutrientDefault">Cancel</button><button class="btn-confirm" data-action="confirmEditNutrientDefault">Save</button></div>
             </div>
         </div>
+        <div id="import-choice-modal" class="modal-overlay modal-overlay--higher">
+            <div class="modal-content">
+                <div class="modal-title">Import backup</div>
+                <div class="modal-subtitle" id="import-choice-info">—</div>
+                <div class="import-choice-summary" id="import-choice-summary"></div>
+                <div class="import-choice-list">
+                    <button type="button" class="import-choice-btn" data-action="importMerge">
+                        <div class="import-choice-title">Merge with existing</div>
+                        <div class="import-choice-desc">Add new cycles and entries from the backup to your current data. Existing cycles, plants, and nutrients are preserved.</div>
+                    </button>
+                    <button type="button" class="import-choice-btn import-choice-btn--destructive" data-action="importReplace">
+                        <div class="import-choice-title">Replace everything</div>
+                        <div class="import-choice-desc">Discard all current data and replace it with the backup. Cannot be undone.</div>
+                    </button>
+                </div>
+                <div class="modal-actions modal-actions--single">
+                    <button class="btn-cancel" data-action="cancelImport">Cancel</button>
+                </div>
+            </div>
+        </div>
         <script type="module" src="/src/main.js"></script>
     </body>
 </html>
