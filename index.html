@@ -100,14 +100,21 @@
                             </div>
                         </div>
                         <div class="checkbox-row checkbox-row--block">
-                            <label class="checkbox-row__label"><input type="checkbox" id="ck-repot" data-action="togglePlantPicker" data-pick="repot" />Repot / transplant </label>
+                            <label class="checkbox-row__label"><input type="checkbox" id="ck-repot" data-action="togglePlantPicker" data-pick="repot" />Repot </label>
                             <div id="repot-plants" class="plant-picker-wrap">
                                 <div class="plant-picker-hint">Which plants?</div>
                                 <div class="plant-picker-list"></div>
                             </div>
                         </div>
+                        <div class="checkbox-row checkbox-row--block">
+                            <label class="checkbox-row__label"><input type="checkbox" id="ck-flush" data-action="togglePlantPicker" data-pick="flush" />Flush </label>
+                            <div id="flush-plants" class="plant-picker-wrap">
+                                <div class="plant-picker-hint">Which plants?</div>
+                                <div class="plant-picker-list"></div>
+                            </div>
+                        </div>
                         <div class="checkbox-row checkbox-row--block" id="light-row">
-                            <label class="checkbox-row__label"><input type="checkbox" id="ck-light" data-action="toggleLightInputs" />Light adjusted </label>
+                            <label class="checkbox-row__label"><input type="checkbox" id="ck-light" data-action="toggleLightInputs" />Lights </label>
                             <div id="light-inputs" class="light-inputs-wrap">
                                 <div class="form-row"><label class="form-label light-label">Lux</label><input class="form-input" type="number" min="0" step="2" id="light-lux" placeholder="0" data-action="saveLightDefaults" /></div>
                                 <div class="form-row"><label class="form-label light-label">Distance (cm)</label><input class="form-input" type="number" min="0" step="1" id="light-dist" placeholder="0" data-action="saveLightDefaults" /></div>

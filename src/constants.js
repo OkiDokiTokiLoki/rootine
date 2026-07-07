@@ -16,14 +16,14 @@ export const COLLAPSED_OBS_KEY = "collapsed_obs";
 export const CYCLE_STAGE = { GROW: "grow", HARVEST: "harvest", COMPLETE: "complete" };
 export const CYCLE_STAGE_LABEL = { grow: "Grow", harvest: "Harvest", complete: "Complete" };
 
+// Action types stored on each entry's `actions` array. The render layer
+// (formatAction in utils.js) maps these back to display strings.
+export const ACTION_TYPE = { LST: "lst", DEF: "def", REPOT: "repot", FLUSH: "flush", LIGHT: "light" };
+
 // Plant types. "auto" = autoflower, "photo" = photoperiod. These are the
 // canonical lowercase forms; migration code in storage.js also writes them
 // out as raw strings when reading older data.
 export const PLANT_TYPE = { AUTO: "auto", PHOTO: "photo" };
-
-// Action types stored on each entry's `actions` array. The render layer
-// (formatAction in utils.js) maps these back to display strings.
-export const ACTION_TYPE = { LST: "lst", DEF: "def", REPOT: "repot", LIGHT: "light" };
 
 // Stats view modes. ACTIVE = current cycle only, ALL = every cycle stacked.
 // "active" is the default; switching to a specific cycle replaces the mode

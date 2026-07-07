@@ -243,6 +243,25 @@ const migrations = [
             ...c,
             stage: c.stage || "grow",
         })),
+
+    // v10 → v11: each plantTypes entry gets a flushedAt field that tracks
+    // when the plant was last flushed. Existing plants start with no flush
+    // history; the field is set when a "Flushed" action is logged for that
+    // plant. String-typed entries (which can exist briefly between plant
+    // add and the first action) are left as-is; getPlantMeta handles them.
+    (cycles) =>
+        cycles.map((c) => {
+            if (!c.plantTypes || typeof c.plantTypes !== "object") return c;
+            const newPlantTypes = {};
+            for (const [name, data] of Object.entries(c.plantTypes)) {
+                if (data && typeof data === "object" && !Array.isArray(data)) {
+                    newPlantTypes[name] = { flushedAt: null, ...data };
+                } else {
+                    newPlantTypes[name] = data;
+                }
+            }
+            return { ...c, plantTypes: newPlantTypes };
+        }),
 ];
 
 const STORAGE_VERSION = migrations.length + 1;

@@ -38,7 +38,7 @@ export function escapeHtml(t) {
 }
 export function getPlantMeta(t, e) {
     const n = t?.plantTypes?.[e];
-    return n ? ("string" == typeof n ? { type: n, repottedAt: t?.startDate } : { type: n.type || "auto", repottedAt: n.repottedAt || t?.startDate }) : { type: "auto", repottedAt: t?.startDate };
+    return n ? ("string" == typeof n ? { type: n, repottedAt: t?.startDate, flushedAt: null } : { type: n.type || "auto", repottedAt: n.repottedAt || t?.startDate, flushedAt: n.flushedAt || null }) : { type: "auto", repottedAt: t?.startDate, flushedAt: null };
 }
 export function fmtQty(t) {
     return t % 1 == 0 ? String(t) : t.toFixed(1);
@@ -49,8 +49,9 @@ export function formatAction(t) {
     switch (t.type) {
         case "lst":
         case "def":
-        case "repot": {
-            const e = { lst: "LST", def: "Defoliate", repot: "Repot / transplant" }[t.type];
+        case "repot":
+        case "flush": {
+            const e = { lst: "LST", def: "Defoliate", repot: "Repot / transplant", flush: "Flushed" }[t.type];
             return t.plants && 0 !== t.plants.length ? `${e} (${t.plants.map(escapeHtml).join(", ")})` : `${e} (All plants)`;
         }
         case "light": {

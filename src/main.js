@@ -10,7 +10,7 @@ import { PLANT_TYPE, ACTION_TYPE, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STO
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
-const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT].map((t) => {
+const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT, ACTION_TYPE.FLUSH].map((t) => {
         const e = document.getElementById(`ck-${t}`),
             n = document.getElementById(`${t}-plants`),
             a = n?.querySelector(".plant-picker-list");
@@ -699,7 +699,7 @@ function togglePlantType(t) {
     (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {});
     const n = e.plants[t],
         a = getPlantMeta(e, n).type;
-    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate }), (e.plantTypes[n].type = PLANT_TYPE.AUTO === a ? PLANT_TYPE.PHOTO : PLANT_TYPE.AUTO), persist(), renderPlantList(), invalidateStats(), invalidateModal());
+    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate, flushedAt: null }), (e.plantTypes[n].type = PLANT_TYPE.AUTO === a ? PLANT_TYPE.PHOTO : PLANT_TYPE.AUTO), persist(), renderPlantList(), invalidateStats(), invalidateModal());
 }
 function toggleFavourite(t) {
     const e = activeCycle();
@@ -760,11 +760,11 @@ function confirmRenamePlant() {
             cycles.forEach((t) => {
                 t.id === e.id &&
                     t.entries.forEach((t) => {
-                        (t.plants && t.plants[l] && ((t.plants[s] = t.plants[l]), delete t.plants[l]), Array.isArray(t.actions) && (t.actions = t.actions.map((t) => (t && (ACTION_TYPE.LST === t.type || ACTION_TYPE.DEF === t.type || ACTION_TYPE.REPOT === t.type) && Array.isArray(t.plants) ? { ...t, plants: t.plants.map((t) => (t === l ? s : t)) } : t))), t.plantObs && "object" == typeof t.plantObs && t.plantObs[l] && ((t.plantObs[s] = t.plantObs[l]), delete t.plantObs[l]));
+                        (t.plants && t.plants[l] && ((t.plants[s] = t.plants[l]), delete t.plants[l]), Array.isArray(t.actions) && (t.actions = t.actions.map((t) => (t && (ACTION_TYPE.LST === t.type || ACTION_TYPE.DEF === t.type || ACTION_TYPE.REPOT === t.type || ACTION_TYPE.FLUSH === t.type) && Array.isArray(t.plants) ? { ...t, plants: t.plants.map((t) => (t === l ? s : t)) } : t))), t.plantObs && "object" == typeof t.plantObs && t.plantObs[l] && ((t.plantObs[s] = t.plantObs[l]), delete t.plantObs[l]));
                     });
             }));
     }
-    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate }), persist(), hideModal("rename-plant-modal"), renderPlantList(), renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
+    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate, flushedAt: e.plantTypes[s]?.flushedAt || null }), persist(), hideModal("rename-plant-modal"), renderPlantList(), renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
 }
 function cancelRenamePlant() {
     hideModal("rename-plant-modal");
@@ -1012,7 +1012,7 @@ function computePlantDetail(t, e) {
     const n = getPlantMeta(t, e),
         a = t.nutrients || [],
         l = Date.now() - 6048e5,
-        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: t.defaultConcentration ?? null }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [] };
+        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: t.defaultConcentration ?? null }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, lastFlushDt: null, firstFlushDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, flushCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, flushCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [], flushActions: [] };
     for (const n of t.entries || []) {
         const t = new Date(n.dt),
             a = t.getTime() >= l;
@@ -1031,11 +1031,15 @@ function computePlantDetail(t, e) {
             const e = s.water || 0;
             (e && ((i.totalWaterCups += e), i.waterCount++, a && i.waterCountLast7d++, (!i.lastWaterDt || t > new Date(i.lastWaterDt)) && (i.lastWaterDt = n.dt)), Object.values(s.nutrients || {}).some((t) => t && t > 0) && (i.feedCount++, a && i.feedCountLast7d++, (!i.lastFeedDt || t > new Date(i.lastFeedDt)) && (i.lastFeedDt = n.dt)));
         }
-        for (const t of n.actions || []) t && (ACTION_TYPE.LST === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.lstCount++, a && i.lstCountLast7d++, i.lstActions.push(n.dt)) : ACTION_TYPE.DEF === t.type && ((t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.defCount++, a && i.defCountLast7d++, i.defActions.push(n.dt))));
+        for (const t of n.actions || []) t && (ACTION_TYPE.LST === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.lstCount++, a && i.lstCountLast7d++, i.lstActions.push(n.dt)) : ACTION_TYPE.DEF === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.defCount++, a && i.defCountLast7d++, i.defActions.push(n.dt)) : ACTION_TYPE.FLUSH === t.type && ((t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.flushCount++, a && i.flushCountLast7d++, i.flushActions.push(n.dt))));
     }
     for (const t of i.lstActions) (!i.lastLstDt || new Date(t) > new Date(i.lastLstDt)) && (i.lastLstDt = t);
     for (const t of i.defActions) (!i.lastDefDt || new Date(t) > new Date(i.lastDefDt)) && (i.lastDefDt = t);
-    (delete i.lstActions, delete i.defActions, i.notes.sort((t, e) => new Date(e.dt) - new Date(t.dt)));
+    for (const t of i.flushActions) {
+        if (!i.lastFlushDt || new Date(t) > new Date(i.lastFlushDt)) i.lastFlushDt = t;
+        if (!i.firstFlushDt || new Date(t) < new Date(i.firstFlushDt)) i.firstFlushDt = t;
+    }
+    (delete i.lstActions, delete i.defActions, delete i.flushActions, i.notes.sort((t, e) => new Date(e.dt) - new Date(t.dt)));
     const s = [...(t.entries || [])].sort((t, e) => new Date(t.dt) - new Date(e.dt));
     for (const [t, n] of Object.entries(i.nutrients)) {
         let a = 0;
@@ -1050,7 +1054,7 @@ function computePlantDetail(t, e) {
     }
     const d = n.repottedAt || t.startDate,
         c = Math.max(0, new Date() - new Date(d));
-    return ((i.repottedAt = d), (i.daysSinceRepot = Math.floor(c / 864e5)), (i.weeksSinceRepot = Math.max(1, Math.ceil(i.daysSinceRepot / 7))), i);
+    return ((i.repottedAt = d), (i.flushedAt = n.flushedAt), (i.daysSinceRepot = Math.floor(c / 864e5)), (i.weeksSinceRepot = Math.max(1, Math.ceil(i.daysSinceRepot / 7))), i);
 }
 function renderPlantDetailModal(t, e) {
     const n = getPlantMeta(t, e).type,
@@ -1083,6 +1087,7 @@ function renderPlantDetailModal(t, e) {
             return e ? `<span class="plant-detail-rel">${r(t)}</span> ${n}` : n;
         },
         p = new Date(s.repottedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        flushDate = s.flushedAt ? new Date(s.flushedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—",
         m =
             0 === s.notes.length
                 ? '<div class="plant-detail-empty">No plant-specific notes yet.</div>'
@@ -1144,6 +1149,10 @@ function renderPlantDetailModal(t, e) {
             <div class="plant-detail-value">${p}</div>
         </div>
         <div class="plant-detail-row">
+            <div class="plant-detail-label">Flushed</div>
+            <div class="plant-detail-value">${u(s.firstFlushDt, !0)}</div>
+        </div>
+        <div class="plant-detail-row">
             <div class="plant-detail-label">Age (since repot)</div>
             <div class="plant-detail-value"><span class="plant-detail-rel">${s.weeksSinceRepot} week${1 === s.weeksSinceRepot ? "" : "s"}</span> ${s.daysSinceRepot} day${1 === s.daysSinceRepot ? "" : "s"}</div>
         </div>
@@ -1181,6 +1190,10 @@ function renderPlantDetailModal(t, e) {
             <div class="plant-detail-label">Last defoliated</div>
             <div class="plant-detail-value">${u(s.lastDefDt, !0)}</div>
         </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Last flushed</div>
+            <div class="plant-detail-value">${u(s.lastFlushDt, !0)}</div>
+        </div>
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Last 7 days</div>
         <div class="plant-detail-row">
@@ -1198,6 +1211,10 @@ function renderPlantDetailModal(t, e) {
         <div class="plant-detail-row">
             <div class="plant-detail-label">Times defoliated</div>
             <div class="plant-detail-value${f(s.defCountLast7d)}">${s.defCountLast7d}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times flushed</div>
+            <div class="plant-detail-value${f(s.flushCountLast7d)}">${s.flushCountLast7d}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Log entries</div>
@@ -1220,6 +1237,10 @@ function renderPlantDetailModal(t, e) {
         <div class="plant-detail-row">
             <div class="plant-detail-label">Times defoliated</div>
             <div class="plant-detail-value">${s.defCount}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Times flushed</div>
+            <div class="plant-detail-value">${s.flushCount}</div>
         </div>
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Notes</div>
@@ -1346,14 +1367,38 @@ function saveEntry() {
     const e = activeCycle(),
         n = [...cyclePlants()].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1)),
         a = [];
+
+    // Capture which plants the entry being edited previously flushed so
+    // we can recompute their flushedAt if the action is being removed.
+    // New entries (no editingEntryId) start with an empty set, so the
+    // recompute loop below is a no-op for them.
+    const previouslyFlushedPlants = new Set();
+    if (draftState.editingEntryId) {
+        const prevEntry = e.entries.find((entry) => entry.id === draftState.editingEntryId);
+        if (prevEntry && Array.isArray(prevEntry.actions)) {
+            for (const action of prevEntry.actions) {
+                if (action && action.type === ACTION_TYPE.FLUSH) {
+                    (action.plants || []).forEach((p) => previouslyFlushedPlants.add(p));
+                }
+            }
+        }
+    }
+    const currentlyFlushedPlants = new Set();
+
     if (
         (PICKER_ACTIONS.forEach((n) => {
             if (!n.checkbox.checked) return;
             const l = n.checked();
             if ((a.push({ type: n.id, plants: l }), ACTION_TYPE.REPOT === n.id)) {
-                const n = t.slice(0, 10);
-                l.forEach((t) => {
-                    e.plantTypes[t] && "object" == typeof e.plantTypes[t] ? (e.plantTypes[t].repottedAt = n) : (e.plantTypes[t] = { type: PLANT_TYPE.AUTO, repottedAt: n });
+                const dt = t.slice(0, 10);
+                l.forEach((p) => {
+                    e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].repottedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: dt });
+                });
+            } else if (ACTION_TYPE.FLUSH === n.id) {
+                const dt = t.slice(0, 10);
+                l.forEach((p) => {
+                    e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].flushedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: e.startDate, flushedAt: dt });
+                    currentlyFlushedPlants.add(p);
                 });
             }
         }),
@@ -1415,6 +1460,32 @@ function saveEntry() {
             return;
         }
         ((n.dt = t), (n.plants = i), (n.actions = a), (n.obs = o || void 0), (n.plantObs = Object.keys(c).length ? c : {}), delete draftState.orphanedEdits[draftState.editingEntryId], resetDraft());
+
+        // For any plant whose flush action was on the previous version of
+        // this entry but isn't on the new one, recompute flushedAt by
+        // scanning every entry. The result is either the next-most-recent
+        // flush (if one exists in another entry) or null. Plants that are
+        // still flushed in this entry keep the date set in the forEach
+        // above and are skipped here.
+        for (const plant of previouslyFlushedPlants) {
+            if (currentlyFlushedPlants.has(plant)) continue;
+            const pt = e.plantTypes[plant];
+            if (!pt || typeof pt !== "object") continue;
+            let latest = null;
+            for (const entry of e.entries) {
+                if (!entry || !Array.isArray(entry.actions)) continue;
+                for (const action of entry.actions) {
+                    if (!action || action.type !== ACTION_TYPE.FLUSH) continue;
+                    const plants = action.plants || [];
+                    if (plants.length === 0 || plants.includes(plant)) {
+                        const dt = entry.dt.slice(0, 10);
+                        if (!latest || dt > latest) latest = dt;
+                        break;
+                    }
+                }
+            }
+            pt.flushedAt = latest;
+        }
     } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: o || void 0, plantObs: Object.keys(c).length ? c : {} });
     (persist(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats());
 }
