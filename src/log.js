@@ -36,7 +36,7 @@ function renderEntriesForCycle(e) {
             s += renderEntryCard(t, e);
         }),
         null !== a && (s += "</div>"),
-        s || '<div class="empty" style="padding:20px 0">No entries yet. <span data-action="showTab" data-id="add" style="color:var(--green);cursor:pointer;text-decoration:underline">Change that.</span></div>'
+        s || '<div class="empty" style="padding:20px 0">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging or <span data-action="triggerImport" style="color:var(--green);cursor:pointer;text-decoration:underline">Import</span> an existing log.</div>'
     );
 }
 function hasPlantObs(e) {
@@ -55,7 +55,7 @@ function renderEntryCard(e, t) {
     let r = "";
     return (
         o.length &&
-            ((r += "<div>"),
+        ((r += "<div>"),
             o.forEach(([e, s]) => {
                 let a = "";
                 ((t?.nutrients || []).forEach((e) => {
@@ -72,9 +72,9 @@ function renderEntryCard(e, t) {
         e.actions && e.actions.length && (r += '<div class="action-list">' + e.actions.map((e) => `<span class="action-tag">${formatAction(e)}</span>`).join("") + "</div>"),
         e.obs && (r += `<div class="obs-box">${escapeHtml(e.obs)}</div>`),
         hasPlantObs(e) &&
-            Object.entries(e.plantObs).forEach(([e, t]) => {
-                t && t.trim() && (r += `<div class="obs-box obs-box-plant"><div class="obs-box-plant-name">${escapeHtml(e)}</div><div>${escapeHtml(t)}</div></div>`);
-            }),
+        Object.entries(e.plantObs).forEach(([e, t]) => {
+            t && t.trim() && (r += `<div class="obs-box obs-box-plant"><div class="obs-box-plant-name">${escapeHtml(e)}</div><div>${escapeHtml(t)}</div></div>`);
+        }),
         `\n    <div class="entry-card" id="card-${escapeHtml(e.id)}">\n      <div class="entry-header" data-action="toggleEntry" data-id="${escapeHtml(e.id)}">\n        <div>\n          <div class="entry-date">${fmtDate(e.dt)}</div>\n          <div class="entry-time">${fmtTime(e.dt)}</div>\n        </div>\n        <div style="display:flex;gap:6px">\n            <button class="settings-btn blue-btn" data-action="editEntry" data-id="${escapeHtml(e.id)}" title="Edit entry">${icon.edit()}</button>\n            <button class="settings-btn red-btn" data-action="deleteEntry" data-id="${escapeHtml(e.id)}" title="Delete entry">${icon.trash()}</button>\n            <button class="settings-btn green-btn" data-action="duplicateEntry" data-id="${escapeHtml(e.id)}" title="Duplicate entry">${icon.duplicate()}</button>\n        </div>\n        <span style="display:flex;align-items:center;gap:6px;margin-left:auto">${d}</span>\n        ${icon.chevronDown({ id: `chev-${escapeHtml(e.id)}` })}\n      </div>\n      <div class="entry-body" id="body-${escapeHtml(e.id)}">${r}</div>\n    </div>`
     );
 }
@@ -106,6 +106,6 @@ export function renderLog(e, t) {
             </div>
         </div>`;
     });
-    a || (a = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging.</div>');
+    a || (a = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging or <span data-action="triggerImport" style="color:var(--green);cursor:pointer;text-decoration:underline">Import</span> an existing log.</div>');
     document.getElementById("log-list").innerHTML = a;
 }
