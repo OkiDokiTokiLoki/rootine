@@ -10,13 +10,13 @@ import { PLANT_TYPE, ACTION_TYPE, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STO
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
-const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT, ACTION_TYPE.FLUSH].map((t) => {
-        const e = document.getElementById(`ck-${t}`),
-            n = document.getElementById(`${t}-plants`),
-            a = n?.querySelector(".plant-picker-list");
-        if (!e || !n || !a) throw new Error(`Missing DOM for picker action "${t}"`);
-        return { id: t, checkbox: e, pickerWrap: n, pickerList: a, items: () => a.querySelectorAll(`.${t}-plant`), allCheckbox: () => a.querySelector(`.${t}-plant-all`), checked: () => [...a.querySelectorAll(`.${t}-plant:checked`)].map((t) => t.value) };
-    }),
+const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT, ACTION_TYPE.FLUSH, ACTION_TYPE.HARVEST].map((t) => {
+    const e = document.getElementById(`ck-${t}`),
+        n = document.getElementById(`${t}-plants`),
+        a = n?.querySelector(".plant-picker-list");
+    if (!e || !n || !a) throw new Error(`Missing DOM for picker action "${t}"`);
+    return { id: t, checkbox: e, pickerWrap: n, pickerList: a, items: () => a.querySelectorAll(`.${t}-plant`), allCheckbox: () => a.querySelector(`.${t}-plant-all`), checked: () => [...a.querySelectorAll(`.${t}-plant:checked`)].map((t) => t.value) };
+}),
     collapsedCycles = loadCollapsedCycles(),
     collapsedWeeks = loadCollapsedWeeks(),
     collapsedObs = loadCollapsedObs();
@@ -247,10 +247,10 @@ function mergeDrafts(t, e) {
                 (Object.entries(t.nutrients || {}).forEach(([t, e]) => {
                     null != e && (n.nutrients[t] = e);
                 }),
-                Object.entries(t.concentrations || {}).forEach(([t, e]) => {
-                    null != e && (n.concentrations[t] = e);
-                }),
-                null != t.water && (n.water = t.water));
+                    Object.entries(t.concentrations || {}).forEach(([t, e]) => {
+                        null != e && (n.concentrations[t] = e);
+                    }),
+                    null != t.water && (n.water = t.water));
         };
     (a(t), a(e));
     const l = {};
@@ -364,18 +364,18 @@ function renderAddForm() {
                         l.has(e) || delete t.nutrients[e];
                     }),
                     t.concentrations &&
-                        Object.keys(t.concentrations).forEach((e) => {
-                            l.has(e) || delete t.concentrations[e];
-                        }));
+                    Object.keys(t.concentrations).forEach((e) => {
+                        l.has(e) || delete t.concentrations[e];
+                    }));
             });
         }
     (renderNutrientFormRows(),
         n.length > 0
             ? (writeNutrientInputs(mergeDrafts(nutrientDrafts[NUTRIENT_TAB_ALL] || {}, nutrientDrafts[nutrientActiveTab] || {})),
-              a &&
-                  a.querySelectorAll(".nutrient-tab").forEach((t) => {
-                      t.classList.toggle("active", t.dataset.tab === nutrientActiveTab);
-                  }))
+                a &&
+                a.querySelectorAll(".nutrient-tab").forEach((t) => {
+                    t.classList.toggle("active", t.dataset.tab === nutrientActiveTab);
+                }))
             : writeNutrientInputs({}),
         PICKER_ACTIONS.forEach((a) => {
             const { id: l, pickerList: i, items: s } = a;
@@ -451,8 +451,8 @@ function renderPlantObsList() {
         (0 === draftState.pendingPlantObs.length
             ? (t.innerHTML = "")
             : (t.innerHTML = draftState.pendingPlantObs
-                  .map(
-                      (t, e) => `
+                .map(
+                    (t, e) => `
         <div class="plant-obs-item${draftState.editingPlantObsIndex === e ? " editing" : ""}">
             <div class="plant-obs-item-header">
                 <span class="plant-obs-item-name">${escapeHtml(t.plant)}</span>
@@ -467,9 +467,9 @@ function renderPlantObsList() {
             </div>
             <div class="plant-obs-item-text">${escapeHtml(t.text)}</div>
         </div>`
-                  )
-                  .join("")),
-        populatePlantObsTabs());
+                )
+                .join("")),
+            populatePlantObsTabs());
 }
 function addPlantObs() {
     const t = document.getElementById("plant-obs-input");
@@ -512,11 +512,11 @@ function editPlantObs(t) {
 function showTab(t, e = !1) {
     if (
         ("add" !== ["log", "add", "stats"].find((t) => document.getElementById("section-" + t).classList.contains("active")) || "add" === t || draftState.editingEntryId || resetAddForm(),
-        ["log", "add", "stats"].forEach((e) => {
-            (document.getElementById("section-" + e).classList.toggle("active", e === t), document.getElementById("tab-" + e).classList.toggle("active", e === t));
-        }),
-        "add" !== t || draftState.editingEntryId || (resetAddForm(), setDateDefault()),
-        e)
+            ["log", "add", "stats"].forEach((e) => {
+                (document.getElementById("section-" + e).classList.toggle("active", e === t), document.getElementById("tab-" + e).classList.toggle("active", e === t));
+            }),
+            "add" !== t || draftState.editingEntryId || (resetAddForm(), setDateDefault()),
+            e)
     ) {
         const t = document.getElementById("content");
         (t && (t.scrollTop = 0), window.scrollTo(0, 0));
@@ -537,9 +537,9 @@ function resetAddForm() {
     const e = document.getElementById("nutrient-water");
     (e && ((e.value = ""), delete e.dataset.previewHadValue),
         document.querySelector("#nutrient-plant-tabs .nutrient-tab") &&
-            document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
-                t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
-            }),
+        document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
+            t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
+        }),
         PICKER_ACTIONS.forEach((t) => {
             ((t.checkbox.checked = !1),
                 (t.pickerWrap.style.display = "none"),
@@ -664,13 +664,13 @@ function renderPlantList() {
     const n = t.plants || [];
     0 !== n.length
         ? ((e.innerHTML = ""),
-          n.forEach((n, a) => {
-              const l = getPlantMeta(t, n).type,
-                  i = PLANT_TYPE.AUTO === l ? "plant-type-badge auto" : "plant-type-badge photo",
-                  s = PLANT_TYPE.AUTO === l ? "AUTO" : "PHOTO",
-                  d = document.createElement("div");
-              ((d.className = "plant-manage-row"),
-                  (d.innerHTML = `
+            n.forEach((n, a) => {
+                const l = getPlantMeta(t, n).type,
+                    i = PLANT_TYPE.AUTO === l ? "plant-type-badge auto" : "plant-type-badge photo",
+                    s = PLANT_TYPE.AUTO === l ? "AUTO" : "PHOTO",
+                    d = document.createElement("div");
+                ((d.className = "plant-manage-row"),
+                    (d.innerHTML = `
             <div class="plant-manage-name">${escapeHtml(n)}</div>
             <div class="plant-manage-actions">
                 <span class="${i}" data-action="togglePlantType" data-index="${a}" title="Click to toggle type">${s}</span>
@@ -679,8 +679,8 @@ function renderPlantList() {
                 <button class="settings-btn favourite-btn ${isFavourite(t, n) ? "is-favourite" : ""}" data-action="toggleFavourite" data-index="${a}" aria-label="${isFavourite(t, n) ? "Unfavourite" : "Favourite"} ${escapeHtml(n)}" title="${isFavourite(t, n) ? "Unfavourite" : "Favourite"}">${icon.star({ size: 18, filled: isFavourite(t, n) })}</button>
             </div>
         `),
-                  e.appendChild(d));
-          }))
+                    e.appendChild(d));
+            }))
         : (e.innerHTML = '<div class="plant-empty">No plants yet. Add some to start logging.</div>');
 }
 function openAddPlant() {
@@ -760,7 +760,7 @@ function confirmRenamePlant() {
             cycles.forEach((t) => {
                 t.id === e.id &&
                     t.entries.forEach((t) => {
-                        (t.plants && t.plants[l] && ((t.plants[s] = t.plants[l]), delete t.plants[l]), Array.isArray(t.actions) && (t.actions = t.actions.map((t) => (t && (ACTION_TYPE.LST === t.type || ACTION_TYPE.DEF === t.type || ACTION_TYPE.REPOT === t.type || ACTION_TYPE.FLUSH === t.type) && Array.isArray(t.plants) ? { ...t, plants: t.plants.map((t) => (t === l ? s : t)) } : t))), t.plantObs && "object" == typeof t.plantObs && t.plantObs[l] && ((t.plantObs[s] = t.plantObs[l]), delete t.plantObs[l]));
+                        (t.plants && t.plants[l] && ((t.plants[s] = t.plants[l]), delete t.plants[l]), Array.isArray(t.actions) && (t.actions = t.actions.map((t) => (t && (ACTION_TYPE.LST === t.type || ACTION_TYPE.DEF === t.type || ACTION_TYPE.REPOT === t.type || ACTION_TYPE.FLUSH === t.type || ACTION_TYPE.HARVEST === t.type) && Array.isArray(t.plants) ? { ...t, plants: t.plants.map((t) => (t === l ? s : t)) } : t))), t.plantObs && "object" == typeof t.plantObs && t.plantObs[l] && ((t.plantObs[s] = t.plantObs[l]), delete t.plantObs[l]));
                     });
             }));
     }
@@ -859,11 +859,11 @@ function renderNutrientList() {
     const n = cycleNutrients();
     0 !== n.length
         ? ((e.innerHTML = ""),
-          n.forEach((n, a) => {
-              const l = getNutrientColor(t, n.name),
-                  i = document.createElement("div");
-              ((i.className = "plant-manage-row"),
-                  (i.innerHTML = `
+            n.forEach((n, a) => {
+                const l = getNutrientColor(t, n.name),
+                    i = document.createElement("div");
+                ((i.className = "plant-manage-row"),
+                    (i.innerHTML = `
             <div class="plant-manage-name">
                 <span class="nutrient-swatch nutrient-swatch--${l}"></span>
                 <span>${escapeHtml(n.name)}</span>
@@ -881,8 +881,8 @@ function renderNutrientList() {
                 </button>
             </div>
         `),
-                  e.appendChild(i));
-          }))
+                    e.appendChild(i));
+            }))
         : (e.innerHTML = '<div class="plant-empty">No nutrients yet. Add some to start logging feeds.</div>');
 }
 function openAddNutrient() {
@@ -933,19 +933,19 @@ function confirmRenameNutrient() {
                 ? i.some((t) => t.name === e)
                     ? alert("A nutrient with that name already exists.")
                     : ((i[n].name = e),
-                      l.entries.forEach((t) => {
-                          Object.values(t.plants || {}).forEach((t) => {
-                              (t.nutrients && null != t.nutrients[a] && ((t.nutrients[e] = t.nutrients[a]), delete t.nutrients[a]), t.concentrations && null != t.concentrations[a] && ((t.concentrations[e] = t.concentrations[a]), delete t.concentrations[a]));
-                          });
-                      }),
-                      nutrientDrafts[a] && ((nutrientDrafts[e] = nutrientDrafts[a]), delete nutrientDrafts[a]),
-                      persist(),
-                      hideModal("rename-nutrient-modal"),
-                      renderNutrientList(),
-                      renderAddForm(),
-                      invalidateLog(),
-                      invalidateStats(),
-                      invalidateModal())
+                        l.entries.forEach((t) => {
+                            Object.values(t.plants || {}).forEach((t) => {
+                                (t.nutrients && null != t.nutrients[a] && ((t.nutrients[e] = t.nutrients[a]), delete t.nutrients[a]), t.concentrations && null != t.concentrations[a] && ((t.concentrations[e] = t.concentrations[a]), delete t.concentrations[a]));
+                            });
+                        }),
+                        nutrientDrafts[a] && ((nutrientDrafts[e] = nutrientDrafts[a]), delete nutrientDrafts[a]),
+                        persist(),
+                        hideModal("rename-nutrient-modal"),
+                        renderNutrientList(),
+                        renderAddForm(),
+                        invalidateLog(),
+                        invalidateStats(),
+                        invalidateModal())
                 : alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.")
             : hideModal("rename-nutrient-modal")
         : alert("Nutrient name can't be empty.");
@@ -959,14 +959,14 @@ function deleteNutrient(t) {
         n = e[t].name;
     confirm(`Remove nutrient "${n}"? Existing entries that reference it keep their data, but it will no longer appear in the Add form or stats.`) &&
         (e.splice(t, 1),
-        Object.values(nutrientDrafts).forEach((t) => {
-            (t.nutrients && delete t.nutrients[n], t.concentrations && delete t.concentrations[n]);
-        }),
-        persist(),
-        renderNutrientList(),
-        renderAddForm(),
-        invalidateLog(),
-        invalidateStats());
+            Object.values(nutrientDrafts).forEach((t) => {
+                (t.nutrients && delete t.nutrients[n], t.concentrations && delete t.concentrations[n]);
+            }),
+            persist(),
+            renderNutrientList(),
+            renderAddForm(),
+            invalidateLog(),
+            invalidateStats());
 }
 function editNutrientDefault(t) {
     if (!activeCycle()) return;
@@ -1092,14 +1092,14 @@ function renderPlantDetailModal(t, e) {
             0 === s.notes.length
                 ? '<div class="plant-detail-empty">No plant-specific notes yet.</div>'
                 : s.notes
-                      .map(
-                          (t) => `
+                    .map(
+                        (t) => `
         <div class="plant-detail-obs">
             <div class="plant-detail-obs-date">${u(t.dt)}</div>
             <div class="plant-detail-obs-text">${escapeHtml(t.text)}</div>
         </div>`
-                      )
-                      .join(""),
+                    )
+                    .join(""),
         y = i
             .map((e) => {
                 const n = s.nutrients[e.name] || { totalCups: 0, activeMlPerL: null, activeSinceDt: null, feedsAtCurrent: 0 },
@@ -1135,15 +1135,14 @@ function renderPlantDetailModal(t, e) {
             <div class="plant-detail-label">Type</div>
             <div class="plant-detail-value">${a}</div>
         </div>
-                ${
-                    cycleShowsYield(t)
-                        ? `
+                ${cycleShowsYield(t)
+                ? `
         <div class="plant-detail-row">
             <div class="plant-detail-label">Yield</div>
             <div class="plant-detail-value nutrient--amber">${s.totalYieldGrams.toFixed(1)} g</div>
         </div>`
-                        : ""
-                }
+                : ""
+            }
         <div class="plant-detail-row">
             <div class="plant-detail-label">Repotted</div>
             <div class="plant-detail-value">${p}</div>
@@ -1158,8 +1157,7 @@ function renderPlantDetailModal(t, e) {
         </div>
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
-        ${
-            i.length > 0
+        ${i.length > 0
                 ? `
            <div class="plant-detail-row">
                <div class="plant-detail-label">Total water</div>
@@ -1171,7 +1169,7 @@ function renderPlantDetailModal(t, e) {
                <div class="plant-detail-value nutrient--water">${s.totalWaterCups.toFixed(1)} cup${1 === s.totalWaterCups ? "" : "s"}</div>
            </div>
            <div class="plant-detail-empty">No nutrients configured for this cycle. Add some via the Nutrient Manager to track per-nutrient stats.</div>`
-        }
+            }
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Recount</div>
         <div class="plant-detail-row">
@@ -1335,11 +1333,11 @@ function editEntry(t) {
         const a = e.actions || [];
         if (
             ((document.getElementById("ck-light").checked = a.some((t) => t && ACTION_TYPE.LIGHT === t.type)),
-            PICKER_ACTIONS.forEach((t) => {
-                const e = a.find((e) => e && e.type === t.id);
-                ((t.checkbox.checked = !!e), e ? (restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, ACTION_TYPE.LST === t.id), (t.pickerWrap.style.display = "block")) : (t.pickerWrap.style.display = "none"));
-            }),
-            document.getElementById("ck-light").checked)
+                PICKER_ACTIONS.forEach((t) => {
+                    const e = a.find((e) => e && e.type === t.id);
+                    ((t.checkbox.checked = !!e), e ? (restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, ACTION_TYPE.LST === t.id), (t.pickerWrap.style.display = "block")) : (t.pickerWrap.style.display = "none"));
+                }),
+                document.getElementById("ck-light").checked)
         ) {
             const t = a.find((t) => ACTION_TYPE.LIGHT === t.type);
             (t && ((document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-dist").value = t.dist || "")), (document.getElementById("light-inputs").style.display = "block"));
@@ -1352,10 +1350,10 @@ function editEntry(t) {
             n && n.trim() && i.push({ plant: t, text: n });
         }),
             e.plantObs &&
-                "object" == typeof e.plantObs &&
-                Object.entries(e.plantObs).forEach(([t, e]) => {
-                    !l.has(t) && e && e.trim() && i.push({ plant: t, text: e });
-                }),
+            "object" == typeof e.plantObs &&
+            Object.entries(e.plantObs).forEach(([t, e]) => {
+                !l.has(t) && e && e.trim() && i.push({ plant: t, text: e });
+            }),
             resetPlantNotesDraft(i));
     }
 
@@ -1389,6 +1387,9 @@ function saveEntry() {
         (PICKER_ACTIONS.forEach((n) => {
             if (!n.checkbox.checked) return;
             const l = n.checked();
+            // The first two clauses are side effects on the cycle/plant
+            // metadata; harvest has none, so it falls through and just
+            // records the action like the other generic ones.
             if ((a.push({ type: n.id, plants: l }), ACTION_TYPE.REPOT === n.id)) {
                 const dt = t.slice(0, 10);
                 l.forEach((p) => {
@@ -1402,7 +1403,7 @@ function saveEntry() {
                 });
             }
         }),
-        document.getElementById("ck-light").checked)
+            document.getElementById("ck-light").checked)
     ) {
         const t = document.getElementById("light-lux").value,
             e = document.getElementById("light-dist").value,
@@ -1740,5 +1741,5 @@ function persist() {
     }));
 try {
     (invalidateLog(), invalidateStats(), updateLightStatus());
-} catch (t) {}
+} catch (t) { }
 registerServiceWorker();

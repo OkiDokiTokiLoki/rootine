@@ -18,7 +18,7 @@ export const CYCLE_STAGE_LABEL = { grow: "Grow", harvest: "Harvest", complete: "
 
 // Action types stored on each entry's `actions` array. The render layer
 // (formatAction in utils.js) maps these back to display strings.
-export const ACTION_TYPE = { LST: "lst", DEF: "def", REPOT: "repot", FLUSH: "flush", LIGHT: "light" };
+export const ACTION_TYPE = { LST: "lst", DEF: "def", REPOT: "repot", FLUSH: "flush", LIGHT: "light", HARVEST: "harvest" };
 
 // Plant types. "auto" = autoflower, "photo" = photoperiod. These are the
 // canonical lowercase forms; migration code in storage.js also writes them

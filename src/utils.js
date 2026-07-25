@@ -50,8 +50,9 @@ export function formatAction(t) {
         case "lst":
         case "def":
         case "repot":
-        case "flush": {
-            const e = { lst: "LST", def: "Defoliate", repot: "Repot / transplant", flush: "Flushed" }[t.type];
+        case "flush":
+        case "harvest": {
+            const e = { lst: "LST", def: "Defoliate", repot: "Repot / transplant", flush: "Flushed", harvest: "Harvested" }[t.type];
             return t.plants && 0 !== t.plants.length ? `${e} (${t.plants.map(escapeHtml).join(", ")})` : `${e} (All plants)`;
         }
         case "light": {
