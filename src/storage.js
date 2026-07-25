@@ -262,6 +262,29 @@ const migrations = [
             }
             return { ...c, plantTypes: newPlantTypes };
         }),
+
+    // v11 → v12: each plantTypes entry gets a harvestedAt field that tracks
+    // when the plant was last harvested (most recent "Harvested" action
+    // applied to it). While harvestedAt is set, the Plant Detail modal
+    // shows a "Harvested" row and freezes the "Age (since repot)" counter
+    // at the harvestedAt date — the plant isn't getting any older. If the
+    // user later removes the harvest action, saveEntry recomputes
+    // harvestedAt from the remaining entries (mirroring the flush
+    // recompute loop), so this is fully reversible. Existing plants start
+    // with harvestedAt unset, so the age counter keeps ticking.
+    (cycles) =>
+        cycles.map((c) => {
+            if (!c.plantTypes || typeof c.plantTypes !== "object") return c;
+            const newPlantTypes = {};
+            for (const [name, data] of Object.entries(c.plantTypes)) {
+                if (data && typeof data === "object" && !Array.isArray(data)) {
+                    newPlantTypes[name] = { harvestedAt: null, ...data };
+                } else {
+                    newPlantTypes[name] = data;
+                }
+            }
+            return { ...c, plantTypes: newPlantTypes };
+        }),
 ];
 
 const STORAGE_VERSION = migrations.length + 1;

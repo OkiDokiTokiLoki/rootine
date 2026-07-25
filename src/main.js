@@ -587,8 +587,8 @@ function latestLoggedLight(t) {
     if (!t) return null;
     const e = [...(t.entries || [])].sort((t, e) => new Date(e.dt) - new Date(t.dt));
     for (const t of e) {
-        const e = (t.actions || []).find((t) => t && ACTION_TYPE.LIGHT === t.type);
-        if (e) return { parsed: parseLightAction(e), dt: t.dt };
+        const a = (t.actions || []).find((t) => t && ACTION_TYPE.LIGHT === t.type);
+        if (a) return { parsed: parseLightAction(a), dt: t.dt };
     }
     return null;
 }
@@ -699,7 +699,7 @@ function togglePlantType(t) {
     (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {});
     const n = e.plants[t],
         a = getPlantMeta(e, n).type;
-    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate, flushedAt: null }), (e.plantTypes[n].type = PLANT_TYPE.AUTO === a ? PLANT_TYPE.PHOTO : PLANT_TYPE.AUTO), persist(), renderPlantList(), invalidateStats(), invalidateModal());
+    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate, flushedAt: null, harvestedAt: null }), (e.plantTypes[n].type = PLANT_TYPE.AUTO === a ? PLANT_TYPE.PHOTO : PLANT_TYPE.AUTO), persist(), renderPlantList(), invalidateStats(), invalidateModal());
 }
 function toggleFavourite(t) {
     const e = activeCycle();
@@ -714,7 +714,7 @@ function confirmAddPlant() {
     if (!t) return void alert("Enter a plant name.");
     if (!PLANT_NAME_RE.test(t)) return void alert("Plant name can only contain letters, numbers, spaces, dashes, and underscores.");
     const e = activeCycle();
-    e ? (Array.isArray(e.plants) || (e.plants = []), e.plants.includes(t) ? alert("A plant with that name already exists.") : (e.plants.push(t), (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {}), (e.plantTypes[t] = draftState.pendingAddPlantType), persist(), hideModal("add-plant-modal"), renderPlantList(), renderAddForm(), invalidateStats())) : alert("No active cycle.");
+    e ? (Array.isArray(e.plants) || (e.plants = []), e.plants.includes(t) ? alert("A plant with that name already exists.") : (e.plants.push(t), (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {}), (e.plantTypes[t] = { type: draftState.pendingAddPlantType, repottedAt: e.startDate, flushedAt: null, harvestedAt: null }), persist(), hideModal("add-plant-modal"), renderPlantList(), renderAddForm(), invalidateStats())) : alert("No active cycle.");
 }
 function cancelAddPlant() {
     hideModal("add-plant-modal");
@@ -764,7 +764,7 @@ function confirmRenamePlant() {
                     });
             }));
     }
-    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate, flushedAt: e.plantTypes[s]?.flushedAt || null }), persist(), hideModal("rename-plant-modal"), renderPlantList(), renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
+    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate, flushedAt: e.plantTypes[s]?.flushedAt || null, harvestedAt: e.plantTypes[s]?.harvestedAt || null }), persist(), hideModal("rename-plant-modal"), renderPlantList(), renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
 }
 function cancelRenamePlant() {
     hideModal("rename-plant-modal");
@@ -1012,7 +1012,7 @@ function computePlantDetail(t, e) {
     const n = getPlantMeta(t, e),
         a = t.nutrients || [],
         l = Date.now() - 6048e5,
-        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: t.defaultConcentration ?? null }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, lastFlushDt: null, firstFlushDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, flushCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, flushCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [], flushActions: [] };
+        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: t.defaultConcentration ?? null }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, lastFlushDt: null, firstFlushDt: null, lastHarvestDt: null, firstHarvestDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, flushCount: 0, harvestCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, flushCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [], flushActions: [], harvestActions: [] };
     for (const n of t.entries || []) {
         const t = new Date(n.dt),
             a = t.getTime() >= l;
@@ -1031,7 +1031,7 @@ function computePlantDetail(t, e) {
             const e = s.water || 0;
             (e && ((i.totalWaterCups += e), i.waterCount++, a && i.waterCountLast7d++, (!i.lastWaterDt || t > new Date(i.lastWaterDt)) && (i.lastWaterDt = n.dt)), Object.values(s.nutrients || {}).some((t) => t && t > 0) && (i.feedCount++, a && i.feedCountLast7d++, (!i.lastFeedDt || t > new Date(i.lastFeedDt)) && (i.lastFeedDt = n.dt)));
         }
-        for (const t of n.actions || []) t && (ACTION_TYPE.LST === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.lstCount++, a && i.lstCountLast7d++, i.lstActions.push(n.dt)) : ACTION_TYPE.DEF === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.defCount++, a && i.defCountLast7d++, i.defActions.push(n.dt)) : ACTION_TYPE.FLUSH === t.type && ((t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.flushCount++, a && i.flushCountLast7d++, i.flushActions.push(n.dt))));
+        for (const t of n.actions || []) t && (ACTION_TYPE.LST === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.lstCount++, a && i.lstCountLast7d++, i.lstActions.push(n.dt)) : ACTION_TYPE.DEF === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.defCount++, a && i.defCountLast7d++, i.defActions.push(n.dt)) : ACTION_TYPE.FLUSH === t.type ? (t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.flushCount++, a && i.flushCountLast7d++, i.flushActions.push(n.dt)) : ACTION_TYPE.HARVEST === t.type && ((t.plants && 0 !== t.plants.length && !t.plants.includes(e)) || (i.harvestCount++, i.harvestActions.push(n.dt))));
     }
     for (const t of i.lstActions) (!i.lastLstDt || new Date(t) > new Date(i.lastLstDt)) && (i.lastLstDt = t);
     for (const t of i.defActions) (!i.lastDefDt || new Date(t) > new Date(i.lastDefDt)) && (i.lastDefDt = t);
@@ -1039,7 +1039,11 @@ function computePlantDetail(t, e) {
         if (!i.lastFlushDt || new Date(t) > new Date(i.lastFlushDt)) i.lastFlushDt = t;
         if (!i.firstFlushDt || new Date(t) < new Date(i.firstFlushDt)) i.firstFlushDt = t;
     }
-    (delete i.lstActions, delete i.defActions, delete i.flushActions, i.notes.sort((t, e) => new Date(e.dt) - new Date(t.dt)));
+    for (const t of i.harvestActions) {
+        if (!i.lastHarvestDt || new Date(t) > new Date(i.lastHarvestDt)) i.lastHarvestDt = t;
+        if (!i.firstHarvestDt || new Date(t) < new Date(i.firstHarvestDt)) i.firstHarvestDt = t;
+    }
+    (delete i.lstActions, delete i.defActions, delete i.flushActions, delete i.harvestActions, i.notes.sort((t, e) => new Date(e.dt) - new Date(t.dt)));
     const s = [...(t.entries || [])].sort((t, e) => new Date(t.dt) - new Date(e.dt));
     for (const [t, n] of Object.entries(i.nutrients)) {
         let a = 0;
@@ -1052,10 +1056,19 @@ function computePlantDetail(t, e) {
         }
         ((n.feedsAtCurrent = a), delete n._runningMlPerL);
     }
-    const d = n.repottedAt || t.startDate,
-        c = Math.max(0, new Date() - new Date(d));
-    return ((i.repottedAt = d), (i.flushedAt = n.flushedAt), (i.daysSinceRepot = Math.floor(c / 864e5)), (i.weeksSinceRepot = Math.max(1, Math.ceil(i.daysSinceRepot / 7))), i);
+    const d = n.repottedAt || t.startDate;
+    // Anchor the "age since repot" calculation at the harvest date
+    // when the plant is harvested (so it stops climbing), otherwise
+    // at "now" (the original behavior). Math.max(0, …) guards the
+    // rare case where the harvest date predates the repot date —
+    // e.g. legacy data or a user who re-harvested a re-potted plant
+    // — so the counter never goes negative.
+    const harvestedAt = n.harvestedAt;
+    const ageNow = harvestedAt || new Date().toISOString().slice(0, 10);
+    const c = Math.max(0, new Date(ageNow) - new Date(d));
+    return ((i.repottedAt = d), (i.harvestedAt = harvestedAt), (i.daysSinceRepot = Math.floor(c / 864e5)), (i.weeksSinceRepot = Math.max(1, Math.ceil(i.daysSinceRepot / 7))), i);
 }
+
 function renderPlantDetailModal(t, e) {
     const n = getPlantMeta(t, e).type,
         a = PLANT_TYPE.AUTO === n ? "AUTO" : "PHOTO",
@@ -1088,6 +1101,7 @@ function renderPlantDetailModal(t, e) {
         },
         p = new Date(s.repottedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
         flushDate = s.flushedAt ? new Date(s.flushedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—",
+        harvestDate = s.harvestedAt ? new Date(s.harvestedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—",
         m =
             0 === s.notes.length
                 ? '<div class="plant-detail-empty">No plant-specific notes yet.</div>'
@@ -1150,6 +1164,10 @@ function renderPlantDetailModal(t, e) {
         <div class="plant-detail-row">
             <div class="plant-detail-label">Flushed</div>
             <div class="plant-detail-value">${u(s.firstFlushDt, !0)}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Harvested</div>
+            <div class="plant-detail-value">${harvestDate}</div>
         </div>
         <div class="plant-detail-row">
             <div class="plant-detail-label">Age (since repot)</div>
@@ -1359,6 +1377,62 @@ function editEntry(t) {
 
     showTab("add");
 }
+function recomputeActionMetadata(cycle) {
+    // Walk every plant in the cycle and set flushedAt / harvestedAt to
+    // the most recent date whose action applies to the plant, or null
+    // if no remaining entry has a matching action. Called from
+    // deleteEntry so removing the only harvest (or flush) entry fully
+    // reverts the per-plant metadata and the frozen age counter
+    // resumes ticking.
+    //
+    // Iterate every plant that has metadata set, not just plants that
+    // appear in remaining actions — otherwise a plant whose only
+    // harvest (or flush) entry just got deleted would never be visited
+    // and its stale harvestedAt / flushedAt would linger.
+    if (!cycle || !Array.isArray(cycle.entries)) return;
+    const tracked = new Set();
+    if (cycle.plantTypes && typeof cycle.plantTypes === "object") {
+        for (const [name, pt] of Object.entries(cycle.plantTypes)) {
+            if (!pt || typeof pt !== "object") continue;
+            if (pt.harvestedAt != null || pt.flushedAt != null) tracked.add(name);
+        }
+    }
+    for (const entry of cycle.entries) {
+        for (const action of entry.actions || []) {
+            if (!action) continue;
+            if (action.type === ACTION_TYPE.FLUSH || action.type === ACTION_TYPE.HARVEST) {
+                (action.plants || []).forEach((p) => tracked.add(p));
+            }
+        }
+    }
+    for (const plant of tracked) {
+        const pt = cycle.plantTypes && cycle.plantTypes[plant];
+        if (!pt || typeof pt !== "object") continue;
+        let latestFlush = null;
+        let latestHarvest = null;
+        for (const entry of cycle.entries) {
+            if (!entry || !Array.isArray(entry.actions)) continue;
+            for (const action of entry.actions) {
+                if (!action) continue;
+                if (action.type === ACTION_TYPE.FLUSH) {
+                    const plants = action.plants || [];
+                    if (plants.length === 0 || plants.includes(plant)) {
+                        const dt = entry.dt.slice(0, 10);
+                        if (!latestFlush || dt > latestFlush) latestFlush = dt;
+                    }
+                } else if (action.type === ACTION_TYPE.HARVEST) {
+                    const plants = action.plants || [];
+                    if (plants.length === 0 || plants.includes(plant)) {
+                        const dt = entry.dt.slice(0, 10);
+                        if (!latestHarvest || dt > latestHarvest) latestHarvest = dt;
+                    }
+                }
+            }
+        }
+        pt.flushedAt = latestFlush;
+        pt.harvestedAt = latestHarvest;
+    }
+}
 function saveEntry() {
     const t = document.getElementById("new-dt").value;
     if (!t) return void alert("Set a date and time.");
@@ -1366,40 +1440,54 @@ function saveEntry() {
         n = [...cyclePlants()].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1)),
         a = [];
 
-    // Capture which plants the entry being edited previously flushed so
-    // we can recompute their flushedAt if the action is being removed.
-    // New entries (no editingEntryId) start with an empty set, so the
-    // recompute loop below is a no-op for them.
+    // Capture previous state for any action whose removal would force
+    // metadata to be recomputed. The flush recompute loop below uses
+    // this to set `flushedAt` to the next-most-recent flush entry (or
+    // null) when the only-or-most-recent flush action is removed by
+    // editing the entry. The same pattern is used for harvest below.
+    // New entries (no editingEntryId) start with empty sets, so both
+    // recompute loops are no-ops.
     const previouslyFlushedPlants = new Set();
+    const previouslyHarvestedPlants = new Set();
     if (draftState.editingEntryId) {
         const prevEntry = e.entries.find((entry) => entry.id === draftState.editingEntryId);
         if (prevEntry && Array.isArray(prevEntry.actions)) {
             for (const action of prevEntry.actions) {
-                if (action && action.type === ACTION_TYPE.FLUSH) {
+                if (!action) continue;
+                if (action.type === ACTION_TYPE.FLUSH) {
                     (action.plants || []).forEach((p) => previouslyFlushedPlants.add(p));
+                } else if (action.type === ACTION_TYPE.HARVEST) {
+                    (action.plants || []).forEach((p) => previouslyHarvestedPlants.add(p));
                 }
             }
         }
     }
     const currentlyFlushedPlants = new Set();
+    const currentlyHarvestedPlants = new Set();
 
     if (
         (PICKER_ACTIONS.forEach((n) => {
             if (!n.checkbox.checked) return;
             const l = n.checked();
-            // The first two clauses are side effects on the cycle/plant
-            // metadata; harvest has none, so it falls through and just
-            // records the action like the other generic ones.
+            // The first three clauses are side effects on the
+            // cycle/plant metadata; harvest has none of those, so it
+            // just records the action like the other generic ones.
             if ((a.push({ type: n.id, plants: l }), ACTION_TYPE.REPOT === n.id)) {
                 const dt = t.slice(0, 10);
                 l.forEach((p) => {
-                    e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].repottedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: dt });
+                    e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].repottedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: dt, flushedAt: null, harvestedAt: null });
                 });
             } else if (ACTION_TYPE.FLUSH === n.id) {
                 const dt = t.slice(0, 10);
                 l.forEach((p) => {
-                    e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].flushedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: e.startDate, flushedAt: dt });
+                    e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].flushedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: e.startDate, flushedAt: dt, harvestedAt: null });
                     currentlyFlushedPlants.add(p);
+                });
+            } else if (ACTION_TYPE.HARVEST === n.id) {
+                const dt = t.slice(0, 10);
+                l.forEach((p) => {
+                    e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].harvestedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: e.startDate, flushedAt: null, harvestedAt: dt });
+                    currentlyHarvestedPlants.add(p);
                 });
             }
         }),
@@ -1462,12 +1550,12 @@ function saveEntry() {
         }
         ((n.dt = t), (n.plants = i), (n.actions = a), (n.obs = o || void 0), (n.plantObs = Object.keys(c).length ? c : {}), delete draftState.orphanedEdits[draftState.editingEntryId], resetDraft());
 
-        // For any plant whose flush action was on the previous version of
-        // this entry but isn't on the new one, recompute flushedAt by
-        // scanning every entry. The result is either the next-most-recent
-        // flush (if one exists in another entry) or null. Plants that are
-        // still flushed in this entry keep the date set in the forEach
-        // above and are skipped here.
+        // For any plant whose flush action was on the previous version
+        // of this entry but isn't on the new one, recompute flushedAt
+        // by scanning every entry. The result is either the next-most-
+        // recent flush (if one exists in another entry) or null.
+        // Plants that are still flushed in this entry keep the date
+        // set in the forEach above and are skipped here.
         for (const plant of previouslyFlushedPlants) {
             if (currentlyFlushedPlants.has(plant)) continue;
             const pt = e.plantTypes[plant];
@@ -1486,6 +1574,34 @@ function saveEntry() {
                 }
             }
             pt.flushedAt = latest;
+        }
+
+        // Mirror the flush recompute for harvest. If the user edits an
+        // entry and unchecks the harvest box, harvestedAt is
+        // recomputed from the most recent remaining harvest action
+        // across all entries, or cleared if there are none. This
+        // makes the "Harvested" row and the frozen age counter fully
+        // reversible: removing the harvest action brings the plant
+        // back to a "never harvested" state with the age counter
+        // ticking again.
+        for (const plant of previouslyHarvestedPlants) {
+            if (currentlyHarvestedPlants.has(plant)) continue;
+            const pt = e.plantTypes[plant];
+            if (!pt || typeof pt !== "object") continue;
+            let latest = null;
+            for (const entry of e.entries) {
+                if (!entry || !Array.isArray(entry.actions)) continue;
+                for (const action of entry.actions) {
+                    if (!action || action.type !== ACTION_TYPE.HARVEST) continue;
+                    const plants = action.plants || [];
+                    if (plants.length === 0 || plants.includes(plant)) {
+                        const dt = entry.dt.slice(0, 10);
+                        if (!latest || dt > latest) latest = dt;
+                        break;
+                    }
+                }
+            }
+            pt.harvestedAt = latest;
         }
     } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: o || void 0, plantObs: Object.keys(c).length ? c : {} });
     (persist(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats());
@@ -1508,6 +1624,13 @@ function deleteEntry(t) {
         const idx = c.entries.findIndex((e) => e.id === t);
         if (idx >= 0) {
             c.entries.splice(idx, 1);
+            // The deleted entry may have been the only one carrying a
+            // flush or harvest action for some plants, leaving their
+            // `flushedAt`/`harvestedAt` pointing at a date that no
+            // longer has a matching action. Recompute those fields
+            // from the remaining entries so the plant detail modal
+            // and the frozen age counter stay consistent.
+            recomputeActionMetadata(c);
             break;
         }
     }

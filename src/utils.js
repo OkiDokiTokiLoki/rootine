@@ -38,7 +38,12 @@ export function escapeHtml(t) {
 }
 export function getPlantMeta(t, e) {
     const n = t?.plantTypes?.[e];
-    return n ? ("string" == typeof n ? { type: n, repottedAt: t?.startDate, flushedAt: null } : { type: n.type || "auto", repottedAt: n.repottedAt || t?.startDate, flushedAt: n.flushedAt || null }) : { type: "auto", repottedAt: t?.startDate, flushedAt: null };
+    // Read shape: { type, repottedAt, flushedAt, harvestedAt }.
+    // Older data may have only some of these; fall back to the cycle's
+    // startDate for repottedAt and null for the rest so the rest of the
+    // code can read .type/.repottedAt/.flushedAt/.harvestedAt without
+    // undefined checks.
+    return n ? ("string" == typeof n ? { type: n, repottedAt: t?.startDate, flushedAt: null, harvestedAt: null } : { type: n.type || "auto", repottedAt: n.repottedAt || t?.startDate, flushedAt: n.flushedAt || null, harvestedAt: n.harvestedAt || null }) : { type: "auto", repottedAt: t?.startDate, flushedAt: null, harvestedAt: null };
 }
 export function fmtQty(t) {
     return t % 1 == 0 ? String(t) : t.toFixed(1);
