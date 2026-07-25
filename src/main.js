@@ -313,12 +313,6 @@ function renderNutrientFormRows() {
     });
 }
 function availablePlantsForAddForm() {
-    // Plants that have been harvested (plantTypes[name].harvestedAt set)
-    // are excluded from the nutrients/water section and from the
-    // LST/defoliate/repot/flush/harvest action pickers, since a
-    // harvested plant isn't getting fed or worked on anymore. Plant
-    // notes still list every plant, so drying/curing notes can be
-    // added for harvested plants from the same Add form.
     const t = activeCycle();
     if (!t) return [];
     return (t.plants || []).filter((p) => {
@@ -330,11 +324,6 @@ function renderAddForm() {
     const t = cyclePlants(),
         e = activeCycle(),
         n = 0 === t.length ? [] : [...t].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1));
-    // Plants still in rotation: full list minus any plant whose
-    // `harvestedAt` is set. Used for nutrients/water tabs and the
-    // action plant pickers (LST/defoliate/repot/flush/harvest).
-    // Plant notes keep using the full `n` so harvested plants can
-    // still receive drying/curing notes.
     const a = availablePlantsForAddForm(),
         l = 0 === a.length ? [] : [...a].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1));
     syncHeaderActions();
@@ -357,9 +346,6 @@ function renderAddForm() {
             const t = document.createElement("div");
             ((t.className = "nutrient-empty"), (t.innerHTML = 'No plants yet. Tap <span data-action="openPlantManager" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.'), i.appendChild(t));
         } else if (0 === l.length) {
-            // Cycle has plants but every plant has been harvested —
-            // the nutrients/water form has nothing to act on. Plant
-            // notes below still works for drying/curing entries.
             const t = document.createElement("div");
             ((t.className = "nutrient-empty"), (t.innerHTML = 'All plants in this cycle have been harvested. You can still add plant notes below.'), i.appendChild(t));
         } else {
@@ -405,11 +391,6 @@ function renderAddForm() {
                 }))
             : writeNutrientInputs({}),
         PICKER_ACTIONS.forEach((a) => {
-            // The action id (a string like "harvest") is destructured
-            // as `actionId` so it doesn't shadow the outer `l` — the
-            // outer `l` is the filtered plant list (no harvested
-            // plants) and is what we iterate when building the
-            // per-plant checkboxes.
             const { id: actionId, pickerList: i, items: s } = a;
             if (((i.innerHTML = ""), 0 === l.length)) return void (i.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available — all plants have been harvested.</div>');
             const d = document.createElement("label");
@@ -1089,12 +1070,6 @@ function computePlantDetail(t, e) {
         ((n.feedsAtCurrent = a), delete n._runningMlPerL);
     }
     const d = n.repottedAt || t.startDate;
-    // Anchor the "age since repot" calculation at the harvest date
-    // when the plant is harvested (so it stops climbing), otherwise
-    // at "now" (the original behavior). Math.max(0, …) guards the
-    // rare case where the harvest date predates the repot date —
-    // e.g. legacy data or a user who re-harvested a re-potted plant
-    // — so the counter never goes negative.
     const harvestedAt = n.harvestedAt;
     const ageNow = harvestedAt || new Date().toISOString().slice(0, 10);
     const c = Math.max(0, new Date(ageNow) - new Date(d));
@@ -1410,17 +1385,7 @@ function editEntry(t) {
     showTab("add");
 }
 function recomputeActionMetadata(cycle) {
-    // Walk every plant in the cycle and set flushedAt / harvestedAt to
-    // the most recent date whose action applies to the plant, or null
-    // if no remaining entry has a matching action. Called from
-    // deleteEntry so removing the only harvest (or flush) entry fully
-    // reverts the per-plant metadata and the frozen age counter
-    // resumes ticking.
     //
-    // Iterate every plant that has metadata set, not just plants that
-    // appear in remaining actions — otherwise a plant whose only
-    // harvest (or flush) entry just got deleted would never be visited
-    // and its stale harvestedAt / flushedAt would linger.
     if (!cycle || !Array.isArray(cycle.entries)) return;
     const tracked = new Set();
     if (cycle.plantTypes && typeof cycle.plantTypes === "object") {
@@ -1472,13 +1437,6 @@ function saveEntry() {
         n = [...cyclePlants()].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1)),
         a = [];
 
-    // Capture previous state for any action whose removal would force
-    // metadata to be recomputed. The flush recompute loop below uses
-    // this to set `flushedAt` to the next-most-recent flush entry (or
-    // null) when the only-or-most-recent flush action is removed by
-    // editing the entry. The same pattern is used for harvest below.
-    // New entries (no editingEntryId) start with empty sets, so both
-    // recompute loops are no-ops.
     const previouslyFlushedPlants = new Set();
     const previouslyHarvestedPlants = new Set();
     if (draftState.editingEntryId) {
@@ -1501,9 +1459,6 @@ function saveEntry() {
         (PICKER_ACTIONS.forEach((n) => {
             if (!n.checkbox.checked) return;
             const l = n.checked();
-            // The first three clauses are side effects on the
-            // cycle/plant metadata; harvest has none of those, so it
-            // just records the action like the other generic ones.
             if ((a.push({ type: n.id, plants: l }), ACTION_TYPE.REPOT === n.id)) {
                 const dt = t.slice(0, 10);
                 l.forEach((p) => {
@@ -1582,12 +1537,6 @@ function saveEntry() {
         }
         ((n.dt = t), (n.plants = i), (n.actions = a), (n.obs = o || void 0), (n.plantObs = Object.keys(c).length ? c : {}), delete draftState.orphanedEdits[draftState.editingEntryId], resetDraft());
 
-        // For any plant whose flush action was on the previous version
-        // of this entry but isn't on the new one, recompute flushedAt
-        // by scanning every entry. The result is either the next-most-
-        // recent flush (if one exists in another entry) or null.
-        // Plants that are still flushed in this entry keep the date
-        // set in the forEach above and are skipped here.
         for (const plant of previouslyFlushedPlants) {
             if (currentlyFlushedPlants.has(plant)) continue;
             const pt = e.plantTypes[plant];
@@ -1608,14 +1557,6 @@ function saveEntry() {
             pt.flushedAt = latest;
         }
 
-        // Mirror the flush recompute for harvest. If the user edits an
-        // entry and unchecks the harvest box, harvestedAt is
-        // recomputed from the most recent remaining harvest action
-        // across all entries, or cleared if there are none. This
-        // makes the "Harvested" row and the frozen age counter fully
-        // reversible: removing the harvest action brings the plant
-        // back to a "never harvested" state with the age counter
-        // ticking again.
         for (const plant of previouslyHarvestedPlants) {
             if (currentlyHarvestedPlants.has(plant)) continue;
             const pt = e.plantTypes[plant];
@@ -1656,12 +1597,6 @@ function deleteEntry(t) {
         const idx = c.entries.findIndex((e) => e.id === t);
         if (idx >= 0) {
             c.entries.splice(idx, 1);
-            // The deleted entry may have been the only one carrying a
-            // flush or harvest action for some plants, leaving their
-            // `flushedAt`/`harvestedAt` pointing at a date that no
-            // longer has a matching action. Recompute those fields
-            // from the remaining entries so the plant detail modal
-            // and the frozen age counter stay consistent.
             recomputeActionMetadata(c);
             break;
         }
@@ -1669,9 +1604,6 @@ function deleteEntry(t) {
     persist();
     invalidateLog();
     invalidateStats();
-    // Re-render the Add form so a plant whose harvest action was
-    // just removed reappears in the nutrients/water tabs and the
-    // action pickers without the user needing a hard refresh.
     renderAddForm();
 }
 function deleteCycle(t) {

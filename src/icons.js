@@ -12,9 +12,6 @@ const VIEW_BOX = "0 -960 960 960",
         waterDropLine: "M480-100q-133 0-226.5-92T160-416q0-63 24.5-120.5T254-638l226-222 226 222q45 44 69.5 101.5T800-416q0 132-93.5 224T480-100ZM240-416h480q0-47-18-89.5T650-580L480-748 310-580q-34 32-52 74.5T240-416Z",
     };
 
-// Rendered SVGs are cached by (icon-name, size, style) so repeated
-// calls don't rebuild the same string. First render builds; every
-// subsequent call with the same key is a Map.get.
 const cache = new Map();
 function cached(key, build) {
     let s = cache.get(key);
@@ -25,9 +22,6 @@ function cached(key, build) {
     return s;
 }
 
-// Build a Material-icon SVG string. Uses inline styles for width/height
-// (not bare attributes) so host CSS can't override the size, and
-// fill="currentColor" so the icon picks up the host element's text color.
 function materialSvg(name, opts = {}) {
     const path = PATHS[name];
     if (!path) return "";
