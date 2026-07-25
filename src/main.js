@@ -312,10 +312,31 @@ function renderNutrientFormRows() {
             t.appendChild(l));
     });
 }
+function availablePlantsForAddForm() {
+    // Plants that have been harvested (plantTypes[name].harvestedAt set)
+    // are excluded from the nutrients/water section and from the
+    // LST/defoliate/repot/flush/harvest action pickers, since a
+    // harvested plant isn't getting fed or worked on anymore. Plant
+    // notes still list every plant, so drying/curing notes can be
+    // added for harvested plants from the same Add form.
+    const t = activeCycle();
+    if (!t) return [];
+    return (t.plants || []).filter((p) => {
+        const pt = t.plantTypes && t.plantTypes[p];
+        return !(pt && typeof pt === "object" && pt.harvestedAt != null);
+    });
+}
 function renderAddForm() {
     const t = cyclePlants(),
         e = activeCycle(),
         n = 0 === t.length ? [] : [...t].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1));
+    // Plants still in rotation: full list minus any plant whose
+    // `harvestedAt` is set. Used for nutrients/water tabs and the
+    // action plant pickers (LST/defoliate/repot/flush/harvest).
+    // Plant notes keep using the full `n` so harvested plants can
+    // still receive drying/curing notes.
+    const a = availablePlantsForAddForm(),
+        l = 0 === a.length ? [] : [...a].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1));
     syncHeaderActions();
 
     const yieldSection = document.getElementById("yield-section");
@@ -327,64 +348,75 @@ function renderAddForm() {
         }
     }
 
-    const a = document.getElementById("nutrient-plant-tabs");
-    if (a)
-        if (((a.innerHTML = ""), 0 === cycles.length)) {
+    const i = document.getElementById("nutrient-plant-tabs");
+    if (i)
+        if (((i.innerHTML = ""), 0 === cycles.length)) {
             const t = document.createElement("div");
-            ((t.className = "nutrient-empty"), (t.innerHTML = 'No grow cycles yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">+ New Cycle</span> to start one.'), a.appendChild(t));
+            ((t.className = "nutrient-empty"), (t.innerHTML = 'No grow cycles yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">+ New Cycle</span> to start one.'), i.appendChild(t));
         } else if (0 === n.length) {
             const t = document.createElement("div");
-            ((t.className = "nutrient-empty"), (t.innerHTML = 'No plants yet. Tap <span data-action="openPlantManager" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.'), a.appendChild(t));
+            ((t.className = "nutrient-empty"), (t.innerHTML = 'No plants yet. Tap <span data-action="openPlantManager" style="color:var(--green);cursor:pointer;text-decoration:underline">+ Plants</span> to add some.'), i.appendChild(t));
+        } else if (0 === l.length) {
+            // Cycle has plants but every plant has been harvested —
+            // the nutrients/water form has nothing to act on. Plant
+            // notes below still works for drying/curing entries.
+            const t = document.createElement("div");
+            ((t.className = "nutrient-empty"), (t.innerHTML = 'All plants in this cycle have been harvested. You can still add plant notes below.'), i.appendChild(t));
         } else {
             const t = document.createElement("button");
             ((t.type = "button"),
                 (t.className = "nutrient-tab"),
                 (t.dataset.tab = NUTRIENT_TAB_ALL),
                 (t.textContent = "All"),
-                a.appendChild(t),
-                n.forEach((t) => {
+                i.appendChild(t),
+                l.forEach((t) => {
                     const n = document.createElement("button");
                     if (((n.type = "button"), (n.className = "nutrient-tab"), (n.dataset.tab = t), isFavourite(e, t))) {
                         const t = document.createElement("span");
                         ((t.innerHTML = icon.star({ size: 10, marginRight: 4, verticalAlign: -1 })), n.appendChild(t.firstChild));
                     }
-                    (n.appendChild(document.createTextNode(t)), a.appendChild(n));
+                    (n.appendChild(document.createTextNode(t)), i.appendChild(n));
                 }),
-                a.querySelectorAll(".nutrient-tab").forEach((t) => {
+                i.querySelectorAll(".nutrient-tab").forEach((t) => {
                     t.addEventListener("click", () => setNutrientTab(t.dataset.tab));
                 }),
-                NUTRIENT_TAB_ALL === nutrientActiveTab || n.includes(nutrientActiveTab) || (delete nutrientDrafts[nutrientActiveTab], (nutrientActiveTab = NUTRIENT_TAB_ALL)),
+                NUTRIENT_TAB_ALL === nutrientActiveTab || l.includes(nutrientActiveTab) || (delete nutrientDrafts[nutrientActiveTab], (nutrientActiveTab = NUTRIENT_TAB_ALL)),
                 Object.keys(nutrientDrafts).forEach((t) => {
-                    NUTRIENT_TAB_ALL === t || n.includes(t) || delete nutrientDrafts[t];
+                    NUTRIENT_TAB_ALL === t || l.includes(t) || delete nutrientDrafts[t];
                 }));
-            const l = new Set((e?.nutrients || []).map((t) => t.name));
+            const c = new Set((e?.nutrients || []).map((t) => t.name));
             Object.values(nutrientDrafts).forEach((t) => {
                 (t.nutrients &&
                     Object.keys(t.nutrients).forEach((e) => {
-                        l.has(e) || delete t.nutrients[e];
+                        c.has(e) || delete t.nutrients[e];
                     }),
                     t.concentrations &&
                     Object.keys(t.concentrations).forEach((e) => {
-                        l.has(e) || delete t.concentrations[e];
+                        c.has(e) || delete t.concentrations[e];
                     }));
             });
         }
     (renderNutrientFormRows(),
-        n.length > 0
+        l.length > 0
             ? (writeNutrientInputs(mergeDrafts(nutrientDrafts[NUTRIENT_TAB_ALL] || {}, nutrientDrafts[nutrientActiveTab] || {})),
-                a &&
-                a.querySelectorAll(".nutrient-tab").forEach((t) => {
+                i &&
+                i.querySelectorAll(".nutrient-tab").forEach((t) => {
                     t.classList.toggle("active", t.dataset.tab === nutrientActiveTab);
                 }))
             : writeNutrientInputs({}),
         PICKER_ACTIONS.forEach((a) => {
-            const { id: l, pickerList: i, items: s } = a;
-            if (((i.innerHTML = ""), 0 === t.length)) return void (i.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available.</div>');
+            // The action id (a string like "harvest") is destructured
+            // as `actionId` so it doesn't shadow the outer `l` — the
+            // outer `l` is the filtered plant list (no harvested
+            // plants) and is what we iterate when building the
+            // per-plant checkboxes.
+            const { id: actionId, pickerList: i, items: s } = a;
+            if (((i.innerHTML = ""), 0 === l.length)) return void (i.innerHTML = '<div style="font-size: 12px; color: var(--muted)">No plants available — all plants have been harvested.</div>');
             const d = document.createElement("label");
             d.className = "plant-picker-opt plant-picker-opt-all";
             const c = document.createElement("input");
             ((c.type = "checkbox"),
-                (c.className = `${l}-plant-all`),
+                (c.className = `${actionId}-plant-all`),
                 (c.onchange = () => {
                     s().forEach((t) => {
                         ((t.checked = c.checked), (t.disabled = c.checked));
@@ -393,11 +425,11 @@ function renderAddForm() {
                 d.appendChild(c),
                 d.appendChild(document.createTextNode("All plants")),
                 i.appendChild(d),
-                n.forEach((t) => {
+                l.forEach((t) => {
                     const n = document.createElement("label");
                     n.className = "plant-picker-opt";
                     const a = document.createElement("input");
-                    if (((a.type = "checkbox"), (a.className = `${l}-plant`), (a.value = t), n.appendChild(a), n.appendChild(document.createTextNode(t)), isFavourite(e, t))) {
+                    if (((a.type = "checkbox"), (a.className = `${actionId}-plant`), (a.value = t), n.appendChild(a), n.appendChild(document.createTextNode(t)), isFavourite(e, t))) {
                         const t = document.createElement("span");
                         ((t.innerHTML = icon.star({ size: 11, marginRight: 0, verticalAlign: -1 })), n.appendChild(t.firstChild));
                     }
@@ -1604,7 +1636,7 @@ function saveEntry() {
             pt.harvestedAt = latest;
         }
     } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: o || void 0, plantObs: Object.keys(c).length ? c : {} });
-    (persist(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats());
+    (persist(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats(), renderAddForm());
 }
 function cancelEdit() {
     (resetDraft(), resetAddForm(), setDateDefault(), showTab("log", !0));
@@ -1637,6 +1669,10 @@ function deleteEntry(t) {
     persist();
     invalidateLog();
     invalidateStats();
+    // Re-render the Add form so a plant whose harvest action was
+    // just removed reappears in the nutrients/water tabs and the
+    // action pickers without the user needing a hard refresh.
+    renderAddForm();
 }
 function deleteCycle(t) {
     const e = cycles.find((e) => e.id === t);
