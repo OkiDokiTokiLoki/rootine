@@ -48,9 +48,10 @@ function renderEntryCard(e, t) {
         n = s.some((p) => p && p.water > 0),
         l = (e.actions || []).some((a) => a && a.type === "light"),
         c = (e.actions || []).some((a) => a && (a.type === "lst" || a.type === "def" || a.type === "repot" || a.type === "flush" || a.type === "harvest")),
+        h = (e.actions || []).some((a) => a && a.type === "harvest"),
         i = !!e.obs?.trim() || hasPlantObs(e);
     let d = "";
-    (a && (d += `<span class="badge badge-feed"    style="margin-left:0">${icon.badgeFeed()}</span>`), n && (d += `<span class="badge badge-water"   style="margin-left:0">${icon.badgeWater()}</span>`), l && (d += `<span class="badge badge-light"   style="margin-left:0;">${icon.badgeLight()}</span>`), c && (d += `<span class="badge badge-scissors" style="margin-left:0;">${icon.badgeScissors()}</span>`), i && (d += `<span class="badge badge-note"    style="margin-left:0;" title="Has observation">${icon.badgeNote()}</span>`));
+    (a && (d += `<span class="badge badge-feed"    style="margin-left:0">${icon.badgeFeed()}</span>`), n && (d += `<span class="badge badge-water"   style="margin-left:0">${icon.badgeWater()}</span>`), l && (d += `<span class="badge badge-light"   style="margin-left:0;">${icon.badgeLight()}</span>`), c && (d += `<span class="badge badge-scissors" style="margin-left:0;${h ? "background:var(--amber-bg);color:var(--amber)" : ""}">${icon.badgeScissors()}</span>`), i && (d += `<span class="badge badge-note"    style="margin-left:0;" title="Has observation">${icon.badgeNote()}</span>`));
     const o = Object.entries(e.plants || {});
     let r = "";
     return (
