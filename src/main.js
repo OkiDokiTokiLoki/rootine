@@ -1490,26 +1490,31 @@ function saveEntry() {
     ((l.nutrients && Object.keys(l.nutrients).length > 0) || (l.concentrations && Object.keys(l.concentrations).length > 0) || null != l.water) && (nutrientDrafts[nutrientActiveTab] = mergeDrafts(nutrientDrafts[nutrientActiveTab], l));
     const i = {},
         s = nutrientDrafts[NUTRIENT_TAB_ALL] || {};
+    const availablePlants = availablePlantsForAddForm();
     n.forEach((t) => {
         const e = nutrientDrafts[t] || {},
             n = {},
             a = {};
-        (Object.entries(s.nutrients || {}).forEach(([t, e]) => {
-            null != e && (a[t] = e);
-        }),
-            Object.entries(e.nutrients || {}).forEach(([t, e]) => {
+        if (availablePlants.includes(t)) {
+            Object.entries(s.nutrients || {}).forEach(([t, e]) => {
                 null != e && (a[t] = e);
-            }),
-            Object.keys(a).length > 0 && (n.nutrients = a));
+            });
+        }
+        Object.entries(e.nutrients || {}).forEach(([t, e]) => {
+            null != e && (a[t] = e);
+        });
+        Object.keys(a).length > 0 && (n.nutrients = a);
         const l = {};
-        (Object.entries(s.concentrations || {}).forEach(([t, e]) => {
-            null != e && (l[t] = e);
-        }),
-            Object.entries(e.concentrations || {}).forEach(([t, e]) => {
+        if (availablePlants.includes(t)) {
+            Object.entries(s.concentrations || {}).forEach(([t, e]) => {
                 null != e && (l[t] = e);
-            }),
-            Object.keys(l).length > 0 && (n.concentrations = l));
-        const d = null != e.water ? e.water : s.water;
+            });
+        }
+        Object.entries(e.concentrations || {}).forEach(([t, e]) => {
+            null != e && (l[t] = e);
+        });
+        Object.keys(l).length > 0 && (n.concentrations = l);
+        const d = availablePlants.includes(t) ? (null != e.water ? e.water : s.water) : e.water;
         const y = s.yieldGrams || 0;
         y && (i.totalYieldGrams += y);
         (null != d && "" !== d && (n.water = d), Object.keys(n).length > 0 && (i[t] = n));
