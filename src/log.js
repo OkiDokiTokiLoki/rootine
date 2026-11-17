@@ -3,9 +3,62 @@ import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
 let collapsedWeeks, collapsedCycles;
-export function initLog(e, t) {
-    ((collapsedWeeks = e), (collapsedCycles = t));
+let logCycleId = null,
+    lastActiveId = null,
+    lastCycles = [];
+export function getLogCycleId() {
+    return logCycleId;
 }
+function selectLogCycle(id) {
+    const changed = logCycleId !== id;
+    logCycleId = id;
+    document.dispatchEvent(new CustomEvent("rootine:log-cycle-changed", { detail: { cycleId: id } }));
+    if (changed) {
+        const content = document.getElementById("content");
+        if (content) content.scrollTop = 0;
+        window.scrollTo(0, 0);
+    }
+}
+export function initLog(e, t) {
+    ((collapsedWeeks = e), (collapsedCycles = t), initLogSwipe());
+}
+function sortedCycles() {
+    return [...lastCycles].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+}
+function initLogSwipe() {
+    const list = document.getElementById("log-list");
+    if (!list) return;
+    let x0 = 0,
+        y0 = 0,
+        tracking = false;
+    list.addEventListener(
+        "touchstart",
+        (ev) => {
+            tracking = ev.touches.length === 1 && !ev.target.closest(".stats-cycle-toggle--scroll");
+            if (tracking) ((x0 = ev.touches[0].clientX), (y0 = ev.touches[0].clientY));
+        },
+        { passive: true }
+    );
+    list.addEventListener(
+        "touchend",
+        (ev) => {
+            if (!tracking) return;
+            tracking = false;
+            const dx = ev.changedTouches[0].clientX - x0,
+                dy = ev.changedTouches[0].clientY - y0;
+            if (Math.abs(dx) < 60 || Math.abs(dx) < 2 * Math.abs(dy)) return;
+            const order = sortedCycles(),
+                i = order.findIndex((c) => c.id === logCycleId),
+                next = order[i + (dx < 0 ? 1 : -1)];
+            next && (selectLogCycle(next.id), renderLog(lastCycles, lastActiveId));
+        },
+        { passive: true }
+    );
+}
+on("selectLogCycle", "click", (e) => {
+    selectLogCycle(e.dataset.id);
+    renderLog(lastCycles, lastActiveId);
+});
 function weekKey(e, t) {
     return `${e}--${t}`;
 }
@@ -79,34 +132,28 @@ function renderEntryCard(e, t) {
         `\n    <div class="entry-card" id="card-${escapeHtml(e.id)}">\n      <div class="entry-header" data-action="toggleEntry" data-id="${escapeHtml(e.id)}">\n        <div>\n          <div class="entry-date">${fmtDate(e.dt)}</div>\n          <div class="entry-time">${fmtTime(e.dt)}</div>\n        </div>\n        <div style="display:flex;gap:6px">\n            <button class="settings-btn blue-btn" data-action="editEntry" data-id="${escapeHtml(e.id)}" title="Edit entry">${icon.edit()}</button>\n            <button class="settings-btn red-btn" data-action="deleteEntry" data-id="${escapeHtml(e.id)}" title="Delete entry">${icon.trash()}</button>\n            <button class="settings-btn green-btn" data-action="duplicateEntry" data-id="${escapeHtml(e.id)}" title="Duplicate entry">${icon.duplicate()}</button>\n        </div>\n        <span style="display:flex;align-items:center;gap:6px;margin-left:auto">${d}</span>\n        ${icon.chevronDown({ id: `chev-${escapeHtml(e.id)}` })}\n      </div>\n      <div class="entry-body" id="body-${escapeHtml(e.id)}">${r}</div>\n    </div>`
     );
 }
-export function renderLog(e, t) {
-    const s = [...e].sort((e, t) => new Date(t.startDate) - new Date(e.startDate));
-    let a = "";
-    s.forEach((e, s) => {
-        const n = e.id === t,
-            l = collapsedCycles.has(e.id),
-            c = new Date(e.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-            stageBadge = cycleStageBadge(e.stage),
-            activeDot = n ? '<span class="cycle-active-dot" title="Active cycle"></span>' : "",
-            i = `${activeDot}${stageBadge}`;
-        a += `
-        <div class="cycle-block">
-            <div class="cycle-header${l ? " collapsed" : ""}"
-                 id="cycle-header-${escapeHtml(e.id)}"
-                 data-action="toggleCycle"
-                 data-id="${escapeHtml(e.id)}">
-                <div class="cycle-header-left">
-                    <span class="cycle-name">${escapeHtml(e.name)}</span>
-                    <span class="cycle-start">${c}</span>
-        ${i}
-        </div>
-                ${icon.chevronDown({ className: "week-chevron" + (l ? " collapsed" : ""), id: `cycle-chev-${escapeHtml(e.id)}`, style: "width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" })}
-            </div>
-            <div class="cycle-entries${l ? " collapsed" : ""}" id="cycle-entries-${escapeHtml(e.id)}">
-                ${renderEntriesForCycle(e)}
-            </div>
-        </div>`;
-    });
-    a || (a = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging or <span data-action="triggerImport" style="color:var(--green);cursor:pointer;text-decoration:underline">Import</span> an existing log.</div>');
-    document.getElementById("log-list").innerHTML = a;
+export function renderLog(cycles, activeId) {
+    lastCycles = cycles;
+    if (activeId !== lastActiveId) ((logCycleId = activeId), (lastActiveId = activeId));
+    if (!cycles.some((c) => c.id === logCycleId)) logCycleId = cycles.some((c) => c.id === activeId) ? activeId : cycles[0]?.id ?? null;
+    const list = document.getElementById("log-list"),
+        prevStrip = list.querySelector(".stats-cycle-toggle--scroll"),
+        prevScroll = prevStrip ? prevStrip.scrollLeft : 0,
+        sorted = sortedCycles(),
+        selected = sorted.find((c) => c.id === logCycleId);
+    if (!selected) {
+        list.innerHTML = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging or <span data-action="triggerImport" style="color:var(--green);cursor:pointer;text-decoration:underline">Import</span> an existing log.</div>';
+        return;
+    }
+    const tabs = sorted
+        .map((c) => `<button class="stats-cycle-btn log-cycle-tab${c.id === selected.id ? " active" : ""}" data-action="selectLogCycle" data-id="${escapeHtml(c.id)}">${escapeHtml(c.name)}</button>`)
+        .join(""),
+        start = new Date(selected.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    list.innerHTML = `
+        <div class="stats-cycle-toggle stats-cycle-toggle--scroll log-cycle-tabs">${tabs}</div>
+        <div class="log-cycle-info"><span class="cycle-start">Started ${start}</span>${cycleStageBadge(selected.stage)}</div>
+        <div class="log-cycle-entries">${renderEntriesForCycle(selected)}</div>`;
+    const strip = list.querySelector(".stats-cycle-toggle--scroll");
+    strip.scrollLeft = prevScroll;
+    strip.querySelector(".stats-cycle-btn.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }

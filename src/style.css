@@ -1168,6 +1168,15 @@ textarea.form-input {
 .stats-cycle-toggle--scroll .stats-cycle-btn {
     flex-shrink: 0;
 }
+.log-cycle-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -14px -16px 14px;
+    padding: 14px 16px 10px;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+}
 .stats-cycle-btn {
     padding: 6px 14px;
     font-size: 12px;
@@ -1930,4 +1939,15 @@ textarea.form-input {
     font-size: 12px;
     color: var(--muted);
     line-height: 1.4;
+}
+.log-cycle-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.log-cycle-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
 }
