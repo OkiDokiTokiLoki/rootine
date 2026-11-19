@@ -30,22 +30,25 @@ function computeStatsOnce(t) {
     const e = { feeds: 0, waters: 0, issues: 0, days: new Set(), obsEntries: [] },
         s = [];
     return (
-        t.forEach((t) => {
-            const a = {};
-            ((t.entries || []).forEach((t) => {
-                const s = Object.values(t.plants || {}),
-                    n = s.some((t) => t && t.nutrients && Object.values(t.nutrients).some((t) => t && t > 0)),
-                    l = s.some((t) => t && t.water > 0);
+        t.forEach((cycle) => {
+            const a = {},
+                allowedPlants = new Set(cycle.plants || []),
+                allowedNutrients = new Set((cycle.nutrients || []).map((nutrient) => nutrient.name));
+            ((cycle.entries || []).forEach((entry) => {
+                const plantEntries = Object.entries(entry.plants || {}).filter(([plant]) => allowedPlants.has(plant)),
+                    plantData = plantEntries.map(([, data]) => data),
+                    n = plantData.some((data) => data?.nutrients && Object.entries(data.nutrients).some(([name, value]) => allowedNutrients.has(name) && value > 0)),
+                    l = plantData.some((data) => data && data.water > 0);
                 (n && e.feeds++,
                     l && e.waters++,
-                    t.obs && (e.issues++, e.obsEntries.push(t)),
-                    e.days.add(t.dt.slice(0, 10)),
-                    Object.entries(t.plants || {}).forEach(([t, e]) => {
-                        const s = a[t] || (a[t] = { nutrients: {}, water: 0 });
-                        (Object.entries(e.nutrients || {}).forEach(([t, e]) => {
-                            s.nutrients[t] = (s.nutrients[t] || 0) + (e || 0);
+                    entry.obs && (e.issues++, e.obsEntries.push(entry)),
+                    e.days.add(entry.dt.slice(0, 10)),
+                    plantEntries.forEach(([plant, data]) => {
+                        const totals = a[plant] || (a[plant] = { nutrients: {}, water: 0 });
+                        (Object.entries(data.nutrients || {}).forEach(([name, value]) => {
+                            if (allowedNutrients.has(name)) totals.nutrients[name] = (totals.nutrients[name] || 0) + (value || 0);
                         }),
-                            (s.water += e.water || 0));
+                            (totals.water += data.water || 0));
                     }));
             }),
                 s.push({ plantTotals: a }));
@@ -77,7 +80,7 @@ function renderPlantCard(t, e, s, a, n, l) {
         y = yieldTotal > 0 ? `<span class="nutrient-totals__item nutrient--amber" title="Yield">Y ${fmtQty(yieldTotal)}g</span>` : "",
         r = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${fmtQty(e.water || 0)}</span>`;
     return `
-    <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(t)}">
+    <div class="plant-stat-row plant-stat-row-clickable" data-action="openPlantDetail" data-id="${escapeHtml(t)}" data-cycle-id="${escapeHtml(l?.id || "")}">
         <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
             <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t)}</span>
             ${o}
@@ -91,21 +94,21 @@ function renderPlantCard(t, e, s, a, n, l) {
     </div>`;
 }
 
-on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id));
+on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id, t.dataset.cycleId));
 export function renderStats(t, e) {
     const s = `
     <div class="stats-cycle-toggle${t.length + 1 > 0 ? " stats-cycle-toggle--scroll" : ""}">
       ${t
-          .map(
-              (t) => `
+            .map(
+                (t) => `
         <button
           class="stats-cycle-btn${statsMode === t.id || (STATS_MODE.ACTIVE === statsMode && t.id === e) ? " active" : ""}"
           data-action="setStatsCycle"
           data-id="${escapeHtml(t.id)}"
         >${escapeHtml(t.name)}</button>
       `
-          )
-          .join("")}
+            )
+            .join("")}
       <button class="stats-cycle-btn${STATS_MODE.ALL === statsMode ? " active" : ""}" data-action="setStatsCycle" data-id="${STATS_MODE.ALL}">All cycles</button>
     </div>`;
     let a;
@@ -123,13 +126,12 @@ export function renderStats(t, e) {
         const a = l[s].plantTotals,
             n = t.plants || [],
             o = STATS_MODE.ALL === statsMode,
-            i = t.id === e ? '<span class="cycle-active-badge">Active</span>' : "",
             d = o ? ' style="margin-bottom: 14px"' : "";
-        if (0 === n.length) return ((c += `<div class="stats-cycle-block"${d}>`), o && (c += `<div class="stats-cycle-block-label"><span>${escapeHtml(t.name)}</span>${i}</div>`), (c += '<div style="color:var(--muted);font-size:13px">No plants in this cycle yet.</div>'), void (c += "</div>"));
+        if (0 === n.length) return ((c += `<div class="stats-cycle-block"${d}>`), o && (c += `<div class="stats-cycle-block-label"><span>${escapeHtml(t.name)}</span></div>`), (c += '<div style="color:var(--muted);font-size:13px">No plants in this cycle yet.</div>'), void (c += "</div>"));
         const r = new Set(t.favourites || []),
             p = [...n].sort((t, e) => (r.has(t) ? 0 : 1) - (r.has(e) ? 0 : 1));
         ((c += `<div class="stats-cycle-block"${d}>`),
-            o && (c += `<div class="stats-cycle-block-label"><span>${escapeHtml(t.name)}</span>${i}</div>`),
+            o && (c += `<div class="stats-cycle-block-label"><span>${escapeHtml(t.name)}</span></div>`),
             p.forEach((e) => {
                 const s = getPlantMeta(t, e),
                     n = a[e] || { nutrients: {}, water: 0 },

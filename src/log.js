@@ -62,6 +62,12 @@ on("selectLogCycle", "click", (e) => {
 function weekKey(e, t) {
     return `${e}--${t}`;
 }
+function cycleEffectiveStart(cycle) {
+    const dates = (cycle.entries || [])
+        .map((entry) => new Date(entry.dt))
+        .filter((date) => !Number.isNaN(date.getTime()));
+    return dates.length ? new Date(Math.min(...dates.map((date) => date.getTime()))) : new Date(`${cycle.startDate}T00:00:00`);
+}
 (on("toggleWeek", "click", (e) => toggleWeek(e.dataset.id, Number(e.dataset.week))), on("toggleCycle", "click", (e) => toggleCycle(e.dataset.id)), on("toggleEntry", "click", (e) => toggleEntry(e.dataset.id)));
 export function toggleWeek(e, t) {
     const s = weekKey(e, t);
@@ -74,12 +80,13 @@ export function toggleEntry(e) {
     (document.getElementById("body-" + e).classList.toggle("open"), document.getElementById("chev-" + e).classList.toggle("open"), document.getElementById("card-" + e).classList.toggle("open"));
 }
 function renderEntriesForCycle(e) {
-    const t = [...e.entries].sort((e, t) => new Date(t.dt) - new Date(e.dt));
+    const t = [...e.entries].sort((e, t) => new Date(t.dt) - new Date(e.dt)),
+        effectiveStart = cycleEffectiveStart(e);
     let s = "",
         a = null;
     return (
         t.forEach((t) => {
-            const n = getWeekNum(t.dt, e.startDate),
+            const n = getWeekNum(t.dt, effectiveStart),
                 l = weekKey(e.id, n);
             if (n !== a) {
                 null !== a && (s += "</div>");
@@ -148,7 +155,7 @@ export function renderLog(cycles, activeId) {
     const tabs = sorted
         .map((c) => `<button class="stats-cycle-btn log-cycle-tab${c.id === selected.id ? " active" : ""}" data-action="selectLogCycle" data-id="${escapeHtml(c.id)}">${escapeHtml(c.name)}</button>`)
         .join(""),
-        start = new Date(selected.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+        start = cycleEffectiveStart(selected).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     list.innerHTML = `
         <div class="stats-cycle-toggle stats-cycle-toggle--scroll log-cycle-tabs">${tabs}</div>
         <div class="log-cycle-info"><span class="cycle-start">Started ${start}</span>${cycleStageBadge(selected.stage)}</div>

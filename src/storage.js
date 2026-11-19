@@ -29,13 +29,12 @@ function migrateActionString(a) {
         return { type: "repot", plants: parseLegacyPlantList(m[1]) };
     }
 
-    // Light adjusted (30k lux, 30cm, 18:00–06:00)
+    // Light adjusted (30k lux, 18:00–06:00)
     if ((m = a.match(/^Light adjusted\s*(?:\((.*)\))?\s*$/))) {
-        const out = { type: "light", lux: null, dist: null, start: null, end: null };
+        const out = { type: "light", lux: null, start: null, end: null };
         if (m[1]) {
             m[1].split(", ").forEach((part) => {
                 if (part.includes("lux")) out.lux = part.replace("k lux", "").trim();
-                else if (part.includes("cm")) out.dist = part.replace("cm", "").trim();
                 else if (part.includes("–")) {
                     const [start, end] = part.split("–");
                     out.start = start.trim();
@@ -284,6 +283,64 @@ const migrations = [
                 }
             }
             return { ...c, plantTypes: newPlantTypes };
+        }),
+
+    // v12 → v13: light distance is no longer collected or displayed.
+    // Remove it from cycle defaults and structured light actions while
+    // preserving luminosity and schedule values.
+    (cycles) =>
+        cycles.map((c) => {
+            const lightDefaults = { ...(c.lightDefaults || {}) };
+            delete lightDefaults.dist;
+            const entries = (c.entries || []).map((entry) => ({
+                ...entry,
+                actions: (entry.actions || []).map((action) => {
+                    if (!action || typeof action !== "object" || action.type !== "light") return action;
+                    const cleaned = { ...action };
+                    delete cleaned.dist;
+                    return cleaned;
+                }),
+            }));
+            return { ...c, lightDefaults, entries };
+        }),
+
+    // v13 → v14: cascade prior plant and nutrient removals through stored
+    // entry data so deleted manager items cannot reappear in logs or stats.
+    (cycles) =>
+        cycles.map((c) => {
+            const plants = Array.isArray(c.plants) ? c.plants : [],
+                plantSet = new Set(plants),
+                nutrientSet = new Set((c.nutrients || []).map((nutrient) => nutrient.name)),
+                plantTypes = Object.fromEntries(Object.entries(c.plantTypes || {}).filter(([name]) => plantSet.has(name))),
+                favourites = (c.favourites || []).filter((name) => plantSet.has(name));
+            const entries = (c.entries || [])
+                .map((entry) => {
+                    const entryPlants = {};
+                    Object.entries(entry.plants || {}).forEach(([name, data]) => {
+                        if (!plantSet.has(name)) return;
+                        const cleaned = { ...data },
+                            nutrients = Object.fromEntries(Object.entries(data.nutrients || {}).filter(([nutrient]) => nutrientSet.has(nutrient))),
+                            concentrations = Object.fromEntries(Object.entries(data.concentrations || {}).filter(([nutrient]) => nutrientSet.has(nutrient)));
+                        if (Object.keys(nutrients).length) cleaned.nutrients = nutrients;
+                        else delete cleaned.nutrients;
+                        if (Object.keys(concentrations).length) cleaned.concentrations = concentrations;
+                        else delete cleaned.concentrations;
+                        if (Object.keys(cleaned).length) entryPlants[name] = cleaned;
+                    });
+                    const plantObs = Object.fromEntries(Object.entries(entry.plantObs || {}).filter(([name]) => plantSet.has(name))),
+                        actions = (entry.actions || [])
+                            .map((action) => {
+                                if (!action || !Array.isArray(action.plants) || action.plants.length === 0) return action;
+                                const actionPlants = action.plants.filter((name) => plantSet.has(name));
+                                return actionPlants.length ? { ...action, plants: actionPlants } : null;
+                            })
+                            .filter(Boolean),
+                        cleanedEntry = { ...entry, plants: entryPlants, plantObs, actions };
+                    const meaningful = Object.keys(entryPlants).length || actions.length || String(entry.obs || "").trim() || Object.values(plantObs).some((text) => String(text || "").trim());
+                    return meaningful ? cleanedEntry : null;
+                })
+                .filter(Boolean);
+            return { ...c, plants, plantTypes, favourites, entries };
         }),
 ];
 

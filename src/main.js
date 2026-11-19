@@ -1,8 +1,8 @@
 import "./style.css";
 import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty, cycleStageBadge } from "./utils.js";
-import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, loadCollapsedObs, isValidCyclesShape } from "./storage.js";
+import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, saveCollapsedWeeks, loadCollapsedObs, isValidCyclesShape } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry, getLogCycleId } from "./log.js";
-import { initStats, renderStats, setStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
+import { initStats, renderStats, setStatsMode, getStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { on, closeHeaderMenu } from "./actions.js";
 import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
@@ -10,7 +10,7 @@ import { PLANT_TYPE, ACTION_TYPE, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STO
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
-const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.REPOT, ACTION_TYPE.FLUSH, ACTION_TYPE.HARVEST].map((t) => {
+const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.FLUSH, ACTION_TYPE.HARVEST].map((t) => {
     const e = document.getElementById(`ck-${t}`),
         n = document.getElementById(`${t}-plants`),
         a = n?.querySelector(".plant-picker-list");
@@ -174,7 +174,6 @@ function snapshotEditForm() {
         light: {
             checked: document.getElementById("ck-light").checked,
             lux: document.getElementById("light-lux").value,
-            dist: document.getElementById("light-dist").value,
             start: document.getElementById("light-start").value,
             end: document.getElementById("light-end").value,
         },
@@ -199,7 +198,7 @@ function restoreEditForm(snap) {
         }),
         writeNutrientInputs(mergeDrafts(nutrientDrafts[NUTRIENT_TAB_ALL] || {}, nutrientDrafts[nutrientActiveTab] || {})));
     const light = snap.light || {};
-    ((document.getElementById("ck-light").checked = !!light.checked), (document.getElementById("light-lux").value = light.lux || ""), (document.getElementById("light-dist").value = light.dist || ""), (document.getElementById("light-start").value = light.start || ""), (document.getElementById("light-end").value = light.end || ""), (document.getElementById("light-inputs").style.display = light.checked ? "block" : "none"));
+    ((document.getElementById("ck-light").checked = !!light.checked), (document.getElementById("light-lux").value = light.lux || ""), (document.getElementById("light-start").value = light.start || ""), (document.getElementById("light-end").value = light.end || ""), (document.getElementById("light-inputs").style.display = light.checked ? "block" : "none"));
     const pickerMap = new Map((snap.pickers || []).map((p) => [p.id, p]));
     PICKER_ACTIONS.forEach((p) => {
         const found = pickerMap.get(p.id);
@@ -606,7 +605,7 @@ function getCycleLightDefaults(cycle = activeCycle()) {
     return (t && t.lightDefaults) || {};
 }
 function parseLightAction(t) {
-    return t && ACTION_TYPE.LIGHT === t.type ? { lux: t.lux || null, dist: t.dist || null, start: t.start || null, end: t.end || null } : null;
+    return t && ACTION_TYPE.LIGHT === t.type ? { lux: t.lux || null, start: t.start || null, end: t.end || null } : null;
 }
 function latestLoggedLight(t) {
     if (!t) return null;
@@ -626,10 +625,9 @@ function updateLightStatus() {
     const a = latestLoggedLight(t),
         l = getCycleLightDefaults(t);
     let i = null,
-        s = null,
         d = null,
         c = null;
-    a ? ((i = a.parsed.lux ?? l.lux ?? null), (s = a.parsed.dist ?? l.dist ?? null), (d = a.parsed.start ?? l.start ?? null), (c = a.parsed.end ?? l.end ?? null)) : ((i = l.lux || null), (s = l.dist || null), (d = l.start || null), (c = l.end || null));
+    a ? ((i = a.parsed.lux ?? l.lux ?? null), (d = a.parsed.start ?? l.start ?? null), (c = a.parsed.end ?? l.end ?? null)) : ((i = l.lux || null), (d = l.start || null), (c = l.end || null));
     let o = !1;
     const r = [];
     if ((i && r.push(i + "K"), d && c)) {
@@ -675,7 +673,6 @@ function ensureLightScheduleModal() {
             </div>
             <div class="form-row"><label class="form-label">Lights on</label><input class="form-input" type="time" id="light-modal-start" /></div>
             <div class="form-row"><label class="form-label">Lights off</label><input class="form-input" type="time" id="light-modal-end" /></div>
-            <div class="form-row"><label class="form-label">Distance (cm)</label><input class="form-input" type="number" min="0" step="1" id="light-modal-dist" placeholder="0" /></div>
             <div class="modal-actions"><button class="btn-cancel" data-action="closeLightSchedule">Cancel</button><button class="btn-confirm" data-action="saveLightSchedule">Save adjustment</button></div>
         </div>`;
     document.body.appendChild(modal);
@@ -686,7 +683,6 @@ function resolvedLightSettings(cycle) {
     const latest = latestLoggedLight(cycle)?.parsed || {};
     return {
         lux: latest.lux ?? defaults.lux ?? "0",
-        dist: latest.dist ?? defaults.dist ?? "",
         start: latest.start ?? defaults.start ?? "",
         end: latest.end ?? defaults.end ?? "",
     };
@@ -704,7 +700,6 @@ function openLightSchedule() {
     modal._cycleId = cycle.id;
     document.getElementById("light-modal-cycle-name").textContent = cycle.name;
     document.getElementById("light-modal-lux").value = settings.lux || "0";
-    document.getElementById("light-modal-dist").value = settings.dist || "";
     document.getElementById("light-modal-start").value = settings.start || "";
     document.getElementById("light-modal-end").value = settings.end || "";
     updateLightLuxOutput();
@@ -718,19 +713,17 @@ function saveLightSchedule() {
         cycle = cycles.find((candidate) => candidate.id === modal?._cycleId);
     if (!cycle) return void closeLightSchedule();
     const lux = document.getElementById("light-modal-lux").value,
-        dist = document.getElementById("light-modal-dist").value,
         start = document.getElementById("light-modal-start").value,
         end = document.getElementById("light-modal-end").value;
     if (!start || !end) return void alert("Set both the lights-on and lights-off times.");
-    if (dist === "") return void alert("Set the light distance in centimetres.");
 
     const now = new Date(),
         pad = (value) => String(value).padStart(2, "0"),
         day = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
         dt = `${day}T${pad(now.getHours())}:${pad(now.getMinutes())}`,
-        adjustment = { type: ACTION_TYPE.LIGHT, lux, dist, start, end };
+        adjustment = { type: ACTION_TYPE.LIGHT, lux, start, end };
     const sameDayEntry = [...(cycle.entries || [])]
-        .filter((entry) => entry.dt?.slice(0, 10) === day && (entry.actions || []).some((action) => action?.type === ACTION_TYPE.LIGHT))
+        .filter((entry) => entry.dt?.slice(0, 10) === day && !entry.keepSeparate)
         .sort((a, b) => new Date(b.dt) - new Date(a.dt))[0];
 
     if (sameDayEntry) {
@@ -739,7 +732,8 @@ function saveLightSchedule() {
     } else {
         cycle.entries.unshift({ id: uid(), dt, plants: {}, actions: [adjustment], plantObs: {} });
     }
-    cycle.lightDefaults = { lux, dist, start, end };
+    mergeEntriesForDay(cycle, day);
+    cycle.lightDefaults = { lux, start, end };
     persist();
     closeLightSchedule();
     cycle.id === activeCycleId && updateGrowAge();
@@ -761,11 +755,11 @@ function scheduleNextLightCheck() {
 }
 function _saveLightDefaults() {
     const t = activeCycle();
-    t && ((t.lightDefaults = { lux: document.getElementById("light-lux").value, dist: document.getElementById("light-dist").value, start: document.getElementById("light-start").value, end: document.getElementById("light-end").value }), persist(), invalidateModal(), updateLightStatus());
+    t && ((t.lightDefaults = { lux: document.getElementById("light-lux").value, start: document.getElementById("light-start").value, end: document.getElementById("light-end").value }), persist(), invalidateModal(), updateLightStatus());
 }
 function _loadLightDefaults() {
     const t = getCycleLightDefaults();
-    ((document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-dist").value = t.dist || ""), (document.getElementById("light-start").value = t.start || ""), (document.getElementById("light-end").value = t.end || ""));
+    ((document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-start").value = t.start || ""), (document.getElementById("light-end").value = t.end || ""));
 }
 function openPlantManager() {
     if (!cycles.some((cycle) => cycle.id === plantManagerCycleId)) plantManagerCycleId = activeCycleId || cycles[0]?.id || null;
@@ -919,10 +913,40 @@ function cancelRenamePlant() {
     hideModal("rename-plant-modal");
 }
 function deletePlant(t) {
-    const e = plantManagerCycle();
-    if (!e) return;
-    const n = e.plants[t];
-    confirm(`Remove plant "${n}"? It will disappear from this cycle's Add form. Existing entries that reference it keep their data.`) && (e.plants.splice(t, 1), e.plantTypes && delete e.plantTypes[n], persist(), renderPlantList(), e.id === activeCycleId && renderAddForm(), invalidateStats());
+    const cycle = plantManagerCycle();
+    if (!cycle) return;
+    const plant = cycle.plants[t];
+    if (!confirm(`Remove plant "${plant}" and its data from this cycle and all log entries?`)) return;
+    cycle.plants.splice(t, 1);
+    if (cycle.plantTypes) delete cycle.plantTypes[plant];
+    cycle.favourites = (cycle.favourites || []).filter((name) => name !== plant);
+    (cycle.entries || []).forEach((entry) => {
+        if (entry.plants) delete entry.plants[plant];
+        if (entry.plantObs) delete entry.plantObs[plant];
+        entry.actions = (entry.actions || [])
+            .map((action) => {
+                if (!action || !Array.isArray(action.plants) || action.plants.length === 0) return action;
+                const plants = action.plants.filter((name) => name !== plant);
+                return plants.length ? { ...action, plants } : null;
+            })
+            .filter(Boolean);
+    });
+    if (cycle.id === activeCycleId) {
+        delete nutrientDrafts[plant];
+        delete yieldDrafts[plant];
+        draftState.pendingPlantObs = draftState.pendingPlantObs.filter((note) => note.plant !== plant);
+        if (nutrientActiveTab === plant) nutrientActiveTab = NUTRIENT_TAB_ALL;
+    }
+    const detail = document.getElementById("plant-detail-modal");
+    if (detail?.classList.contains("modal-overlay--visible") && document.getElementById("plant-detail-name")?.textContent === plant) hideModal("plant-detail-modal");
+    pruneEmptyEntries(cycle);
+    recomputeActionMetadata(cycle);
+    persist();
+    updateGrowAge();
+    renderPlantList();
+    if (cycle.id === activeCycleId) renderAddForm();
+    invalidateLog();
+    invalidateStats();
 }
 function isFavourite(t, e) {
     return Array.isArray(t.favourites) && t.favourites.includes(e);
@@ -1147,16 +1171,34 @@ function deleteNutrient(t) {
     if (!cycle) return;
     const e = nutrientManagerNutrients(),
         n = e[t].name;
-    confirm(`Remove nutrient "${n}"? Existing entries that reference it keep their data, but it will no longer appear in the Add form or stats.`) &&
-        (e.splice(t, 1),
-            cycle.id === activeCycleId && Object.values(nutrientDrafts).forEach((t) => {
-                (t.nutrients && delete t.nutrients[n], t.concentrations && delete t.concentrations[n]);
-            }),
-            persist(),
-            renderNutrientList(),
-            cycle.id === activeCycleId && renderAddForm(),
-            invalidateLog(),
-            invalidateStats());
+    if (!confirm(`Remove nutrient "${n}" and its data from this cycle and all log entries?`)) return;
+    e.splice(t, 1);
+    (cycle.entries || []).forEach((entry) => {
+        Object.values(entry.plants || {}).forEach((plantData) => {
+            if (plantData.nutrients) {
+                delete plantData.nutrients[n];
+                if (Object.keys(plantData.nutrients).length === 0) delete plantData.nutrients;
+            }
+            if (plantData.concentrations) {
+                delete plantData.concentrations[n];
+                if (Object.keys(plantData.concentrations).length === 0) delete plantData.concentrations;
+            }
+        });
+    });
+    if (cycle.id === activeCycleId)
+        Object.values(nutrientDrafts).forEach((draft) => {
+            if (draft.nutrients) delete draft.nutrients[n];
+            if (draft.concentrations) delete draft.concentrations[n];
+        });
+    pruneEmptyEntries(cycle);
+    recomputeActionMetadata(cycle);
+    persist();
+    updateGrowAge();
+    renderNutrientList();
+    if (cycle.id === activeCycleId) renderAddForm();
+    invalidateLog();
+    invalidateStats();
+    invalidateModal();
 }
 function editNutrientDefault(t) {
     const cycle = nutrientManagerCycle();
@@ -1193,7 +1235,9 @@ function confirmEditNutrientDefault() {
 function cancelEditNutrientDefault() {
     hideModal("edit-nutrient-default-modal");
 }
-function openPlantDetail(t) {
+function openPlantDetail(t, cycleId = null) {
+    const requested = cycleId && cycles.find((cycle) => cycle.id === cycleId && cycle.plants?.includes(t));
+    if (requested) return renderPlantDetailModal(requested, t);
     const e = activeCycle();
     if (!e || !e.plants.includes(t)) {
         const e = cycles.find((e) => e.plants && e.plants.includes(t));
@@ -1258,6 +1302,7 @@ function computePlantDetail(t, e) {
 }
 
 function renderPlantDetailModal(t, e) {
+    document.getElementById("plant-detail-modal")._cycleId = t.id;
     const n = getPlantMeta(t, e).type,
         a = PLANT_TYPE.AUTO === n ? "AUTO" : "PHOTO",
         l = PLANT_TYPE.AUTO === n ? "plant-type-badge auto" : "plant-type-badge photo",
@@ -1546,7 +1591,7 @@ function editEntry(t) {
                 document.getElementById("ck-light").checked)
         ) {
             const t = a.find((t) => ACTION_TYPE.LIGHT === t.type);
-            (t && ((document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-dist").value = t.dist || "")), (document.getElementById("light-inputs").style.display = "block"));
+            (t && (document.getElementById("light-lux").value = t.lux || ""), (document.getElementById("light-inputs").style.display = "block"));
         } else document.getElementById("light-inputs").style.display = "none";
         document.getElementById("new-obs").value = e.obs || "";
         const l = new Set(cyclePlants()),
@@ -1610,6 +1655,125 @@ function recomputeActionMetadata(cycle) {
         pt.flushedAt = latestFlush;
         pt.harvestedAt = latestHarvest;
     }
+    let latestLight = null,
+        latestLightDt = null;
+    for (const entry of cycle.entries) {
+        for (const action of entry.actions || []) {
+            if (action?.type === ACTION_TYPE.LIGHT && (!latestLightDt || entry.dt > latestLightDt)) {
+                latestLight = action;
+                latestLightDt = entry.dt;
+            }
+        }
+    }
+    cycle.lightDefaults = latestLight ? { lux: latestLight.lux || "", start: latestLight.start || "", end: latestLight.end || "" } : {};
+}
+function pruneEmptyEntries(cycle) {
+    cycle.entries = (cycle.entries || []).filter((entry) => {
+        Object.entries(entry.plants || {}).forEach(([plant, data]) => {
+            if (!data || Object.keys(data).length === 0) delete entry.plants[plant];
+        });
+        const hasPlants = Object.keys(entry.plants || {}).length > 0,
+            hasActions = (entry.actions || []).length > 0,
+            hasObs = !!String(entry.obs || "").trim(),
+            hasPlantObs = Object.values(entry.plantObs || {}).some((text) => String(text || "").trim());
+        return hasPlants || hasActions || hasObs || hasPlantObs;
+    });
+}
+function mergeEntryText(existing, incoming) {
+    const a = existing && String(existing).trim(),
+        b = incoming && String(incoming).trim();
+    if (!a) return b || undefined;
+    if (!b || a === b) return a;
+    return `${a}\n${b}`;
+}
+function mergeDailyPlantData(existing = {}, incoming = {}) {
+    const merged = { ...existing, ...incoming };
+    const nutrientNames = new Set([...Object.keys(existing.nutrients || {}), ...Object.keys(incoming.nutrients || {})]);
+    if (nutrientNames.size) {
+        merged.nutrients = {};
+        nutrientNames.forEach((name) => {
+            const total = Number(existing.nutrients?.[name] || 0) + Number(incoming.nutrients?.[name] || 0);
+            if (total) merged.nutrients[name] = total;
+        });
+    }
+    const concentrations = { ...(existing.concentrations || {}), ...(incoming.concentrations || {}) };
+    if (Object.keys(concentrations).length) merged.concentrations = concentrations;
+    const water = Number(existing.water || 0) + Number(incoming.water || 0);
+    if (water) merged.water = water;
+    else delete merged.water;
+    const yieldGrams = Number(existing.yieldGrams || 0) + Number(incoming.yieldGrams || 0);
+    if (yieldGrams) merged.yieldGrams = yieldGrams;
+    else delete merged.yieldGrams;
+    return merged;
+}
+function mergeDailyActions(existing = [], incoming = []) {
+    const result = existing.map((action) => (action && typeof action === "object" ? { ...action, plants: Array.isArray(action.plants) ? [...action.plants] : action.plants } : action));
+    incoming.forEach((action) => {
+        if (!action || typeof action !== "object") {
+            if (!result.includes(action)) result.push(action);
+            return;
+        }
+        if (action.type === ACTION_TYPE.LIGHT) {
+            const index = result.findIndex((item) => item?.type === ACTION_TYPE.LIGHT);
+            const lightAction = index >= 0 ? { ...result[index], ...action } : { ...action };
+            delete lightAction.dist;
+            if (index >= 0) result[index] = lightAction;
+            else result.push(lightAction);
+            return;
+        }
+        if (PICKER_ACTIONS.some((picker) => picker.id === action.type)) {
+            const index = result.findIndex((item) => item?.type === action.type);
+            if (index >= 0) {
+                const currentPlants = result[index].plants || [],
+                    incomingPlants = action.plants || [];
+                result[index] = { ...result[index], ...action, plants: currentPlants.length === 0 || incomingPlants.length === 0 ? [] : [...new Set([...currentPlants, ...incomingPlants])] };
+            } else result.push({ ...action, plants: [...(action.plants || [])] });
+            return;
+        }
+        result.push({ ...action });
+    });
+    return result;
+}
+function mergeEntriesForDay(cycle, day) {
+    if (!cycle || !day) return null;
+    const sameDay = (cycle.entries || []).filter((entry) => entry.dt?.slice(0, 10) === day && !entry.keepSeparate).sort((a, b) => new Date(a.dt) - new Date(b.dt));
+    if (sameDay.length < 2) return sameDay[0] || null;
+    const merged = JSON.parse(JSON.stringify(sameDay[0]));
+    merged.plants ||= {};
+    merged.actions ||= [];
+    merged.plantObs ||= {};
+    for (const entry of sameDay.slice(1)) {
+        Object.entries(entry.plants || {}).forEach(([plant, data]) => {
+            merged.plants[plant] = mergeDailyPlantData(merged.plants[plant], data);
+        });
+        merged.actions = mergeDailyActions(merged.actions, entry.actions || []);
+        merged.obs = mergeEntryText(merged.obs, entry.obs);
+        Object.entries(entry.plantObs || {}).forEach(([plant, text]) => {
+            merged.plantObs[plant] = mergeEntryText(merged.plantObs[plant], text);
+        });
+    }
+    const ids = new Set(sameDay.map((entry) => entry.id));
+    cycle.entries = cycle.entries.filter((entry) => !ids.has(entry.id));
+    cycle.entries.push(merged);
+    return merged;
+}
+function mergeAllDailyEntries() {
+    let changed = false;
+    cycles.forEach((cycle) => {
+        const counts = new Map();
+        (cycle.entries || []).forEach((entry) => {
+            if (entry.keepSeparate) return;
+            const day = entry.dt?.slice(0, 10);
+            if (day) counts.set(day, (counts.get(day) || 0) + 1);
+        });
+        counts.forEach((count, day) => {
+            if (count > 1) {
+                mergeEntriesForDay(cycle, day);
+                changed = true;
+            }
+        });
+    });
+    if (changed) persist();
 }
 function saveEntry() {
     const t = document.getElementById("new-dt").value;
@@ -1640,12 +1804,8 @@ function saveEntry() {
     PICKER_ACTIONS.forEach((n) => {
         if (!n.checkbox.checked) return;
         const l = n.checked();
-        if ((a.push({ type: n.id, plants: l }), ACTION_TYPE.REPOT === n.id)) {
-            const dt = t.slice(0, 10);
-            l.forEach((p) => {
-                e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].repottedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: dt, flushedAt: null, harvestedAt: null });
-            });
-        } else if (ACTION_TYPE.FLUSH === n.id) {
+        a.push({ type: n.id, plants: l });
+        if (ACTION_TYPE.FLUSH === n.id) {
             const dt = t.slice(0, 10);
             l.forEach((p) => {
                 e.plantTypes[p] && "object" == typeof e.plantTypes[p] ? (e.plantTypes[p].flushedAt = dt) : (e.plantTypes[p] = { type: PLANT_TYPE.AUTO, repottedAt: e.startDate, flushedAt: dt, harvestedAt: null });
@@ -1755,6 +1915,7 @@ function saveEntry() {
             pt.harvestedAt = latest;
         }
     } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: o || void 0, plantObs: Object.keys(c).length ? c : {} });
+    mergeEntriesForDay(e, t.slice(0, 10));
     (persist(), updateGrowAge(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats(), renderAddForm());
 }
 function cancelEdit() {
@@ -1765,7 +1926,7 @@ function duplicateEntry(t) {
         const n = e.entries.find((e) => e.id === t);
         if (n) {
             const t = JSON.parse(JSON.stringify(n));
-            return ((t.id = uid()), e.entries.unshift(t), persist(), invalidateLog(), void invalidateStats());
+            return ((t.id = uid()), (t.keepSeparate = true), e.entries.unshift(t), persist(), invalidateLog(), void invalidateStats());
         }
     }
 }
@@ -1817,13 +1978,38 @@ function deleteEntry(t) {
     }
     persist();
     updateGrowAge();
+    updateLightStatus();
     invalidateLog();
     invalidateStats();
+    invalidateModal();
     renderAddForm();
 }
 function deleteCycle(t) {
-    const e = cycles.find((e) => e.id === t);
-    e && confirm(`Delete "${e.name}" and all its entries? This cannot be undone.`) && ((cycles = cycles.filter((e) => e.id !== t)), activeCycleId === t && ((activeCycleId = cycles.length ? cycles[cycles.length - 1].id : null), saveActiveCycleId(activeCycleId)), persist(), updateGrowAge(), renderAddForm(), invalidateLog(), invalidateStats(), refreshOpenCycleManager());
+    const cycle = cycles.find((candidate) => candidate.id === t);
+    if (!cycle || !confirm(`Delete "${cycle.name}" and all its entries? This cannot be undone.`)) return;
+    cycles = cycles.filter((candidate) => candidate.id !== t);
+    collapsedCycles.delete(t);
+    [...collapsedWeeks].forEach((key) => key.startsWith(`${t}--`) && collapsedWeeks.delete(key));
+    saveCollapsedCycles(collapsedCycles);
+    saveCollapsedWeeks(collapsedWeeks);
+    if (plantManagerCycleId === t) plantManagerCycleId = null;
+    if (nutrientManagerCycleId === t) nutrientManagerCycleId = null;
+    if (getStatsMode() === t) setStatsMode(STATS_MODE.ACTIVE);
+    if (document.getElementById("light-schedule-modal")?._cycleId === t) hideModal("light-schedule-modal");
+    if (document.getElementById("plant-detail-modal")?._cycleId === t) hideModal("plant-detail-modal");
+    if (activeCycleId === t) {
+        activeCycleId = cycles.length ? cycles[cycles.length - 1].id : null;
+        saveActiveCycleId(activeCycleId);
+        resetDraft();
+        resetAddForm();
+    }
+    persist();
+    updateGrowAge();
+    updateLightStatus();
+    renderAddForm();
+    invalidateLog();
+    invalidateStats();
+    refreshOpenCycleManager();
 }
 function exportBackup() {
     const t = JSON.stringify(cycles, null, 2),
@@ -1956,8 +2142,8 @@ function refreshOpenPlantDetail() {
     if (!t || !t.classList.contains("modal-overlay--visible")) return;
     const e = document.getElementById("plant-detail-name").textContent;
     if (!e) return;
-    const n = cycles.find((t) => t.plants && t.plants.includes(e));
-    n && renderPlantDetailModal(n, e);
+    const n = cycles.find((cycle) => cycle.id === t._cycleId && cycle.plants?.includes(e));
+    n ? renderPlantDetailModal(n, e) : hideModal("plant-detail-modal");
 }
 function invalidateLog() {
     renderLog(cycles, activeCycleId);
@@ -2064,12 +2250,13 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("confirmEditNutrientDefault", "click", () => confirmEditNutrientDefault()),
     on("cancelEditNutrientDefault", "click", () => cancelEditNutrientDefault()),
     on("selectPlantType", "click", (t) => selectPlantType(t.dataset.scope, t.dataset.type)),
-    on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id)),
+    on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id, t.dataset.cycleId)),
     on("toggleHeaderMenu", "click", () => toggleHeaderMenu()),
     on("openCycleManager", "click", () => openCycleManager()),
     on("closeCycleManager", "click", () => closeCycleManager()),
     on("newCycleFromManager", "click", () => newCycleFromManager()),
     on("advanceCycleStage", "click", (t) => advanceCycleStage(t.dataset.id)),
+    mergeAllDailyEntries(),
     updateGrowAge(),
     setDateDefault(),
     _loadLightDefaults(),

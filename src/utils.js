@@ -36,9 +36,25 @@ export function cycleUid() {
 export function escapeHtml(t) {
     return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
+function inferredRepottedAt(cycle, plant) {
+    let firstEntryDate = null,
+        latestRepotDate = null;
+    for (const entry of cycle?.entries || []) {
+        const date = entry?.dt?.slice(0, 10);
+        if (!date) continue;
+        if (!firstEntryDate || date < firstEntryDate) firstEntryDate = date;
+        for (const action of entry.actions || []) {
+            if (!action || action.type !== "repot") continue;
+            const plants = action.plants || [];
+            if ((plants.length === 0 || plants.includes(plant)) && (!latestRepotDate || date > latestRepotDate)) latestRepotDate = date;
+        }
+    }
+    return latestRepotDate || firstEntryDate || cycle?.startDate;
+}
 export function getPlantMeta(t, e) {
-    const n = t?.plantTypes?.[e];
-    return n ? ("string" == typeof n ? { type: n, repottedAt: t?.startDate, flushedAt: null, harvestedAt: null } : { type: n.type || "auto", repottedAt: n.repottedAt || t?.startDate, flushedAt: n.flushedAt || null, harvestedAt: n.harvestedAt || null }) : { type: "auto", repottedAt: t?.startDate, flushedAt: null, harvestedAt: null };
+    const n = t?.plantTypes?.[e],
+        repottedAt = inferredRepottedAt(t, e);
+    return n ? ("string" == typeof n ? { type: n, repottedAt, flushedAt: null, harvestedAt: null } : { type: n.type || "auto", repottedAt, flushedAt: n.flushedAt || null, harvestedAt: n.harvestedAt || null }) : { type: "auto", repottedAt, flushedAt: null, harvestedAt: null };
 }
 export function fmtQty(t) {
     return t % 1 == 0 ? String(t) : t.toFixed(1);
@@ -56,7 +72,7 @@ export function formatAction(t) {
             return t.plants && 0 !== t.plants.length ? `${e} (${t.plants.map(escapeHtml).join(", ")})` : `${e} (All plants)`;
         }
         case "light": {
-            const e = [t.lux ? `${escapeHtml(t.lux)}k lux` : null, t.dist ? `${escapeHtml(t.dist)}cm` : null, t.start && t.end ? `${escapeHtml(t.start)}–${escapeHtml(t.end)}` : null].filter(Boolean);
+            const e = [t.lux ? `${escapeHtml(t.lux)}k lux` : null, t.start && t.end ? `${escapeHtml(t.start)}–${escapeHtml(t.end)}` : null].filter(Boolean);
             return e.length ? `Light adjusted (${e.join(", ")})` : "Light adjusted";
         }
         default:
