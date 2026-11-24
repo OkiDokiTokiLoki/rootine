@@ -205,7 +205,6 @@ input[type="datetime-local"] {
 }
 .plant-row {
     display: grid;
-    grid-template-columns: 100px 1fr;
     gap: 8px;
     align-items: start;
     padding: 6px 0;
@@ -1255,6 +1254,10 @@ textarea.form-input {
 .badge-scissors {
     background: var(--neutral-bg);
     color: var(--neutral);
+}
+.badge-scissors svg {
+    fill: currentColor;
+    stroke: none;
 }
 .chip {
     display: inline-flex;

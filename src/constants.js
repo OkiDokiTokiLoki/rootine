@@ -30,7 +30,7 @@ export const ACTION_DEFINITIONS = [
     { type: ACTION_TYPE.DEF, label: "Defoliate", pastLabel: "Defoliated", icon: "scissors", plantPicker: true },
     { type: ACTION_TYPE.REPOT, label: "Repot / transplant", pastLabel: "Repotted / transplanted", icon: "scissors", plantPicker: true, formVisible: false },
     { type: ACTION_TYPE.FLUSH, label: "Flush", pastLabel: "Flushed", icon: "flush", plantPicker: true },
-    { type: ACTION_TYPE.HARVEST, label: "Harvest", pastLabel: "Harvested", icon: "harvest", plantPicker: true, highlight: "amber" },
+    { type: ACTION_TYPE.HARVEST, label: "Harvest", pastLabel: "Harvested", icon: "harvest", plantPicker: true },
     { type: ACTION_TYPE.LIGHT, label: "Lights", pastLabel: "Light adjustment", icon: "lightBulb", plantPicker: false, formVisible: false },
 ];
 export const ACTION_BY_TYPE = Object.fromEntries(ACTION_DEFINITIONS.map((action) => [action.type, action]));

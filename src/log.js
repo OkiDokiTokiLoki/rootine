@@ -109,11 +109,16 @@ function renderEntryCard(e, t) {
         n = s.some((p) => p && p.water > 0),
         l = (e.actions || []).some((a) => a && a.type === ACTION_TYPE.LIGHT),
         plantActions = (e.actions || []).filter((a) => a && PLANT_ACTION_TYPES.has(a.type)),
-        c = plantActions.length > 0,
-        h = plantActions.some((action) => ACTION_BY_TYPE[action.type]?.highlight === "amber"),
+        actionBadges = [...new Set(plantActions.map((action) => action.type))]
+            .map((type) => {
+                const definition = ACTION_BY_TYPE[type];
+                if (!definition) return "";
+                return `<span class="badge badge-scissors" style="margin-left:0" title="${escapeHtml(definition.pastLabel || definition.label)}">${icon.action(definition.icon, { width: 13, height: 15 })}</span>`;
+            })
+            .join(""),
         i = !!e.obs?.trim() || hasPlantObs(e);
     let d = "";
-    (a && (d += `<span class="badge badge-feed"    style="margin-left:0">${icon.badgeFeed()}</span>`), n && (d += `<span class="badge badge-water"   style="margin-left:0">${icon.badgeWater()}</span>`), l && (d += `<span class="badge badge-light"   style="margin-left:0;">${icon.badgeLight()}</span>`), c && (d += `<span class="badge badge-scissors" style="margin-left:0;${h ? "background:var(--amber-bg);color:var(--amber)" : ""}">${icon.badgeScissors()}</span>`), i && (d += `<span class="badge badge-note"    style="margin-left:0;" title="Has observation">${icon.badgeNote()}</span>`));
+    (a && (d += `<span class="badge badge-feed" style="margin-left:0">${icon.badgeFeed()}</span>`), n && (d += `<span class="badge badge-water" style="margin-left:0">${icon.badgeWater()}</span>`), l && (d += `<span class="badge badge-light" style="margin-left:0;">${icon.badgeLight()}</span>`), (d += actionBadges), i && (d += `<span class="badge badge-note" style="margin-left:0;" title="Has observation">${icon.badgeNote()}</span>`));
     const o = Object.entries(e.plants || {});
     let r = "";
     return (
