@@ -1,12 +1,12 @@
 import "./style.css";
-import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty, cycleStageBadge } from "./utils.js";
+import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty, cycleStageBadge, renderCycleSelector } from "./utils.js";
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, saveCollapsedWeeks, loadCollapsedObs, isValidCyclesShape } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry, getLogCycleId } from "./log.js";
 import { initStats, renderStats, setStatsMode, getStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { on, closeHeaderMenu } from "./actions.js";
 import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
-import { PLANT_TYPE, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, CYCLE_STAGE, CYCLE_STAGE_LABEL } from "./constants.js";
+import { PLANT_TYPE, PLANT_TYPE_DEFINITIONS, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, PLANT_DETAIL_METRIC_SECTIONS } from "./constants.js";
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
@@ -295,7 +295,7 @@ function cycleNutrients() {
 }
 function cycleShowsYield(cycle) {
     const stage = cycle?.stage || CYCLE_STAGE.GROW;
-    return stage === CYCLE_STAGE.HARVEST || stage === CYCLE_STAGE.COMPLETE;
+    return !!CYCLE_STAGE_DEFINITIONS[stage]?.showsYield;
 }
 function resetPlantNotesDraft(t) {
     ((draftState.pendingPlantObs = Array.isArray(t) ? [...t] : []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
@@ -815,10 +815,7 @@ function renderPlantList() {
         e.before(tabs);
     }
     if (tabs) {
-        tabs.innerHTML = [...cycles]
-            .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-            .map((cycle) => `<button class="stats-cycle-btn${cycle.id === plantManagerCycleId ? " active" : ""}" data-action="selectPlantManagerCycle" data-id="${escapeHtml(cycle.id)}">${escapeHtml(cycle.name)} · ${CYCLE_STAGE_LABEL[cycle.stage || CYCLE_STAGE.GROW]}</button>`)
-            .join("");
+        tabs.innerHTML = renderCycleSelector(cycles, { selectedId: plantManagerCycleId, action: "selectPlantManagerCycle", showStage: true, newestFirst: true, wrap: false });
         tabs.style.display = cycles.length ? "" : "none";
     }
     if (addButton) addButton.disabled = !t;
@@ -828,8 +825,9 @@ function renderPlantList() {
         ? ((e.innerHTML = ""),
             n.forEach((n, a) => {
                 const l = getPlantMeta(t, n).type,
-                    i = PLANT_TYPE.AUTO === l ? "plant-type-badge auto" : "plant-type-badge photo",
-                    s = PLANT_TYPE.AUTO === l ? "AUTO" : "PHOTO",
+                    typeDefinition = PLANT_TYPE_DEFINITIONS[l] || PLANT_TYPE_DEFINITIONS[PLANT_TYPE.AUTO],
+                    i = `plant-type-badge ${typeDefinition.className}`,
+                    s = typeDefinition.label,
                     d = document.createElement("div");
                 ((d.className = "plant-manage-row"),
                     (d.innerHTML = `
@@ -862,7 +860,8 @@ function togglePlantType(t) {
     (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {});
     const n = e.plants[t],
         a = getPlantMeta(e, n).type;
-    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate, flushedAt: null, harvestedAt: null }), (e.plantTypes[n].type = PLANT_TYPE.AUTO === a ? PLANT_TYPE.PHOTO : PLANT_TYPE.AUTO), persist(), renderPlantList(), invalidateStats(), invalidateModal());
+    const typeDefinition = PLANT_TYPE_DEFINITIONS[a] || PLANT_TYPE_DEFINITIONS[PLANT_TYPE.AUTO];
+    ((e.plantTypes[n] && "object" == typeof e.plantTypes[n]) || (e.plantTypes[n] = { type: a, repottedAt: e.startDate, flushedAt: null, harvestedAt: null }), (e.plantTypes[n].type = typeDefinition.next), persist(), renderPlantList(), invalidateStats(), invalidateModal());
 }
 function toggleFavourite(t) {
     const e = plantManagerCycle();
@@ -1018,12 +1017,10 @@ function renderCycleList() {
         const startDate = new Date(cycle.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
         const plantCount = (cycle.plants || []).length;
         const stageBadge = cycleStageBadge(stage);
-        const nextStage = stage === CYCLE_STAGE.HARVEST ? CYCLE_STAGE.COMPLETE : stage === CYCLE_STAGE.COMPLETE ? CYCLE_STAGE.GROW : CYCLE_STAGE.HARVEST;
-        let nextBtnClass;
-        if (stage === CYCLE_STAGE.HARVEST) nextBtnClass = "complete-tag";
-        else if (stage === CYCLE_STAGE.COMPLETE) nextBtnClass = "green-btn";
-        else nextBtnClass = "amber-btn";
-        const nextBtnTitle = `Advance to ${CYCLE_STAGE_LABEL[nextStage]}`;
+        const stageDefinition = CYCLE_STAGE_DEFINITIONS[stage] || CYCLE_STAGE_DEFINITIONS[CYCLE_STAGE.GROW],
+            nextStage = stageDefinition.next,
+            nextBtnClass = stageDefinition.advanceClass,
+            nextBtnTitle = `Advance to ${CYCLE_STAGE_DEFINITIONS[nextStage].label}`;
         const row = document.createElement("div");
         row.className = "cycle-manage-row";
         row.innerHTML = `
@@ -1049,9 +1046,7 @@ function advanceCycleStage(id) {
     const cycle = cycles.find((c) => c.id === id);
     if (!cycle) return;
     const current = cycle.stage || CYCLE_STAGE.GROW;
-    if (current === CYCLE_STAGE.GROW) cycle.stage = CYCLE_STAGE.HARVEST;
-    else if (current === CYCLE_STAGE.HARVEST) cycle.stage = CYCLE_STAGE.COMPLETE;
-    else cycle.stage = CYCLE_STAGE.GROW;
+    cycle.stage = (CYCLE_STAGE_DEFINITIONS[current] || CYCLE_STAGE_DEFINITIONS[CYCLE_STAGE.GROW]).next;
     persist();
     invalidateLog();
     invalidateStats();
@@ -1079,10 +1074,7 @@ function renderNutrientList() {
         tabs.style.flexShrink = "0";
         e.before(tabs);
     }
-    tabs.innerHTML = [...cycles]
-        .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-        .map((cycle) => `<button class="stats-cycle-btn${cycle.id === nutrientManagerCycleId ? " active" : ""}" data-action="selectNutrientManagerCycle" data-id="${escapeHtml(cycle.id)}">${escapeHtml(cycle.name)} · ${CYCLE_STAGE_LABEL[cycle.stage || CYCLE_STAGE.GROW]}</button>`)
-        .join("");
+    tabs.innerHTML = renderCycleSelector(cycles, { selectedId: nutrientManagerCycleId, action: "selectNutrientManagerCycle", showStage: true, newestFirst: true, wrap: false });
     tabs.style.display = cycles.length ? "" : "none";
     if (addButton) addButton.disabled = !t;
     if (!t) return void (e.innerHTML = '<div class="plant-empty">No grow cycles yet. Create one before adding nutrients.</div>');
@@ -1325,8 +1317,9 @@ function computePlantDetail(t, e) {
 function renderPlantDetailModal(t, e) {
     document.getElementById("plant-detail-modal")._cycleId = t.id;
     const n = getPlantMeta(t, e).type,
-        a = PLANT_TYPE.AUTO === n ? "AUTO" : "PHOTO",
-        l = PLANT_TYPE.AUTO === n ? "plant-type-badge auto" : "plant-type-badge photo",
+        typeDefinition = PLANT_TYPE_DEFINITIONS[n] || PLANT_TYPE_DEFINITIONS[PLANT_TYPE.AUTO],
+        a = typeDefinition.label,
+        l = `plant-type-badge ${typeDefinition.className}`,
         i = t.nutrients || [],
         s = computePlantDetail(t, e),
         d = document.getElementById("plant-detail-name");
@@ -1398,6 +1391,16 @@ function renderPlantDetailModal(t, e) {
             })
             .join(""),
         f = (t) => (0 === t ? " plant-detail-value--muted" : ""),
+        metricSections = PLANT_DETAIL_METRIC_SECTIONS.map((section) => `
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">${escapeHtml(section.label)}</div>
+        ${section.metrics.map((metric) => {
+            const value = s[metric.property] ?? 0;
+            return `<div class="plant-detail-row">
+                <div class="plant-detail-label">${escapeHtml(metric.label)}</div>
+                <div class="plant-detail-value${section.mutedZero ? f(value) : ""}">${value}</div>
+            </div>`;
+        }).join("")}`).join(""),
         g = `
         <div class="plant-detail-row">
             <div class="plant-detail-label">Type</div>
@@ -1464,54 +1467,7 @@ function renderPlantDetailModal(t, e) {
             <div class="plant-detail-label">Last flushed</div>
             <div class="plant-detail-value">${u(s.lastFlushDt, !0)}</div>
         </div>
-        <div class="plant-detail-divider"></div>
-        <div class="plant-detail-section-label">Last 7 days</div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times fed</div>
-            <div class="plant-detail-value${f(s.feedCountLast7d)}">${s.feedCountLast7d}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times watered</div>
-            <div class="plant-detail-value${f(s.waterCountLast7d)}">${s.waterCountLast7d}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times LST'd</div>
-            <div class="plant-detail-value${f(s.lstCountLast7d)}">${s.lstCountLast7d}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times defoliated</div>
-            <div class="plant-detail-value${f(s.defCountLast7d)}">${s.defCountLast7d}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times flushed</div>
-            <div class="plant-detail-value${f(s.flushCountLast7d)}">${s.flushCountLast7d}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Log entries</div>
-            <div class="plant-detail-value${f(s.logCountLast7d)}">${s.logCountLast7d}</div>
-        </div>
-        <div class="plant-detail-divider"></div>
-        <div class="plant-detail-section-label">Cycle recap</div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Feed sessions</div>
-            <div class="plant-detail-value">${s.feedCount}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Water sessions</div>
-            <div class="plant-detail-value">${s.waterCount}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times LST'd</div>
-            <div class="plant-detail-value">${s.lstCount}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times defoliated</div>
-            <div class="plant-detail-value">${s.defCount}</div>
-        </div>
-        <div class="plant-detail-row">
-            <div class="plant-detail-label">Times flushed</div>
-            <div class="plant-detail-value">${s.flushCount}</div>
-        </div>
+        ${metricSections}
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Notes</div>
         ${m}

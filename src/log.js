@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction, someValue, cycleStageBadge } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction, someValue, cycleStageBadge, renderCycleSelector } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
@@ -154,12 +154,10 @@ export function renderLog(cycles, activeId) {
         list.innerHTML = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging or <span data-action="triggerImport" style="color:var(--green);cursor:pointer;text-decoration:underline">Import</span> an existing log.</div>';
         return;
     }
-    const tabs = sorted
-        .map((c) => `<button class="stats-cycle-btn log-cycle-tab${c.id === selected.id ? " active" : ""}" data-action="selectLogCycle" data-id="${escapeHtml(c.id)}">${escapeHtml(c.name)}</button>`)
-        .join(""),
+    const tabs = renderCycleSelector(sorted, { selectedId: selected.id, action: "selectLogCycle", extraClass: "log-cycle-tabs", buttonClass: "log-cycle-tab" }),
         start = cycleEffectiveStart(selected).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     list.innerHTML = `
-        <div class="stats-cycle-toggle stats-cycle-toggle--scroll log-cycle-tabs">${tabs}</div>
+        ${tabs}
         <div class="log-cycle-info"><span class="cycle-start">Started ${start}</span>${cycleStageBadge(selected.stage)}</div>
         <div class="log-cycle-entries">${renderEntriesForCycle(selected)}</div>`;
     const strip = list.querySelector(".stats-cycle-toggle--scroll");

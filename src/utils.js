@@ -1,4 +1,4 @@
-import { ACTION_BY_TYPE, ACTION_TYPE, CYCLE_STAGE_LABEL } from "./constants.js";
+import { ACTION_BY_TYPE, ACTION_TYPE, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS } from "./constants.js";
 
 export const NUTRIENT_PALETTE = ["fish", "grow", "bloom", "blue", "amber", "red"];
 export function getNutrientColor(t, e) {
@@ -84,8 +84,18 @@ export function someValue(obj, pred = Boolean) {
     return false;
 }
 export function cycleStageBadge(stage) {
-    if (stage === "harvest") return `<span class="cycle-badge amber-btn">${CYCLE_STAGE_LABEL.harvest}</span>`;
-    if (stage === "complete") return `<span class="cycle-badge complete-tag">${CYCLE_STAGE_LABEL.complete}</span>`;
-    return `<span class="cycle-badge green-btn">${CYCLE_STAGE_LABEL.grow}</span>`;
+    const definition = CYCLE_STAGE_DEFINITIONS[stage] || CYCLE_STAGE_DEFINITIONS[CYCLE_STAGE.GROW];
+    return `<span class="cycle-badge ${definition.badgeClass}">${definition.label}</span>`;
+}
+export function renderCycleSelector(cycles, { selectedId, action, showStage = false, includeAll = false, allId = "all", allLabel = "All cycles", newestFirst = false, extraClass = "", buttonClass = "", wrap = true } = {}) {
+    const ordered = [...cycles].sort((a, b) => (newestFirst ? -1 : 1) * (new Date(a.startDate) - new Date(b.startDate)));
+    const buttons = ordered.map((cycle) => {
+        const definition = CYCLE_STAGE_DEFINITIONS[cycle.stage] || CYCLE_STAGE_DEFINITIONS[CYCLE_STAGE.GROW];
+        const label = `${escapeHtml(cycle.name)}${showStage ? ` · ${definition.label}` : ""}`;
+        return `<button class="stats-cycle-btn${buttonClass ? ` ${buttonClass}` : ""}${cycle.id === selectedId ? " active" : ""}" data-action="${action}" data-id="${escapeHtml(cycle.id)}">${label}</button>`;
+    });
+    if (includeAll) buttons.push(`<button class="stats-cycle-btn${allId === selectedId ? " active" : ""}" data-action="${action}" data-id="${escapeHtml(allId)}">${escapeHtml(allLabel)}</button>`);
+    const content = buttons.join("");
+    return wrap ? `<div class="stats-cycle-toggle stats-cycle-toggle--scroll${extraClass ? ` ${extraClass}` : ""}">${content}</div>` : content;
 }
 

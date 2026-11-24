@@ -1,8 +1,8 @@
-import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getNutrientColor, abbrevNutrient, fmtQty } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getNutrientColor, abbrevNutrient, fmtQty, renderCycleSelector } from "./utils.js";
 import { saveCollapsedObs } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
-import { PLANT_TYPE, STATS_MODE } from "./constants.js";
+import { PLANT_TYPE, PLANT_TYPE_DEFINITIONS, STATS_MODE, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS } from "./constants.js";
 let statsMode = STATS_MODE.ACTIVE;
 export function initStats(t) {
     statsMode = t || STATS_MODE.ACTIVE;
@@ -67,16 +67,17 @@ function countPlantNotes(t, e) {
     );
 }
 function renderPlantCard(t, e, s, a, n, l) {
-    const o = a ? icon.star({ size: 12 }) : "",
-        c = PLANT_TYPE.AUTO === s ? "AUTO" : "PHOTO",
-        i = PLANT_TYPE.AUTO === s ? "plant-type-badge auto" : "plant-type-badge photo",
+    const typeDefinition = PLANT_TYPE_DEFINITIONS[s] || PLANT_TYPE_DEFINITIONS[PLANT_TYPE.AUTO],
+        o = a ? icon.star({ size: 12 }) : "",
+        c = typeDefinition.label,
+        i = `plant-type-badge ${typeDefinition.className}`,
         d = ((l && l.nutrients) || [])
             .map((t) => {
                 const s = (e.nutrients || {})[t.name] || 0;
                 return s <= 0 ? "" : `<span class="nutrient-totals__item nutrient--${getNutrientColor(l, t.name)}" title="${escapeHtml(t.name)}">${escapeHtml(abbrevNutrient(t.name))} ${fmtQty(s)}</span>`;
             })
             .join(""),
-        yieldTotal = l && (l.stage === "harvest" || l.stage === "complete") ? (l.entries || []).reduce((sum, ent) => sum + (ent.plants?.[t]?.yieldGrams || 0), 0) : 0,
+        yieldTotal = l && CYCLE_STAGE_DEFINITIONS[l.stage || CYCLE_STAGE.GROW]?.showsYield ? (l.entries || []).reduce((sum, ent) => sum + (ent.plants?.[t]?.yieldGrams || 0), 0) : 0,
         y = yieldTotal > 0 ? `<span class="nutrient-totals__item nutrient--amber" title="Yield">Y ${fmtQty(yieldTotal)}g</span>` : "",
         r = `<span class="nutrient-totals__item nutrient--water" title="Water">W ${fmtQty(e.water || 0)}</span>`;
     return `
@@ -96,21 +97,8 @@ function renderPlantCard(t, e, s, a, n, l) {
 
 on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id, t.dataset.cycleId));
 export function renderStats(t, e) {
-    const s = `
-    <div class="stats-cycle-toggle${t.length + 1 > 0 ? " stats-cycle-toggle--scroll" : ""}">
-      ${t
-            .map(
-                (t) => `
-        <button
-          class="stats-cycle-btn${statsMode === t.id || (STATS_MODE.ACTIVE === statsMode && t.id === e) ? " active" : ""}"
-          data-action="setStatsCycle"
-          data-id="${escapeHtml(t.id)}"
-        >${escapeHtml(t.name)}</button>
-      `
-            )
-            .join("")}
-      <button class="stats-cycle-btn${STATS_MODE.ALL === statsMode ? " active" : ""}" data-action="setStatsCycle" data-id="${STATS_MODE.ALL}">All cycles</button>
-    </div>`;
+    const selectedStatsId = STATS_MODE.ACTIVE === statsMode ? e : statsMode,
+        s = renderCycleSelector(t, { selectedId: selectedStatsId, action: "setStatsCycle", includeAll: true, allId: STATS_MODE.ALL });
     let a;
     if (STATS_MODE.ALL === statsMode) a = [...t].sort((t, e) => new Date(e.startDate) - new Date(t.startDate));
     else {
