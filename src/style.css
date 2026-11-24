@@ -205,7 +205,7 @@ input[type="datetime-local"] {
 }
 .plant-row {
     display: grid;
-    grid-template-columns: 46px 1fr;
+    grid-template-columns: 100px 1fr;
     gap: 8px;
     align-items: start;
     padding: 6px 0;
@@ -371,9 +371,6 @@ input[type="datetime-local"] {
     display: flex;
     align-items: center;
     gap: 6px;
-}
-.nutrient-input-group .form-input {
-    width: 70px;
 }
 .form-input--conc {
     font-size: 13px;
@@ -1387,10 +1384,20 @@ textarea.form-input {
     border: none;
     border-radius: var(--r-md);
     cursor: pointer;
-    margin-bottom: 8px;
+    margin: 0;
 }
 .submit-btn:active {
     opacity: 0.85;
+}
+.entry-save-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin: 0 -16px -24px;
+    padding: 10px 16px 12px;
+    background: var(--bg);
+    border-top: 0.5px solid var(--border);
+    box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.08);
 }
 .header-menu-btn {
     display: inline-flex;
@@ -1689,7 +1696,47 @@ textarea.form-input {
 .plant-picker-wrap {
     display: none;
     width: 100%;
-    padding: 8px 0 10px 30px;
+    padding: 10px 0 4px;
+}
+.action-toggle-state {
+    display: none;
+}
+.action-button-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+}
+.action-toggle-btn {
+    min-width: 0;
+    padding: 10px 4px 9px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--r-md);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.action-toggle-btn svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+}
+.action-toggle-btn.active {
+    color: var(--green);
+    background: var(--green-bg);
+    border-color: var(--green-border);
+}
+.action-toggle-btn:active {
+    opacity: 0.8;
+}
+.action-plant-pickers {
+    margin-bottom: 8px;
 }
 .plant-picker-hint {
     font-size: 12px;

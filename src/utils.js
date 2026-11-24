@@ -1,4 +1,4 @@
-import { CYCLE_STAGE_LABEL } from "./constants.js";
+import { ACTION_BY_TYPE, ACTION_TYPE, CYCLE_STAGE_LABEL } from "./constants.js";
 
 export const NUTRIENT_PALETTE = ["fish", "grow", "bloom", "blue", "amber", "red"];
 export function getNutrientColor(t, e) {
@@ -44,7 +44,7 @@ function inferredRepottedAt(cycle, plant) {
         if (!date) continue;
         if (!firstEntryDate || date < firstEntryDate) firstEntryDate = date;
         for (const action of entry.actions || []) {
-            if (!action || action.type !== "repot") continue;
+            if (!action || action.type !== ACTION_TYPE.REPOT) continue;
             const plants = action.plants || [];
             if ((plants.length === 0 || plants.includes(plant)) && (!latestRepotDate || date > latestRepotDate)) latestRepotDate = date;
         }
@@ -62,16 +62,13 @@ export function fmtQty(t) {
 export function formatAction(t) {
     if (null == t) return "";
     if ("string" == typeof t) return escapeHtml(t);
+    const definition = ACTION_BY_TYPE[t.type];
+    if (definition?.plantPicker) {
+        const label = definition.pastLabel || definition.label;
+        return t.plants && 0 !== t.plants.length ? `${label} (${t.plants.map(escapeHtml).join(", ")})` : `${label} (All plants)`;
+    }
     switch (t.type) {
-        case "lst":
-        case "def":
-        case "repot":
-        case "flush":
-        case "harvest": {
-            const e = { lst: "LST", def: "Defoliate", repot: "Repot / transplant", flush: "Flushed", harvest: "Harvested" }[t.type];
-            return t.plants && 0 !== t.plants.length ? `${e} (${t.plants.map(escapeHtml).join(", ")})` : `${e} (All plants)`;
-        }
-        case "light": {
+        case ACTION_TYPE.LIGHT: {
             const e = [t.lux ? `${escapeHtml(t.lux)}k lux` : null, t.start && t.end ? `${escapeHtml(t.start)}–${escapeHtml(t.end)}` : null].filter(Boolean);
             return e.length ? `Light adjusted (${e.join(", ")})` : "Light adjusted";
         }
@@ -91,3 +88,4 @@ export function cycleStageBadge(stage) {
     if (stage === "complete") return `<span class="cycle-badge complete-tag">${CYCLE_STAGE_LABEL.complete}</span>`;
     return `<span class="cycle-badge green-btn">${CYCLE_STAGE_LABEL.grow}</span>`;
 }
+

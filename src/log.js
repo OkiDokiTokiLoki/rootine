@@ -2,6 +2,7 @@ import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, for
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
+import { ACTION_BY_TYPE, ACTION_TYPE, PLANT_ACTION_TYPES } from "./constants.js";
 let collapsedWeeks, collapsedCycles;
 let logCycleId = null,
     lastActiveId = null,
@@ -106,9 +107,10 @@ function renderEntryCard(e, t) {
     const s = Object.values(e.plants || {}),
         a = s.some((p) => p && someValue(p.nutrients, (v) => v && v > 0)),
         n = s.some((p) => p && p.water > 0),
-        l = (e.actions || []).some((a) => a && a.type === "light"),
-        c = (e.actions || []).some((a) => a && (a.type === "lst" || a.type === "def" || a.type === "repot" || a.type === "flush" || a.type === "harvest")),
-        h = (e.actions || []).some((a) => a && a.type === "harvest"),
+        l = (e.actions || []).some((a) => a && a.type === ACTION_TYPE.LIGHT),
+        plantActions = (e.actions || []).filter((a) => a && PLANT_ACTION_TYPES.has(a.type)),
+        c = plantActions.length > 0,
+        h = plantActions.some((action) => ACTION_BY_TYPE[action.type]?.highlight === "amber"),
         i = !!e.obs?.trim() || hasPlantObs(e);
     let d = "";
     (a && (d += `<span class="badge badge-feed"    style="margin-left:0">${icon.badgeFeed()}</span>`), n && (d += `<span class="badge badge-water"   style="margin-left:0">${icon.badgeWater()}</span>`), l && (d += `<span class="badge badge-light"   style="margin-left:0;">${icon.badgeLight()}</span>`), c && (d += `<span class="badge badge-scissors" style="margin-left:0;${h ? "background:var(--amber-bg);color:var(--amber)" : ""}">${icon.badgeScissors()}</span>`), i && (d += `<span class="badge badge-note"    style="margin-left:0;" title="Has observation">${icon.badgeNote()}</span>`));

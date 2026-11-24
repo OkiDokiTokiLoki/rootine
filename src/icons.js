@@ -45,6 +45,9 @@ export function trash(t) {
 export function duplicate(t) {
     return materialSvg("duplicate", t);
 }
+export function action(name, options) {
+    return materialSvg(name, options);
+}
 
 const BADGE_STYLE = "width:13px;height:15px;fill:currentColor";
 function badgeSvg(name) {
@@ -95,4 +98,4 @@ export function chevronDown({ className: t = "chevron", id: e = "", style: r = "
     return cached(key, () => `<svg class="${t}"${e ? ` id="${e}"` : ""} viewBox="0 0 24 24"${r ? ` style="${r}"` : ""}><polyline points="6 9 12 15 18 9"/></svg>`);
 }
 
-export const icon = { edit: edit, trash: trash, duplicate: duplicate, editStroke: editStroke, trashStroke: trashStroke, badgeFeed: badgeFeed, badgeWater: badgeWater, badgeLight: badgeLight, badgeScissors: badgeScissors, badgeNote: badgeNote, waterDropLine: waterDropLine, star: star, chevronDown: chevronDown, checkStroke: checkStroke, arrowUp: () => cached("s:arrowUp", () => '<svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M320-160q-117 0-198.5-81.5T40-440q0-107 70.5-186.5T287-718l-63-66 56-56 160 160-160 160-56-57 59-59q-71 14-117 69t-46 127q0 83 58.5 141.5T320-240h120v80H320Zm200-360v-280h360v280H520Zm0 360v-280h360v280H520Zm80-80h200v-120H600v120Z"/></svg>') };
+export const icon = { edit: edit, trash: trash, duplicate: duplicate, action: action, editStroke: editStroke, trashStroke: trashStroke, badgeFeed: badgeFeed, badgeWater: badgeWater, badgeLight: badgeLight, badgeScissors: badgeScissors, badgeNote: badgeNote, waterDropLine: waterDropLine, star: star, chevronDown: chevronDown, checkStroke: checkStroke, arrowUp: () => cached("s:arrowUp", () => '<svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M320-160q-117 0-198.5-81.5T40-440q0-107 70.5-186.5T287-718l-63-66 56-56 160 160-160 160-56-57 59-59q-71 14-117 69t-46 127q0 83 58.5 141.5T320-240h120v80H320Zm200-360v-280h360v280H520Zm0 360v-280h360v280H520Zm80-80h200v-120H600v120Z"/></svg>') };

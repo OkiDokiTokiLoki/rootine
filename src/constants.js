@@ -20,6 +20,20 @@ export const CYCLE_STAGE_LABEL = { grow: "Grow", harvest: "Harvest", complete: "
 // (formatAction in utils.js) maps these back to display strings.
 export const ACTION_TYPE = { LST: "lst", DEF: "def", REPOT: "repot", FLUSH: "flush", LIGHT: "light", HARVEST: "harvest" };
 
+// Shared action metadata used by forms, logs and action formatting. Add or
+// rename a standard plant action here instead of updating several views.
+export const ACTION_DEFINITIONS = [
+    { type: ACTION_TYPE.LST, label: "LST", pastLabel: "LST", icon: "scissors", plantPicker: true },
+    { type: ACTION_TYPE.DEF, label: "Defoliate", pastLabel: "Defoliated", icon: "scissors", plantPicker: true },
+    { type: ACTION_TYPE.REPOT, label: "Repot / transplant", pastLabel: "Repotted / transplanted", icon: "scissors", plantPicker: true, formVisible: false },
+    { type: ACTION_TYPE.FLUSH, label: "Flush", pastLabel: "Flushed", icon: "scissors", plantPicker: true },
+    { type: ACTION_TYPE.HARVEST, label: "Harvest", pastLabel: "Harvested", icon: "scissors", plantPicker: true, highlight: "amber" },
+    { type: ACTION_TYPE.LIGHT, label: "Lights", pastLabel: "Light adjustment", icon: "lightBulb", plantPicker: false, formVisible: false },
+];
+export const ACTION_BY_TYPE = Object.fromEntries(ACTION_DEFINITIONS.map((action) => [action.type, action]));
+export const FORM_PLANT_ACTIONS = ACTION_DEFINITIONS.filter((action) => action.plantPicker && action.formVisible !== false);
+export const PLANT_ACTION_TYPES = new Set(ACTION_DEFINITIONS.filter((action) => action.plantPicker).map((action) => action.type));
+
 // Plant types. "auto" = autoflower, "photo" = photoperiod. These are the
 // canonical lowercase forms; migration code in storage.js also writes them
 // out as raw strings when reading older data.

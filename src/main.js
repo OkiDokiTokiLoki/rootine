@@ -6,16 +6,34 @@ import { initStats, renderStats, setStatsMode, getStatsMode, initObsCollapsed, t
 import { on, closeHeaderMenu } from "./actions.js";
 import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
-import { PLANT_TYPE, ACTION_TYPE, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, CYCLE_STAGE, CYCLE_STAGE_LABEL } from "./constants.js";
+import { PLANT_TYPE, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, CYCLE_STAGE, CYCLE_STAGE_LABEL } from "./constants.js";
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
-const PICKER_ACTIONS = [ACTION_TYPE.LST, ACTION_TYPE.DEF, ACTION_TYPE.FLUSH, ACTION_TYPE.HARVEST].map((t) => {
+function renderActionControls() {
+    const buttons = document.querySelector(".action-button-grid"),
+        pickers = document.querySelector(".action-plant-pickers");
+    if (!buttons || !pickers) return;
+    buttons.innerHTML = FORM_PLANT_ACTIONS.map((action) => `
+        <input class="action-toggle-state" type="checkbox" id="ck-${action.type}" />
+        <button class="action-toggle-btn" type="button" data-action="togglePlantPicker" data-pick="${action.type}" aria-pressed="false">
+            ${icon.action(action.icon, { size: 22 })}<span>${escapeHtml(action.label)}</span>
+        </button>`).join("");
+    pickers.innerHTML = FORM_PLANT_ACTIONS.map((action) => `
+        <div id="${action.type}-plants" class="plant-picker-wrap">
+            <div class="plant-picker-hint">${escapeHtml(action.label)}</div>
+            <div class="plant-picker-list"></div>
+        </div>`).join("");
+}
+renderActionControls();
+
+const PICKER_ACTIONS = FORM_PLANT_ACTIONS.map(({ type: t }) => {
     const e = document.getElementById(`ck-${t}`),
         n = document.getElementById(`${t}-plants`),
+        button = document.querySelector(`.action-toggle-btn[data-pick="${t}"]`),
         a = n?.querySelector(".plant-picker-list");
-    if (!e || !n || !a) throw new Error(`Missing DOM for picker action "${t}"`);
-    return { id: t, checkbox: e, pickerWrap: n, pickerList: a, items: () => a.querySelectorAll(`.${t}-plant`), allCheckbox: () => a.querySelector(`.${t}-plant-all`), checked: () => [...a.querySelectorAll(`.${t}-plant:checked`)].map((t) => t.value) };
+    if (!e || !n || !button || !a) throw new Error(`Missing DOM for picker action "${t}"`);
+    return { id: t, checkbox: e, button, pickerWrap: n, pickerList: a, items: () => a.querySelectorAll(`.${t}-plant`), allCheckbox: () => a.querySelector(`.${t}-plant-all`), checked: () => [...a.querySelectorAll(`.${t}-plant:checked`)].map((t) => t.value) };
 }),
     collapsedCycles = loadCollapsedCycles(),
     collapsedWeeks = loadCollapsedWeeks(),
@@ -207,8 +225,7 @@ function restoreEditForm(snap) {
             cb.checked = false;
         }),
             p.allCheckbox() && (p.allCheckbox().checked = false),
-            (p.checkbox.checked = !!(found && found.checked)),
-            (p.pickerWrap.style.display = found && found.checked ? "block" : "none"));
+            setPickerActive(p, !!(found && found.checked)));
         if (!found || !found.checked) return;
         if (found.allChecked) {
             (p.items().forEach((cb) => {
@@ -306,8 +323,7 @@ function renderNutrientFormRows() {
             (l.innerHTML = `
             <label class="form-label nutrient-field-label--${a}">${escapeHtml(n.name)}</label>
             <div class="nutrient-input-group">
-                <input class="form-input" type="number" min="0" step="0.5" placeholder="cups" data-nutrient="${escapeHtml(n.name)}" data-field="amount" />
-                <input class="form-input form-input--conc" type="number" min="0" step="1" placeholder="ml/l" data-nutrient="${escapeHtml(n.name)}" data-field="conc" title="Concentration (ml/l)" />
+                <input class="form-input" type="number" inputmode="decimal" min="0" step="0.5" placeholder="cups" data-nutrient="${escapeHtml(n.name)}" data-field="amount" />
             </div>
         `),
             t.appendChild(l));
@@ -555,8 +571,7 @@ function resetAddForm() {
             t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
         }),
         PICKER_ACTIONS.forEach((t) => {
-            ((t.checkbox.checked = !1),
-                (t.pickerWrap.style.display = "none"),
+            (setPickerActive(t, false),
                 t.items().forEach((t) => {
                     ((t.checked = !1), (t.disabled = !1));
                 }));
@@ -591,7 +606,13 @@ function setDateDefault() {
 }
 function togglePlantPicker(t) {
     const e = PICKER_ACTIONS.find((e) => e.id === t);
-    e && (e.pickerWrap.style.display = e.checkbox.checked ? "block" : "none");
+    e && setPickerActive(e, !e.checkbox.checked);
+}
+function setPickerActive(picker, active) {
+    picker.checkbox.checked = active;
+    picker.button.classList.toggle("active", active);
+    picker.button.setAttribute("aria-pressed", String(active));
+    picker.pickerWrap.style.display = active ? "block" : "none";
 }
 function toggleLightInputs() {
     document.getElementById("light-inputs").style.display = document.getElementById("ck-light").checked ? "block" : "none";
@@ -903,7 +924,7 @@ function confirmRenamePlant() {
             cycles.forEach((t) => {
                 t.id === e.id &&
                     t.entries.forEach((t) => {
-                        (t.plants && t.plants[l] && ((t.plants[s] = t.plants[l]), delete t.plants[l]), Array.isArray(t.actions) && (t.actions = t.actions.map((t) => (t && (ACTION_TYPE.LST === t.type || ACTION_TYPE.DEF === t.type || ACTION_TYPE.REPOT === t.type || ACTION_TYPE.FLUSH === t.type || ACTION_TYPE.HARVEST === t.type) && Array.isArray(t.plants) ? { ...t, plants: t.plants.map((t) => (t === l ? s : t)) } : t))), t.plantObs && "object" == typeof t.plantObs && t.plantObs[l] && ((t.plantObs[s] = t.plantObs[l]), delete t.plantObs[l]));
+                        (t.plants && t.plants[l] && ((t.plants[s] = t.plants[l]), delete t.plants[l]), Array.isArray(t.actions) && (t.actions = t.actions.map((t) => (t && PLANT_ACTION_TYPES.has(t.type) && Array.isArray(t.plants) ? { ...t, plants: t.plants.map((t) => (t === l ? s : t)) } : t))), t.plantObs && "object" == typeof t.plantObs && t.plantObs[l] && ((t.plantObs[s] = t.plantObs[l]), delete t.plantObs[l]));
                     });
             }));
     }
@@ -1586,7 +1607,7 @@ function editEntry(t) {
             ((document.getElementById("ck-light").checked = a.some((t) => t && ACTION_TYPE.LIGHT === t.type)),
                 PICKER_ACTIONS.forEach((t) => {
                     const e = a.find((e) => e && e.type === t.id);
-                    ((t.checkbox.checked = !!e), e ? (restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, ACTION_TYPE.LST === t.id), (t.pickerWrap.style.display = "block")) : (t.pickerWrap.style.display = "none"));
+                    (setPickerActive(t, !!e), e && restorePlants(e, `.${t.id}-plant`, `.${t.id}-plant-all`, ACTION_TYPE.LST === t.id));
                 }),
                 document.getElementById("ck-light").checked)
         ) {
@@ -2212,7 +2233,7 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("addPlantObs", "click", () => addPlantObs()),
     on("saveEntry", "click", () => saveEntry()),
     on("cancelEdit", "click", () => cancelEdit()),
-    on("togglePlantPicker", "change", (t) => togglePlantPicker(t.dataset.pick)),
+    on("togglePlantPicker", "click", (t) => togglePlantPicker(t.dataset.pick)),
     on("toggleLightInputs", "change", () => toggleLightInputs()),
     on("saveLightDefaults", "input", () => _saveLightDefaults()),
     on("openLightSchedule", "click", () => openLightSchedule()),

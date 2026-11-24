@@ -81,38 +81,12 @@
                         <div class="form-section-title">Nutrients &amp; water</div>
                         <div class="nutrient-plant-tabs" id="nutrient-plant-tabs"></div>
                         <div id="nutrient-rows"></div>
-                        <div class="form-row form-row--last nutrient-water-row"><label class="form-label">Water</label><input class="form-input" type="number" min="0" step="0.5" placeholder="cups" id="nutrient-water" /></div>
+                        <div class="form-row form-row--last nutrient-water-row"><label class="form-label">Water</label><input class="form-input" type="number" inputmode="decimal" min="0" step="0.5" placeholder="cups" id="nutrient-water" /></div>
                     </div>
                     <div class="form-section">
                         <div class="form-section-title">Actions</div>
-                        <div class="checkbox-row checkbox-row--block">
-                            <label class="checkbox-row__label"><input type="checkbox" id="ck-lst" data-action="togglePlantPicker" data-pick="lst" />LST </label>
-                            <div id="lst-plants" class="plant-picker-wrap">
-                                <div class="plant-picker-hint">Which plants?</div>
-                                <div class="plant-picker-list"></div>
-                            </div>
-                        </div>
-                        <div class="checkbox-row checkbox-row--block">
-                            <label class="checkbox-row__label"><input type="checkbox" id="ck-def" data-action="togglePlantPicker" data-pick="def" />Defoliate </label>
-                            <div id="def-plants" class="plant-picker-wrap">
-                                <div class="plant-picker-hint">Which plants?</div>
-                                <div class="plant-picker-list"></div>
-                            </div>
-                        </div>
-                        <div class="checkbox-row checkbox-row--block">
-                            <label class="checkbox-row__label"><input type="checkbox" id="ck-flush" data-action="togglePlantPicker" data-pick="flush" />Flush </label>
-                            <div id="flush-plants" class="plant-picker-wrap">
-                                <div class="plant-picker-hint">Which plants?</div>
-                                <div class="plant-picker-list"></div>
-                            </div>
-                        </div>
-                        <div class="checkbox-row checkbox-row--block">
-                            <label class="checkbox-row__label"><input type="checkbox" id="ck-harvest" data-action="togglePlantPicker" data-pick="harvest" />Harvest </label>
-                            <div id="harvest-plants" class="plant-picker-wrap">
-                                <div class="plant-picker-hint">Which plants?</div>
-                                <div class="plant-picker-list"></div>
-                            </div>
-                        </div>
+                        <div class="action-button-grid"></div>
+                        <div class="action-plant-pickers"></div>
                         <div class="checkbox-row checkbox-row--block" id="light-row">
                             <label class="checkbox-row__label"><input type="checkbox" id="ck-light" data-action="toggleLightInputs" />Lights </label>
                             <div id="light-inputs" class="light-inputs-wrap">
@@ -132,7 +106,9 @@
                         <div class="plant-obs-tabs" id="plant-obs-tabs"></div>
                         <textarea id="plant-obs-input" class="form-input plant-obs-input" rows="1" placeholder="Note about the selected plant (e.g. yellow tips, light stretch)"></textarea><button class="plant-obs-add-btn" type="button" data-action="addPlantObs">+ Add note</button>
                     </div>
-                    <button class="btn-primary submit-btn" data-action="saveEntry">Save entry</button>
+                    <div class="entry-save-bar">
+                        <button class="btn-primary submit-btn" data-action="saveEntry">Save entry</button>
+                    </div>
                 </div>
                 <div id="section-stats" class="section">
                     <div id="stats-cycle-toggle-container"></div>
