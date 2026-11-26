@@ -6,7 +6,7 @@ import { initStats, renderStats, setStatsMode, getStatsMode, initObsCollapsed, t
 import { on, closeHeaderMenu } from "./actions.js";
 import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
-import { PLANT_TYPE, PLANT_TYPE_DEFINITIONS, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, PLANT_DETAIL_METRIC_SECTIONS } from "./constants.js";
+import { PLANT_TYPE, PLANT_TYPE_DEFINITIONS, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, PLANT_DETAIL_METRIC_SECTIONS } from "./constants.js";
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
@@ -425,7 +425,9 @@ function renderOverview() {
         <div class="section-title overview-section-title">Grow cycles</div>
         <div class="overview-cycle-list">${cycleCards || `<div class="overview-empty"><strong>No grow cycles yet</strong><span>Create your first cycle to begin tracking plants, nutrients, and logs.</span><button data-action="newCycleFromManager">Create a grow cycle</button></div>`}</div>
         <div class="section-title overview-section-title">Data &amp; backup</div>
-        <div class="overview-data-card"><div><strong>Your data stays on this device</strong><span>Export a backup regularly so your grow history can be restored on any device.</span></div><div class="overview-data-actions"><button data-action="exportBackup">Export backup</button><button data-action="triggerImport">Import backup</button></div></div>`;
+        <div class="overview-data-card"><div><strong>Your data stays on this device</strong><span>Export a backup regularly so your grow history can be restored on any device.</span></div><div class="overview-data-actions"><button data-action="exportBackup">Export backup</button><button data-action="triggerImport">Import backup</button></div></div>
+        <div class="section-title overview-section-title overview-section-title--danger">Danger zone</div>
+        <div class="overview-danger-card"><div><strong>Reset or remove local data</strong><span>Open guarded maintenance tools for interface settings or a complete Rootine reset.</span></div><button data-action="openDangerZone">Open danger zone</button></div>`;
 }
 function openOverviewCycleLog(id) {
     if (!cycles.some((cycle) => cycle.id === id)) return;
@@ -2304,6 +2306,38 @@ function mergeCycles(existing, imported) {
 function triggerImport() {
     document.getElementById("import-backup-input").click();
 }
+function openDangerZone() {
+    const input = document.getElementById("danger-confirm-input"),
+        button = document.getElementById("danger-clear-btn");
+    if (input) input.value = "";
+    if (button) button.disabled = true;
+    showModal("danger-zone-modal");
+}
+function closeDangerZone() {
+    hideModal("danger-zone-modal");
+}
+function updateDangerClearState() {
+    const input = document.getElementById("danger-confirm-input"),
+        button = document.getElementById("danger-clear-btn");
+    if (button) button.disabled = input?.value.trim() !== "CLEAR";
+}
+function resetInterfacePreferences() {
+    if (!confirm("Reset Rootine's interface preferences? Your grow cycles and logs will be preserved.")) return;
+    [ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY].forEach((key) => localStorage.removeItem(key));
+    location.reload();
+}
+function clearAllRootineData() {
+    const input = document.getElementById("danger-confirm-input");
+    if (input?.value.trim() !== "CLEAR") return;
+    if (!confirm("Permanently clear every Rootine cycle, plant, nutrient, log entry, and setting on this device? This cannot be undone.")) return;
+    const ownedKeys = new Set([STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY]);
+    for (let index = 0; index < localStorage.length; index++) {
+        const key = localStorage.key(index);
+        if (key && (key.startsWith("_corrupt_backup_") || key.startsWith("light_defaults_"))) ownedKeys.add(key);
+    }
+    ownedKeys.forEach((key) => localStorage.removeItem(key));
+    location.reload();
+}
 function refreshOpenPlantDetail() {
     const t = document.getElementById("plant-detail-modal");
     if (!t || !t.classList.contains("modal-overlay--visible")) return;
@@ -2428,6 +2462,11 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("importReplace", "click", () => applyImport("replace")),
     on("cancelImport", "click", () => cancelImport()),
     on("triggerImport", "click", () => triggerImport()),
+    on("openDangerZone", "click", () => openDangerZone()),
+    on("closeDangerZone", "click", () => closeDangerZone()),
+    on("updateDangerClearState", "input", () => updateDangerClearState()),
+    on("resetInterfacePreferences", "click", () => resetInterfacePreferences()),
+    on("clearAllRootineData", "click", () => clearAllRootineData()),
     on("confirmNewCycle", "click", () => confirmNewCycle()),
     on("cancelNewCycle", "click", () => cancelNewCycle()),
     on("confirmRenameCycle", "click", () => confirmRenameCycle()),

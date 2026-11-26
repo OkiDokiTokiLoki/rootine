@@ -1782,6 +1782,100 @@ textarea.form-input {
     font-weight: 600;
     cursor: pointer;
 }
+.overview-section-title--danger {
+    color: var(--red);
+}
+.overview-danger-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px;
+    border: 1px solid var(--red-border);
+    border-radius: var(--r-md);
+    background: var(--red-bg);
+}
+.overview-danger-card strong,
+.overview-danger-card span {
+    display: block;
+}
+.overview-danger-card strong {
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+.overview-danger-card span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+.overview-danger-card button {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--red-border);
+    border-radius: var(--r-sm);
+    background: var(--red-bg);
+    color: var(--red);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.danger-tool {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface2);
+}
+.danger-tool strong,
+.danger-tool span {
+    display: block;
+}
+.danger-tool strong {
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+.danger-tool span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+.danger-tool button {
+    width: 100%;
+    min-height: 40px;
+    margin-top: 12px;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.danger-tool__secondary {
+    border: 1px solid var(--border2);
+    background: var(--surface3);
+    color: var(--text);
+}
+.danger-tool--destructive {
+    border-color: var(--red-border);
+    background: var(--red-bg);
+}
+.danger-confirm-label {
+    display: block;
+    margin: 14px 0 7px;
+    color: var(--muted);
+    font-size: 12px;
+}
+.danger-confirm-label b {
+    color: var(--text);
+}
+.danger-tool__delete {
+    border: 1px solid var(--red-border);
+    background: var(--red);
+    color: #fff;
+}
+.danger-tool__delete:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
 @media (max-width: 430px) {
     .overview-manager-grid {
         grid-template-columns: 1fr;
@@ -1802,6 +1896,13 @@ textarea.form-input {
     .overview-data-card {
         align-items: stretch;
         flex-direction: column;
+    }
+    .overview-danger-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .overview-danger-card button {
+        width: 100%;
     }
     .overview-data-actions button {
         flex: 1;
