@@ -5,7 +5,7 @@ export function on(e, t, n) {
 function closeHeaderMenu() {
     const e = document.getElementById("header-menu"),
         t = document.getElementById("header-menu-btn");
-    e && (e.classList.remove("open"), t.classList.remove("is-open"), t.setAttribute("aria-expanded", "false"));
+    e && (e.classList.remove("open"), e.setAttribute("aria-hidden", "true"), (e.inert = true), t.classList.remove("is-open"), t.setAttribute("aria-expanded", "false"));
 }
 function route(e) {
     const t = e.target.closest("[data-action]");

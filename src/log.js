@@ -97,7 +97,7 @@ function renderEntriesForCycle(e) {
             s += renderEntryCard(t, e);
         }),
         null !== a && (s += "</div>"),
-        s || '<div class="empty" style="padding:20px 0">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging or <span data-action="triggerImport" style="color:var(--green);cursor:pointer;text-decoration:underline">Import</span> an existing log.</div>'
+        s || '<div class="empty empty-state-card"><strong>No entries in this cycle yet</strong><span>Start with today’s watering, feeding, action, or observation.</span><button type="button" class="btn-primary" data-action="showTab" data-id="add">Add first entry</button></div>'
     );
 }
 function hasPlantObs(e) {
@@ -156,7 +156,7 @@ export function renderLog(cycles, activeId) {
         sorted = sortedCycles(),
         selected = sorted.find((c) => c.id === logCycleId);
     if (!selected) {
-        list.innerHTML = '<div class="empty">No entries yet. Tap <span data-action="newCycle" style="color:var(--green);cursor:pointer;text-decoration:underline">Add</span> to start logging or <span data-action="triggerImport" style="color:var(--green);cursor:pointer;text-decoration:underline">Import</span> an existing log.</div>';
+        list.innerHTML = '<div class="empty empty-state-card"><strong>Welcome to Rootine</strong><span>Create your first grow cycle to start logging, or restore an existing backup.</span><button type="button" class="btn-primary" data-action="newCycle">Create grow cycle</button><button type="button" class="empty-state-link" data-action="triggerImport">Import backup</button></div>';
         return;
     }
     const tabs = renderCycleSelector(sorted, { selectedId: selected.id, action: "selectLogCycle", extraClass: "log-cycle-tabs", buttonClass: "log-cycle-tab" }),

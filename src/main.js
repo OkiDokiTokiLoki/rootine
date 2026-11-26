@@ -44,20 +44,58 @@ let yieldDrafts = {};
 let plantManagerCycleId = null,
     nutrientManagerCycleId = null;
 const draftState = { editingEntryId: null, pendingAddPlantType: PLANT_TYPE.AUTO, pendingRenamePlantType: PLANT_TYPE.AUTO, pendingPlantObs: [], selectedPlantObsTab: null, editingPlantObsIndex: null, orphanedEdits: {} };
+const modalFocusOrigins = new Map();
+let toastTimer = null;
 function resetDraft() {
     ((draftState.editingEntryId = null), (draftState.pendingAddPlantType = PLANT_TYPE.AUTO), (draftState.pendingRenamePlantType = PLANT_TYPE.AUTO), (draftState.pendingPlantObs = []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
 }
 function showModal(id) {
-    document.getElementById(id)?.classList.add("modal-overlay--visible");
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modalFocusOrigins.set(id, document.activeElement);
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-hidden", "false");
+    modal.inert = false;
+    const title = modal.querySelector(".modal-title");
+    if (title) {
+        title.id ||= `${id}-title`;
+        modal.setAttribute("aria-labelledby", title.id);
+    }
+    modal.classList.add("modal-overlay--visible");
+    requestAnimationFrame(() => modal.querySelector('input:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex="0"]')?.focus());
 }
 function hideModal(id) {
-    document.getElementById(id)?.classList.remove("modal-overlay--visible");
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.remove("modal-overlay--visible");
+    modal.setAttribute("aria-hidden", "true");
+    modal.inert = true;
+    const origin = modalFocusOrigins.get(id);
+    modalFocusOrigins.delete(id);
+    origin?.isConnected && requestAnimationFrame(() => origin.focus());
 }
 function toggleHeaderMenu() {
     const t = document.getElementById("header-menu"),
         e = document.getElementById("header-menu-btn"),
         n = t.classList.toggle("open");
-    (e.classList.toggle("is-open", n), e.setAttribute("aria-expanded", n ? "true" : "false"));
+    (e.classList.toggle("is-open", n), e.setAttribute("aria-expanded", n ? "true" : "false"), t.setAttribute("aria-hidden", n ? "false" : "true"), (t.inert = !n));
+}
+function showToast(message, type = "success") {
+    const toast = document.getElementById("app-toast");
+    if (!toast) return;
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.dataset.type = type;
+    toast.classList.add("app-toast--visible");
+    toastTimer = setTimeout(() => toast.classList.remove("app-toast--visible"), 2800);
+}
+function showAddFormMessage(message = "", type = "error") {
+    const el = document.getElementById("add-form-message");
+    if (!el) return;
+    el.textContent = message;
+    el.dataset.type = type;
+    el.hidden = !message;
 }
 (initLog(collapsedWeeks, collapsedCycles),
     initStats(STATS_MODE.ACTIVE),
@@ -297,6 +335,29 @@ function cycleShowsYield(cycle) {
     const stage = cycle?.stage || CYCLE_STAGE.GROW;
     return !!CYCLE_STAGE_DEFINITIONS[stage]?.showsYield;
 }
+function reconcileCycleHarvestStage(cycle) {
+    if (!cycle || cycle.stageSource === "manual") return false;
+    const hasHarvestedPlant = Object.values(cycle.plantTypes || {}).some((plantType) => plantType && typeof plantType === "object" && plantType.harvestedAt),
+        hasHarvestAction = (cycle.entries || []).some((entry) => (entry.actions || []).some((action) => action?.type === ACTION_TYPE.HARVEST)),
+        hasHarvest = hasHarvestedPlant || hasHarvestAction,
+        currentStage = cycle.stage || CYCLE_STAGE.GROW;
+    if (!cycle.stageSource && (currentStage === CYCLE_STAGE.COMPLETE || (currentStage === CYCLE_STAGE.HARVEST && !hasHarvest))) {
+        cycle.stageSource = "manual";
+        return true;
+    }
+    const nextStage = hasHarvest ? CYCLE_STAGE.HARVEST : CYCLE_STAGE.GROW,
+        changed = currentStage !== nextStage || cycle.stageSource !== "auto";
+    cycle.stage = nextStage;
+    cycle.stageSource = "auto";
+    return changed;
+}
+function reconcileAllCycleStages() {
+    let changed = false;
+    cycles.forEach((cycle) => {
+        if (reconcileCycleHarvestStage(cycle)) changed = true;
+    });
+    if (changed) persist();
+}
 function resetPlantNotesDraft(t) {
     ((draftState.pendingPlantObs = Array.isArray(t) ? [...t] : []), (draftState.selectedPlantObsTab = null), (draftState.editingPlantObsIndex = null));
     const e = document.getElementById("plant-obs-input");
@@ -326,9 +387,9 @@ function renderOverview() {
         { value: totalEntries, label: "Log entries" },
     ];
     const managerCards = [
-        { title: "Grow cycles", description: "Create, rename, clone, advance, or remove cycles.", action: "openCycleManager", button: "Manage cycles" },
-        { title: "Plants", description: "Manage plants and varieties for any grow cycle.", action: "openPlantManager", button: "Manage plants" },
-        { title: "Nutrients", description: "Manage the nutrient list for any grow cycle.", action: "openNutrientManager", button: "Manage nutrients" },
+        { title: "Grow cycles", description: "Create, rename, clone, advance, or remove cycles.", action: "openCycleManager", button: "Manage cycles", icon: icon.duplicate({ size: 20 }) },
+        { title: "Plants", description: "Manage plants and varieties for any grow cycle.", action: "openPlantManager", button: "Manage plants", icon: icon.action("feed", { size: 20 }) },
+        { title: "Nutrients", description: "Manage the nutrient list for any grow cycle.", action: "openNutrientManager", button: "Manage nutrients", icon: icon.waterDropLine({ size: 20 }) },
     ];
     const cycleCards = sortedCycles.map((cycle) => {
         const stage = cycle.stage || CYCLE_STAGE.GROW,
@@ -354,15 +415,17 @@ function renderOverview() {
     }).join("");
     root.innerHTML = `
         <div class="overview-hero">
-            <div><div class="overview-eyebrow">Grow overview</div><h2>Everything in one place</h2><p>Review your grows and jump straight into the manager you need.</p></div>
-            <button class="overview-new-cycle" data-action="newCycleFromManager">+ New cycle</button>
+            <div><div class="overview-eyebrow">Grow overview</div><h2>Your grow control center</h2><p>Review progress, manage each cycle, and keep your grow data safe.</p></div>
+            <div class="overview-hero-actions"><button class="overview-new-cycle" data-action="newCycleFromManager">New cycle</button><button class="overview-quick-log" data-action="showTab" data-id="add">Add log</button></div>
         </div>
         <div class="overview-summary">${summary.map((item) => `<div class="overview-summary-card"><strong>${item.value}</strong><span>${item.label}</span></div>`).join("")}</div>
-        <div class="overview-latest">${latest ? `<span>Latest activity</span><strong>${escapeHtml(latest.cycle.name)}</strong><small>${fmtDate(latest.dt)} at ${fmtTime(latest.dt)}</small>` : `<span>Latest activity</span><strong>No logs yet</strong><small>Create a cycle and add your first entry.</small>`}</div>
-        <div class="section-title overview-section-title">Managers</div>
-        <div class="overview-manager-grid">${managerCards.map((manager) => `<button class="overview-manager-card" data-action="${manager.action}"><strong>${manager.title}</strong><span>${manager.description}</span><em>${manager.button} →</em></button>`).join("")}</div>
+        <div class="overview-latest">${latest ? `<div><span>Latest activity</span><strong>${escapeHtml(latest.cycle.name)}</strong><small>${fmtDate(latest.dt)} at ${fmtTime(latest.dt)}</small></div><button data-action="openOverviewCycleLog" data-id="${escapeHtml(latest.cycle.id)}">View log</button>` : `<div><span>Latest activity</span><strong>No logs yet</strong><small>Create a cycle and add your first entry.</small></div><button data-action="showTab" data-id="add">Add log</button>`}</div>
+        <div class="section-title overview-section-title">Manage</div>
+        <div class="overview-manager-grid">${managerCards.map((manager) => `<button class="overview-manager-card" data-action="${manager.action}"><i>${manager.icon}</i><strong>${manager.title}</strong><span>${manager.description}</span><em>${manager.button}</em></button>`).join("")}</div>
         <div class="section-title overview-section-title">Grow cycles</div>
-        <div class="overview-cycle-list">${cycleCards || `<div class="overview-empty"><strong>No grow cycles yet</strong><span>Create your first cycle to begin tracking plants, nutrients, and logs.</span><button data-action="newCycleFromManager">Create a grow cycle</button></div>`}</div>`;
+        <div class="overview-cycle-list">${cycleCards || `<div class="overview-empty"><strong>No grow cycles yet</strong><span>Create your first cycle to begin tracking plants, nutrients, and logs.</span><button data-action="newCycleFromManager">Create a grow cycle</button></div>`}</div>
+        <div class="section-title overview-section-title">Data &amp; backup</div>
+        <div class="overview-data-card"><div><strong>Your data stays on this device</strong><span>Export a backup regularly so your grow history can be restored on any device.</span></div><div class="overview-data-actions"><button data-action="exportBackup">Export backup</button><button data-action="triggerImport">Import backup</button></div></div>`;
 }
 function openOverviewCycleLog(id) {
     if (!cycles.some((cycle) => cycle.id === id)) return;
@@ -422,6 +485,12 @@ function renderAddForm() {
     const a = availablePlantsForAddForm(),
         l = 0 === a.length ? [] : [...a].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1));
     syncHeaderActions();
+    const setupGate = document.getElementById("add-setup-gate"),
+        formContent = document.getElementById("add-form-content"),
+        needsSetup = !e;
+    if (setupGate) setupGate.hidden = !needsSetup;
+    if (formContent) formContent.hidden = needsSetup;
+    document.querySelector('[data-action="saveEntry"]')?.toggleAttribute("disabled", needsSetup);
 
     const yieldSection = document.getElementById("yield-section");
     if (yieldSection) {
@@ -620,7 +689,8 @@ function editPlantObs(t) {
 function showTab(t, e = !1) {
     const tabs = ["overview", "log", "add", "stats"],
         currentTab = tabs.find((id) => document.getElementById("section-" + id).classList.contains("active")),
-        shouldScrollToTop = e || currentTab !== t;
+        shouldScrollToTop = true;
+    if ("add" === currentTab && "add" !== t && !draftState.editingEntryId && isAddFormDirty() && !confirm("Discard this unsaved log entry?")) return;
     if ("add" === currentTab && "add" !== t && !draftState.editingEntryId) resetAddForm();
     tabs.forEach((id) => {
         document.getElementById("section-" + id).classList.toggle("active", id === t);
@@ -636,6 +706,17 @@ function showTab(t, e = !1) {
         if (content) content.scrollTop = 0;
         window.scrollTo(0, 0);
     }
+}
+function isAddFormDirty() {
+    if (!activeCycle()) return false;
+    if (document.getElementById("new-obs")?.value.trim() || document.getElementById("plant-obs-input")?.value.trim() || draftState.pendingPlantObs.length) return true;
+    if (PICKER_ACTIONS.some((action) => action.checkbox.checked)) return true;
+    if (document.getElementById("nutrient-water")?.value) return true;
+    if (document.querySelector('#nutrient-rows input:not([value=""]), #yield-rows input:not([value=""])')) {
+        const inputs = document.querySelectorAll("#nutrient-rows input, #yield-rows input");
+        if ([...inputs].some((input) => input.value !== "")) return true;
+    }
+    return Object.keys(nutrientDrafts).length > 0 || Object.keys(yieldDrafts).length > 0;
 }
 function resetAddForm() {
     ((yieldDrafts = {}), (nutrientDrafts = {}), (nutrientActiveTab = NUTRIENT_TAB_ALL));
@@ -756,7 +837,11 @@ function updateLightStatus() {
         r.push(f(d) + "–" + f(c) + " (" + i + "/" + s + ")");
     }
     const u = r.length ? r.join("·") : "no active schedule";
-    if (status) status.title = t ? `Adjust ${t.name} light schedule` : "No grow cycle selected";
+    if (status) {
+        status.title = t ? `Adjust ${t.name} light schedule` : "Create a grow cycle to set a light schedule";
+        status.setAttribute("aria-disabled", t ? "false" : "true");
+        status.classList.toggle("light-status--disabled", !t);
+    }
     if ((e.textContent !== u && (e.textContent = u), n)) {
         const t = o ? "var(--amber)" : "var(--muted)";
         n.style.fill !== t && (n.style.fill = t);
@@ -1132,6 +1217,7 @@ function advanceCycleStage(id) {
     if (!cycle) return;
     const current = cycle.stage || CYCLE_STAGE.GROW;
     cycle.stage = (CYCLE_STAGE_DEFINITIONS[current] || CYCLE_STAGE_DEFINITIONS[CYCLE_STAGE.GROW]).next;
+    cycle.stageSource = "manual";
     persist();
     invalidateLog();
     invalidateStats();
@@ -1572,7 +1658,7 @@ function confirmNewCycle() {
     const e = new Date(),
         n = (t) => String(t).padStart(2, "0"),
         a = `${e.getFullYear()}-${n(e.getMonth() + 1)}-${n(e.getDate())}`,
-        l = { id: cycleUid(), name: t, startDate: a, plants: [], plantTypes: {}, entries: [], lightDefaults: {}, nutrients: [], stage: CYCLE_STAGE.GROW };
+        l = { id: cycleUid(), name: t, startDate: a, plants: [], plantTypes: {}, entries: [], lightDefaults: {}, nutrients: [], stage: CYCLE_STAGE.GROW, stageSource: "auto" };
     (cycles.push(l), (activeCycleId = l.id), persist(), saveActiveCycleId(activeCycleId), updateGrowAge(), renderAddForm(), syncHeaderActions(), resetAddForm(), setDateDefault(), showTab("log", !0), invalidateLog(), invalidateStats(), hideModal("cycle-manage-modal"));
 }
 function cancelNewCycle() {
@@ -1839,8 +1925,19 @@ function mergeAllDailyEntries() {
 }
 function saveEntry() {
     const t = document.getElementById("new-dt").value;
-    if (!t) return void alert("Set a date and time.");
-    const e = activeCycle(),
+    if (!activeCycle()) {
+        showAddFormMessage("Create a grow cycle before saving an entry.");
+        document.getElementById("add-setup-gate")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+    }
+    if (!t) {
+        showAddFormMessage("Set a date and time before saving.");
+        document.getElementById("new-dt")?.focus();
+        return;
+    }
+    showAddFormMessage();
+    const wasEditing = Boolean(draftState.editingEntryId),
+        e = activeCycle(),
         n = [...cyclePlants()].sort((t, n) => (isFavourite(e, t) ? 0 : 1) - (isFavourite(e, n) ? 0 : 1)),
         editedEntry = draftState.editingEntryId ? e.entries.find((entry) => entry.id === draftState.editingEntryId) : null,
         a = editedEntry ? (editedEntry.actions || []).filter((action) => action?.type === ACTION_TYPE.LIGHT).map((action) => ({ ...action })) : [];
@@ -1859,6 +1956,13 @@ function saveEntry() {
                 }
             }
         }
+    }
+    const harvestPicker = PICKER_ACTIONS.find((picker) => picker.id === ACTION_TYPE.HARVEST),
+        newlyHarvestedPlants = harvestPicker?.checkbox.checked ? harvestPicker.checked().filter((plant) => !previouslyHarvestedPlants.has(plant)) : [];
+    if (newlyHarvestedPlants.length) {
+        const names = newlyHarvestedPlants.join(", "),
+            message = `Mark ${names} as harvested?\n\n${newlyHarvestedPlants.length === 1 ? "This plant" : "These plants"} will be removed from future feeding and action selections. You can undo this by editing this log entry.`;
+        if (!confirm(message)) return;
     }
     const currentlyFlushedPlants = new Set();
     const currentlyHarvestedPlants = new Set();
@@ -1978,7 +2082,7 @@ function saveEntry() {
         }
     } else e.entries.unshift({ id: uid(), dt: t, plants: i, actions: a, obs: o || void 0, plantObs: Object.keys(c).length ? c : {} });
     mergeEntriesForDay(e, t.slice(0, 10));
-    (persist(), updateGrowAge(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats(), renderAddForm());
+    (reconcileCycleHarvestStage(e), persist(), updateGrowAge(), resetAddForm(), showTab("log", !0), invalidateLog(), invalidateStats(), renderAddForm(), showToast(wasEditing ? "Log entry updated" : "Log entry saved"));
 }
 function cancelEdit() {
     (resetDraft(), resetAddForm(), setDateDefault(), showTab("log", !0));
@@ -2035,6 +2139,7 @@ function deleteEntry(t) {
         if (idx >= 0) {
             c.entries.splice(idx, 1);
             recomputeActionMetadata(c);
+            reconcileCycleHarvestStage(c);
             break;
         }
     }
@@ -2236,6 +2341,32 @@ if (lightStatusControl) {
         }
     });
 }
+document.querySelectorAll(".modal-overlay").forEach((modal) => {
+    modal.setAttribute("aria-hidden", "true");
+    modal.inert = true;
+});
+document.addEventListener("keydown", (event) => {
+    const visibleModals = [...document.querySelectorAll(".modal-overlay--visible")];
+    const modal = visibleModals.at(-1);
+    if (!modal) return;
+    if (event.key === "Escape") {
+        const closeButton = modal.querySelector('[data-action*="cancel" i], [data-action*="close" i]');
+        closeButton?.click();
+        return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]')].filter((el) => el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0],
+        last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    }
+});
 document.addEventListener("rootine:log-cycle-changed", (event) => {
     const cycleId = event.detail?.cycleId;
     if (cycleId && cycles.some((cycle) => cycle.id === cycleId) && cycleId !== activeCycleId) {
@@ -2323,6 +2454,7 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("closeCycleManager", "click", () => closeCycleManager()),
     on("newCycleFromManager", "click", () => newCycleFromManager()),
     on("advanceCycleStage", "click", (t) => advanceCycleStage(t.dataset.id)),
+    reconcileAllCycleStages(),
     mergeAllDailyEntries(),
     updateGrowAge(),
     setDateDefault(),
