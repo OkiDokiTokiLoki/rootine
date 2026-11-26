@@ -306,6 +306,84 @@ function syncHeaderActions() {
     const t = document.getElementById("header-add-plants-btn");
     t && (t.style.display = 0 === cycles.length ? "none" : "");
 }
+function renderOverview() {
+    const root = document.getElementById("overview-content");
+    if (!root) return;
+    const totalPlants = cycles.reduce((sum, cycle) => sum + (cycle.plants || []).length, 0),
+        totalEntries = cycles.reduce((sum, cycle) => sum + (cycle.entries || []).length, 0),
+        currentCycles = cycles.filter((cycle) => (cycle.stage || CYCLE_STAGE.GROW) !== CYCLE_STAGE.COMPLETE).length,
+        allEntries = cycles.flatMap((cycle) => (cycle.entries || []).map((entry) => ({ ...entry, cycle }))).sort((a, b) => new Date(b.dt) - new Date(a.dt)),
+        latest = allEntries[0] || null,
+        sortedCycles = [...cycles].sort((a, b) => {
+            const aDate = a.entries?.length ? Math.max(...a.entries.map((entry) => new Date(entry.dt).getTime() || 0)) : new Date(a.startDate).getTime(),
+                bDate = b.entries?.length ? Math.max(...b.entries.map((entry) => new Date(entry.dt).getTime() || 0)) : new Date(b.startDate).getTime();
+            return bDate - aDate;
+        });
+    const summary = [
+        { value: cycles.length, label: "Grow cycles" },
+        { value: currentCycles, label: "In progress" },
+        { value: totalPlants, label: "Plants" },
+        { value: totalEntries, label: "Log entries" },
+    ];
+    const managerCards = [
+        { title: "Grow cycles", description: "Create, rename, clone, advance, or remove cycles.", action: "openCycleManager", button: "Manage cycles" },
+        { title: "Plants", description: "Manage plants and varieties for any grow cycle.", action: "openPlantManager", button: "Manage plants" },
+        { title: "Nutrients", description: "Manage the nutrient list for any grow cycle.", action: "openNutrientManager", button: "Manage nutrients" },
+    ];
+    const cycleCards = sortedCycles.map((cycle) => {
+        const stage = cycle.stage || CYCLE_STAGE.GROW,
+            entries = cycle.entries || [],
+            latestEntry = [...entries].sort((a, b) => new Date(b.dt) - new Date(a.dt))[0],
+            lastActivity = latestEntry ? fmtDate(latestEntry.dt) : "No entries yet";
+        return `<article class="overview-cycle-card">
+            <div class="overview-cycle-head">
+                <div><div class="overview-cycle-name">${escapeHtml(cycle.name)}</div><div class="overview-cycle-date">Last activity: ${lastActivity}</div></div>
+                ${cycleStageBadge(stage)}
+            </div>
+            <div class="overview-cycle-metrics">
+                <span>${(cycle.plants || []).length} plant${(cycle.plants || []).length === 1 ? "" : "s"}</span>
+                <span>${entries.length} entr${entries.length === 1 ? "y" : "ies"}</span>
+                <span>${(cycle.nutrients || []).length} nutrient${(cycle.nutrients || []).length === 1 ? "" : "s"}</span>
+            </div>
+            <div class="overview-cycle-actions">
+                <button data-action="openOverviewCycleLog" data-id="${escapeHtml(cycle.id)}">View logs</button>
+                <button data-action="openOverviewPlantManager" data-id="${escapeHtml(cycle.id)}">Plants</button>
+                <button data-action="openOverviewNutrientManager" data-id="${escapeHtml(cycle.id)}">Nutrients</button>
+            </div>
+        </article>`;
+    }).join("");
+    root.innerHTML = `
+        <div class="overview-hero">
+            <div><div class="overview-eyebrow">Grow overview</div><h2>Everything in one place</h2><p>Review your grows and jump straight into the manager you need.</p></div>
+            <button class="overview-new-cycle" data-action="newCycleFromManager">+ New cycle</button>
+        </div>
+        <div class="overview-summary">${summary.map((item) => `<div class="overview-summary-card"><strong>${item.value}</strong><span>${item.label}</span></div>`).join("")}</div>
+        <div class="overview-latest">${latest ? `<span>Latest activity</span><strong>${escapeHtml(latest.cycle.name)}</strong><small>${fmtDate(latest.dt)} at ${fmtTime(latest.dt)}</small>` : `<span>Latest activity</span><strong>No logs yet</strong><small>Create a cycle and add your first entry.</small>`}</div>
+        <div class="section-title overview-section-title">Managers</div>
+        <div class="overview-manager-grid">${managerCards.map((manager) => `<button class="overview-manager-card" data-action="${manager.action}"><strong>${manager.title}</strong><span>${manager.description}</span><em>${manager.button} →</em></button>`).join("")}</div>
+        <div class="section-title overview-section-title">Grow cycles</div>
+        <div class="overview-cycle-list">${cycleCards || `<div class="overview-empty"><strong>No grow cycles yet</strong><span>Create your first cycle to begin tracking plants, nutrients, and logs.</span><button data-action="newCycleFromManager">Create a grow cycle</button></div>`}</div>`;
+}
+function openOverviewCycleLog(id) {
+    if (!cycles.some((cycle) => cycle.id === id)) return;
+    activeCycleId = id;
+    saveActiveCycleId(activeCycleId);
+    resetDraft();
+    resetAddForm();
+    updateGrowAge();
+    renderAddForm();
+    invalidateLog();
+    invalidateStats();
+    showTab("log", true);
+}
+function openOverviewPlantManager(id) {
+    plantManagerCycleId = id;
+    openPlantManager();
+}
+function openOverviewNutrientManager(id) {
+    nutrientManagerCycleId = id;
+    openNutrientManager();
+}
 function renderNutrientFormRows() {
     const t = document.getElementById("nutrient-rows");
     if (!t) return;
@@ -540,16 +618,23 @@ function editPlantObs(t) {
     (a && a.querySelectorAll(".plant-obs-tab").forEach((t) => t.classList.toggle("active", t.dataset.plant === e.plant)), document.querySelectorAll(".plant-obs-item").forEach((e, n) => e.classList.toggle("editing", n === t)));
 }
 function showTab(t, e = !1) {
-    if (
-        ("add" !== ["log", "add", "stats"].find((t) => document.getElementById("section-" + t).classList.contains("active")) || "add" === t || draftState.editingEntryId || resetAddForm(),
-            ["log", "add", "stats"].forEach((e) => {
-                (document.getElementById("section-" + e).classList.toggle("active", e === t), document.getElementById("tab-" + e).classList.toggle("active", e === t));
-            }),
-            "add" !== t || draftState.editingEntryId || (resetAddForm(), setDateDefault()),
-            e)
-    ) {
-        const t = document.getElementById("content");
-        (t && (t.scrollTop = 0), window.scrollTo(0, 0));
+    const tabs = ["overview", "log", "add", "stats"],
+        currentTab = tabs.find((id) => document.getElementById("section-" + id).classList.contains("active")),
+        shouldScrollToTop = e || currentTab !== t;
+    if ("add" === currentTab && "add" !== t && !draftState.editingEntryId) resetAddForm();
+    tabs.forEach((id) => {
+        document.getElementById("section-" + id).classList.toggle("active", id === t);
+        document.getElementById("tab-" + id).classList.toggle("active", id === t);
+    });
+    if ("overview" === t) renderOverview();
+    if ("add" === t && !draftState.editingEntryId) {
+        resetAddForm();
+        setDateDefault();
+    }
+    if (shouldScrollToTop) {
+        const content = document.getElementById("content");
+        if (content) content.scrollTop = 0;
+        window.scrollTo(0, 0);
     }
 }
 function resetAddForm() {
@@ -2124,9 +2209,11 @@ function refreshOpenPlantDetail() {
 }
 function invalidateLog() {
     renderLog(cycles, activeCycleId);
+    renderOverview();
 }
 function invalidateStats() {
     renderStats(cycles, activeCycleId);
+    renderOverview();
 }
 function invalidateModal() {
     refreshOpenPlantDetail();
@@ -2168,6 +2255,9 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("editEntry", "click", (t) => editEntry(t.dataset.id)),
     on("deleteEntry", "click", (t) => deleteEntry(t.dataset.id)),
     on("duplicateEntry", "click", (t) => duplicateEntry(t.dataset.id)),
+    on("openOverviewCycleLog", "click", (t) => openOverviewCycleLog(t.dataset.id)),
+    on("openOverviewPlantManager", "click", (t) => openOverviewPlantManager(t.dataset.id)),
+    on("openOverviewNutrientManager", "click", (t) => openOverviewNutrientManager(t.dataset.id)),
     on("setStatsCycle", "click", (t) => setStatsCycle(t.dataset.id)),
     on("editCycleName", "click", (t) => {
         const e = cycles.find((e) => e.id === t.dataset.id);
