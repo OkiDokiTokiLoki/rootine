@@ -8,8 +8,8 @@
         <meta name="apple-mobile-web-app-title" content="Rootine - Grow Journal" />
         <meta name="theme-color" content="#1a1a1a" />
         <title>Rootine</title>
-      <script type="module" crossorigin src="/rootine/assets/index-ILT2sx9y.js"></script>
-      <link rel="stylesheet" crossorigin href="/rootine/assets/index-B0Yg0nqx.css">
+      <script type="module" crossorigin src="/rootine/assets/index-CBkNfsfc.js"></script>
+      <link rel="stylesheet" crossorigin href="/rootine/assets/index-DMSkaljt.css">
     </head>
     <body>
         <div id="app">
@@ -278,6 +278,23 @@
                 <div class="modal-actions modal-actions--single">
                     <button class="btn-cancel" data-action="cancelImport">Cancel</button>
                 </div>
+            </div>
+        </div>
+        <div id="danger-zone-modal" class="modal-overlay modal-overlay--higher">
+            <div class="modal-content modal-content--wide">
+                <div class="modal-title">Danger zone</div>
+                <div class="modal-subtitle">Maintenance tools that reset or permanently remove local Rootine data.</div>
+                <div class="danger-tool">
+                    <div><strong>Reset interface preferences</strong><span>Resets the selected cycle and expanded or collapsed sections. Grow cycles and logs are preserved.</span></div>
+                    <button type="button" class="danger-tool__secondary" data-action="resetInterfacePreferences">Reset preferences</button>
+                </div>
+                <div class="danger-tool danger-tool--destructive">
+                    <div><strong>Clear all Rootine data</strong><span>Permanently deletes every cycle, plant, nutrient, log entry, light schedule, and Rootine backup recovery record stored on this device.</span></div>
+                    <label class="danger-confirm-label" for="danger-confirm-input">Type <b>CLEAR</b> to enable this action</label>
+                    <input id="danger-confirm-input" type="text" class="form-input form-input-full" autocomplete="off" autocapitalize="characters" spellcheck="false" data-action="updateDangerClearState" />
+                    <button type="button" id="danger-clear-btn" class="danger-tool__delete" data-action="clearAllRootineData" disabled>Clear everything</button>
+                </div>
+                <div class="modal-actions modal-actions--single"><button class="btn-cancel" data-action="closeDangerZone">Close</button></div>
             </div>
         </div>
         <div id="app-toast" class="app-toast" role="status" aria-live="polite" aria-atomic="true"></div>
