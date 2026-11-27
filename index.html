@@ -238,8 +238,6 @@
                 <div class="modal-title">Add Nutrient</div>
                 <input id="new-nutrient-name" type="text" class="form-input form-input-full" placeholder="e.g. CalMag" style="margin-bottom: 14px" />
                 <div class="modal-hint">Letters, numbers, spaces, dashes, underscores.</div>
-                <div class="modal-label">Starting concentration (ml/l, optional)</div>
-                <input id="new-nutrient-conc" type="number" min="0" step="1" class="form-input form-input-full" placeholder="e.g. 5" style="margin-bottom: 14px" />
                 <div class="modal-actions"><button class="btn-cancel" data-action="cancelAddNutrient">Cancel</button><button class="btn-confirm" data-action="confirmAddNutrient">Add</button></div>
             </div>
         </div>
@@ -247,16 +245,9 @@
             <div class="modal-content">
                 <div class="modal-title">Rename Nutrient</div>
                 <input id="rename-nutrient-input" type="text" class="form-input form-input-full" style="margin-bottom: 14px" />
+                <div class="modal-label">Badge and text colour</div>
+                <div id="rename-nutrient-colors" class="nutrient-color-picker" role="group" aria-label="Nutrient colour"></div>
                 <div class="modal-actions"><button class="btn-cancel" data-action="cancelRenameNutrient">Cancel</button><button class="btn-confirm" data-action="confirmRenameNutrient">Save</button></div>
-            </div>
-        </div>
-        <div id="edit-nutrient-default-modal" class="modal-overlay modal-overlay--higher">
-            <div class="modal-content">
-                <div class="modal-title">Default concentration</div>
-                <div class="modal-subtitle" id="edit-nutrient-default-name"></div>
-                <div class="modal-hint">Used as a starting value in the Add form and shown in Plant Detail when no entry has logged a concentration yet. Leave blank to clear.</div>
-                <input id="edit-nutrient-default-input" type="number" min="0" step="1" class="form-input form-input-full" placeholder="e.g. 5" style="margin-bottom: 14px" />
-                <div class="modal-actions"><button class="btn-cancel" data-action="cancelEditNutrientDefault">Cancel</button><button class="btn-confirm" data-action="confirmEditNutrientDefault">Save</button></div>
             </div>
         </div>
         <div id="import-choice-modal" class="modal-overlay modal-overlay--higher">

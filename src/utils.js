@@ -1,10 +1,12 @@
-import { ACTION_BY_TYPE, ACTION_TYPE, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS } from "./constants.js";
+import { ACTION_BY_TYPE, ACTION_TYPE, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, NUTRIENT_COLOR_DEFINITIONS } from "./constants.js";
 
-export const NUTRIENT_PALETTE = ["fish", "grow", "bloom", "blue", "amber", "red"];
+export const NUTRIENT_PALETTE = NUTRIENT_COLOR_DEFINITIONS.map(({ value }) => value);
 export function getNutrientColor(t, e) {
     if (!t || !Array.isArray(t.nutrients)) return "neutral";
     const n = t.nutrients.findIndex((t) => t.name === e);
-    return n < 0 ? "neutral" : NUTRIENT_PALETTE[n % NUTRIENT_PALETTE.length];
+    if (n < 0) return "neutral";
+    const stored = t.nutrients[n]?.color;
+    return NUTRIENT_PALETTE.includes(stored) ? stored : NUTRIENT_PALETTE[n % NUTRIENT_PALETTE.length];
 }
 export function abbrevNutrient(t) {
     return t ? t.slice(0, 2).toUpperCase() : "";

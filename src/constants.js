@@ -13,6 +13,14 @@ export const ACTIVE_CYCLE_KEY = "active_cycle_id";
 export const COLLAPSED_CYCLES_KEY = "collapsed_cycles";
 export const COLLAPSED_WEEKS_KEY = "collapsed_weeks";
 export const COLLAPSED_OBS_KEY = "collapsed_obs";
+export const NUTRIENT_COLOR_DEFINITIONS = [
+    { value: "fish", label: "Cyan" },
+    { value: "grow", label: "Green" },
+    { value: "bloom", label: "Purple" },
+    { value: "blue", label: "Blue" },
+    { value: "amber", label: "Amber" },
+    { value: "red", label: "Red" },
+];
 export const CYCLE_STAGE = { GROW: "grow", HARVEST: "harvest", COMPLETE: "complete" };
 export const CYCLE_STAGE_DEFINITIONS = {
     [CYCLE_STAGE.GROW]: { label: "Grow", next: CYCLE_STAGE.HARVEST, badgeClass: "green-btn", advanceClass: "amber-btn", showsYield: false },

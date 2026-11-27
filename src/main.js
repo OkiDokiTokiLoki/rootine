@@ -6,7 +6,7 @@ import { initStats, renderStats, setStatsMode, getStatsMode, initObsCollapsed, t
 import { on, closeHeaderMenu } from "./actions.js";
 import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
-import { PLANT_TYPE, PLANT_TYPE_DEFINITIONS, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, PLANT_DETAIL_METRIC_SECTIONS } from "./constants.js";
+import { PLANT_TYPE, PLANT_TYPE_DEFINITIONS, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, PLANT_DETAIL_METRIC_SECTIONS, NUTRIENT_COLOR_DEFINITIONS } from "./constants.js";
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
@@ -373,8 +373,6 @@ function renderOverview() {
     const totalPlants = cycles.reduce((sum, cycle) => sum + (cycle.plants || []).length, 0),
         totalEntries = cycles.reduce((sum, cycle) => sum + (cycle.entries || []).length, 0),
         currentCycles = cycles.filter((cycle) => (cycle.stage || CYCLE_STAGE.GROW) !== CYCLE_STAGE.COMPLETE).length,
-        allEntries = cycles.flatMap((cycle) => (cycle.entries || []).map((entry) => ({ ...entry, cycle }))).sort((a, b) => new Date(b.dt) - new Date(a.dt)),
-        latest = allEntries[0] || null,
         sortedCycles = [...cycles].sort((a, b) => {
             const aDate = a.entries?.length ? Math.max(...a.entries.map((entry) => new Date(entry.dt).getTime() || 0)) : new Date(a.startDate).getTime(),
                 bDate = b.entries?.length ? Math.max(...b.entries.map((entry) => new Date(entry.dt).getTime() || 0)) : new Date(b.startDate).getTime();
@@ -414,12 +412,7 @@ function renderOverview() {
         </article>`;
     }).join("");
     root.innerHTML = `
-        <div class="overview-hero">
-            <div><div class="overview-eyebrow">Grow overview</div><h2>Your grow control center</h2><p>Review progress, manage each cycle, and keep your grow data safe.</p></div>
-            <div class="overview-hero-actions"><button class="overview-new-cycle" data-action="newCycleFromManager">New cycle</button><button class="overview-quick-log" data-action="showTab" data-id="add">Add log</button></div>
-        </div>
         <div class="overview-summary">${summary.map((item) => `<div class="overview-summary-card"><strong>${item.value}</strong><span>${item.label}</span></div>`).join("")}</div>
-        <div class="overview-latest">${latest ? `<div><span>Latest activity</span><strong>${escapeHtml(latest.cycle.name)}</strong><small>${fmtDate(latest.dt)} at ${fmtTime(latest.dt)}</small></div><button data-action="openOverviewCycleLog" data-id="${escapeHtml(latest.cycle.id)}">View log</button>` : `<div><span>Latest activity</span><strong>No logs yet</strong><small>Create a cycle and add your first entry.</small></div><button data-action="showTab" data-id="add">Add log</button>`}</div>
         <div class="section-title overview-section-title">Manage</div>
         <div class="overview-manager-grid">${managerCards.map((manager) => `<button class="overview-manager-card" data-action="${manager.action}"><i>${manager.icon}</i><strong>${manager.title}</strong><span>${manager.description}</span><em>${manager.button}</em></button>`).join("")}</div>
         <div class="section-title overview-section-title">Grow cycles</div>
@@ -1262,17 +1255,13 @@ function renderNutrientList() {
             <div class="plant-manage-name">
                 <span class="nutrient-swatch nutrient-swatch--${l}"></span>
                 <span>${escapeHtml(n.name)}</span>
-                ${null != n.defaultConcentration ? `<span class="nutrient-default-hint" title="Starting dilution">${n.defaultConcentration} ml/l</span>` : ""}
             </div>
             <div class="plant-manage-actions">
-                <button class="settings-btn blue-btn" data-action="renameNutrient" data-index="${a}" title="Rename ${escapeHtml(n.name)}" aria-label="Rename ${escapeHtml(n.name)}">
+                <button class="settings-btn blue-btn" data-action="renameNutrient" data-index="${a}" title="Edit ${escapeHtml(n.name)}" aria-label="Edit ${escapeHtml(n.name)} name and colour">
                     ${icon.edit()}
                 </button>
                 <button class="settings-btn red-btn" data-action="deleteNutrient" data-index="${a}" title="Delete ${escapeHtml(n.name)}" aria-label="Delete ${escapeHtml(n.name)}">
                     ${icon.trash()}
-                </button>
-                <button class="settings-btn amber-btn" data-action="editNutrientDefault" data-index="${a}" title="Set starting dilution for ${escapeHtml(n.name)}" aria-label="Set default concentration for ${escapeHtml(n.name)}">
-                    ${icon.waterDropLine()}
                 </button>
             </div>
         `),
@@ -1282,23 +1271,16 @@ function renderNutrientList() {
 }
 function openAddNutrient() {
     if (!nutrientManagerCycle()) return void alert("Select a grow cycle first.");
-    ((document.getElementById("new-nutrient-name").value = ""), (document.getElementById("new-nutrient-conc").value = ""), showModal("add-nutrient-modal"), setTimeout(() => document.getElementById("new-nutrient-name").focus(), 50));
+    ((document.getElementById("new-nutrient-name").value = ""), showModal("add-nutrient-modal"), setTimeout(() => document.getElementById("new-nutrient-name").focus(), 50));
 }
 function confirmAddNutrient() {
-    const t = document.getElementById("new-nutrient-name").value.trim(),
-        e = document.getElementById("new-nutrient-conc").value.trim();
+    const t = document.getElementById("new-nutrient-name").value.trim();
     if (!t) return void alert("Enter a nutrient name.");
-    let n = null;
-    if ("" !== e) {
-        const t = parseFloat(e);
-        if (isNaN(t) || t < 0) return void alert("Concentration must be a non-negative number.");
-        n = t;
-    }
     if (!PLANT_NAME_RE.test(t)) return void alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.");
     const cycle = nutrientManagerCycle();
     if (!cycle) return void alert("Select a grow cycle first.");
     const a = nutrientManagerNutrients();
-    a.some((e) => e.name === t) ? alert("A nutrient with that name already exists.") : (a.push({ name: t, defaultConcentration: n }), persist(), hideModal("add-nutrient-modal"), renderNutrientList(), cycle.id === activeCycleId && renderAddForm());
+    a.some((e) => e.name === t) ? alert("A nutrient with that name already exists.") : (a.push({ name: t, color: NUTRIENT_PALETTE[a.length % NUTRIENT_PALETTE.length] }), persist(), hideModal("add-nutrient-modal"), renderNutrientList(), cycle.id === activeCycleId && renderAddForm());
 }
 function cancelAddNutrient() {
     hideModal("add-nutrient-modal");
@@ -1306,17 +1288,33 @@ function cancelAddNutrient() {
 function renameNutrient(t) {
     const cycle = nutrientManagerCycle();
     if (!cycle) return;
-    const e = nutrientManagerNutrients()[t].name;
+    const nutrient = nutrientManagerNutrients()[t],
+        e = nutrient.name;
     document.getElementById("rename-nutrient-input").value = e;
     const n = document.getElementById("rename-nutrient-modal");
     (showModal("rename-nutrient-modal"),
         (n._cycleId = cycle.id),
         (n._nutrientIndex = t),
         (n._oldName = e),
+        (n._selectedColor = getNutrientColor(cycle, e)),
+        renderNutrientColorPicker(n._selectedColor),
         setTimeout(() => {
             const t = document.getElementById("rename-nutrient-input");
             (t.focus(), t.select());
         }, 50));
+}
+function renderNutrientColorPicker(selectedColor) {
+    const picker = document.getElementById("rename-nutrient-colors");
+    if (!picker) return;
+    picker.innerHTML = NUTRIENT_COLOR_DEFINITIONS.map(
+        ({ value, label }) => `<button type="button" class="nutrient-color-option${value === selectedColor ? " active" : ""}" data-action="selectNutrientColor" data-color="${value}" aria-pressed="${value === selectedColor}" title="${label}"><span class="nutrient-color-dot nutrient-color-dot--${value}"></span><span>${label}</span></button>`,
+    ).join("");
+}
+function selectNutrientColor(color) {
+    if (!NUTRIENT_PALETTE.includes(color)) return;
+    const modal = document.getElementById("rename-nutrient-modal");
+    modal._selectedColor = color;
+    renderNutrientColorPicker(color);
 }
 function confirmRenameNutrient() {
     const t = document.getElementById("rename-nutrient-modal"),
@@ -1326,28 +1324,23 @@ function confirmRenameNutrient() {
         l = cycles.find((cycle) => cycle.id === t._cycleId);
     if (!l) return;
     const i = Array.isArray(l.nutrients) ? l.nutrients : (l.nutrients = []);
-    e
-        ? e !== a
-            ? PLANT_NAME_RE.test(e)
-                ? i.some((t) => t.name === e)
-                    ? alert("A nutrient with that name already exists.")
-                    : ((i[n].name = e),
-                        l.entries.forEach((t) => {
-                            Object.values(t.plants || {}).forEach((t) => {
-                                (t.nutrients && null != t.nutrients[a] && ((t.nutrients[e] = t.nutrients[a]), delete t.nutrients[a]), t.concentrations && null != t.concentrations[a] && ((t.concentrations[e] = t.concentrations[a]), delete t.concentrations[a]));
-                            });
-                        }),
-                        l.id === activeCycleId && nutrientDrafts[a] && ((nutrientDrafts[e] = nutrientDrafts[a]), delete nutrientDrafts[a]),
-                        persist(),
-                        hideModal("rename-nutrient-modal"),
-                        renderNutrientList(),
-                        l.id === activeCycleId && renderAddForm(),
-                        invalidateLog(),
-                        invalidateStats(),
-                        invalidateModal())
-                : alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.")
-            : hideModal("rename-nutrient-modal")
-        : alert("Nutrient name can't be empty.");
+    if (!e) return void alert("Nutrient name can't be empty.");
+    if (!PLANT_NAME_RE.test(e)) return void alert("Nutrient name can only contain letters, numbers, spaces, dashes, and underscores.");
+    if (e !== a && i.some((nutrient) => nutrient.name === e)) return void alert("A nutrient with that name already exists.");
+    const nutrient = i[n];
+    if (!nutrient) return;
+    if (e !== a) {
+        nutrient.name = e;
+        l.entries.forEach((entry) => {
+            Object.values(entry.plants || {}).forEach((plantData) => {
+                if (plantData.nutrients && null != plantData.nutrients[a]) ((plantData.nutrients[e] = plantData.nutrients[a]), delete plantData.nutrients[a]);
+                if (plantData.concentrations && null != plantData.concentrations[a]) ((plantData.concentrations[e] = plantData.concentrations[a]), delete plantData.concentrations[a]);
+            });
+        });
+        l.id === activeCycleId && nutrientDrafts[a] && ((nutrientDrafts[e] = nutrientDrafts[a]), delete nutrientDrafts[a]);
+    }
+    nutrient.color = NUTRIENT_PALETTE.includes(t._selectedColor) ? t._selectedColor : getNutrientColor(l, e);
+    (persist(), hideModal("rename-nutrient-modal"), renderNutrientList(), l.id === activeCycleId && renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
 }
 function cancelRenameNutrient() {
     hideModal("rename-nutrient-modal");
@@ -1386,41 +1379,6 @@ function deleteNutrient(t) {
     invalidateStats();
     invalidateModal();
 }
-function editNutrientDefault(t) {
-    const cycle = nutrientManagerCycle();
-    if (!cycle) return;
-    const e = nutrientManagerNutrients()[t];
-    if (!e) return;
-    document.getElementById("edit-nutrient-default-name").textContent = e.name;
-    const n = document.getElementById("edit-nutrient-default-input");
-    n.value = null != e.defaultConcentration ? String(e.defaultConcentration) : "";
-    const a = document.getElementById("edit-nutrient-default-modal");
-    (showModal("edit-nutrient-default-modal"),
-        (a._cycleId = cycle.id),
-        (a._nutrientIndex = t),
-        setTimeout(() => {
-            (n.focus(), n.select());
-        }, 50));
-}
-function confirmEditNutrientDefault() {
-    const t = document.getElementById("edit-nutrient-default-modal");
-    const cycle = cycles.find((candidate) => candidate.id === t._cycleId);
-    if (!cycle) return;
-    const nutrients = Array.isArray(cycle.nutrients) ? cycle.nutrients : (cycle.nutrients = []),
-        e = nutrients[t._nutrientIndex];
-    if (!e) return void hideModal("edit-nutrient-default-modal");
-    const n = document.getElementById("edit-nutrient-default-input").value.trim();
-    if ("" === n) e.defaultConcentration = null;
-    else {
-        const t = parseFloat(n);
-        if (isNaN(t) || t < 0) return void alert("Concentration must be a non-negative number.");
-        e.defaultConcentration = t;
-    }
-    (persist(), hideModal("edit-nutrient-default-modal"), renderNutrientList(), cycle.id === activeCycleId && renderAddForm(), invalidateModal());
-}
-function cancelEditNutrientDefault() {
-    hideModal("edit-nutrient-default-modal");
-}
 function openPlantDetail(t, cycleId = null) {
     const requested = cycleId && cycles.find((cycle) => cycle.id === cycleId && cycle.plants?.includes(t));
     if (requested) return renderPlantDetailModal(requested, t);
@@ -1436,7 +1394,7 @@ function computePlantDetail(t, e) {
     const n = getPlantMeta(t, e),
         a = t.nutrients || [],
         l = Date.now() - 6048e5,
-        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: t.defaultConcentration ?? null }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, lastFlushDt: null, firstFlushDt: null, lastHarvestDt: null, firstHarvestDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, flushCount: 0, harvestCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, flushCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [], flushActions: [], harvestActions: [] };
+        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: null }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, lastFlushDt: null, firstFlushDt: null, lastHarvestDt: null, firstHarvestDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, flushCount: 0, harvestCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, flushCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [], flushActions: [], harvestActions: [] };
     for (const n of t.entries || []) {
         const t = new Date(n.dt),
             a = t.getTime() >= l;
@@ -1538,9 +1496,8 @@ function renderPlantDetailModal(t, e) {
             .map((e) => {
                 const n = s.nutrients[e.name] || { totalCups: 0, activeMlPerL: null, activeSinceDt: null, feedsAtCurrent: 0 },
                     a = `nutrient--${getNutrientColor(t, e.name)}`,
-                    l = null == n.activeMlPerL && null != e.defaultConcentration,
-                    i = n.activeSinceDt || (l ? t.startDate : null),
-                    d = i ? `<span class="plant-detail-rel">${r(i)}</span> since ${fmtDate(i)}` : l ? '<span class="plant-detail-rel">since cycle start</span>' : "—";
+                    i = n.activeSinceDt,
+                    d = i ? `<span class="plant-detail-rel">${r(i)}</span> since ${fmtDate(i)}` : "—";
                 return `
         <div class="plant-detail-nutrient-block">
             <div class="plant-detail-nutrient-name ${a}">${escapeHtml(e.name)}</div>
@@ -2437,8 +2394,8 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("deletePlant", "click", (t) => deletePlant(Number(t.dataset.index))),
     on("toggleFavourite", "click", (t) => toggleFavourite(Number(t.dataset.index))),
     on("renameNutrient", "click", (t) => renameNutrient(Number(t.dataset.index))),
+    on("selectNutrientColor", "click", (t) => selectNutrientColor(t.dataset.color)),
     on("deleteNutrient", "click", (t) => deleteNutrient(Number(t.dataset.index))),
-    on("editNutrientDefault", "click", (t) => editNutrientDefault(Number(t.dataset.index))),
     on("editPlantObs", "click", (t) => editPlantObs(Number(t.dataset.index))),
     on("removePlantObs", "click", (t) => removePlantObs(Number(t.dataset.index))),
     on("addPlantObs", "click", () => addPlantObs()),
@@ -2484,8 +2441,6 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("cancelAddNutrient", "click", () => cancelAddNutrient()),
     on("confirmRenameNutrient", "click", () => confirmRenameNutrient()),
     on("cancelRenameNutrient", "click", () => cancelRenameNutrient()),
-    on("confirmEditNutrientDefault", "click", () => confirmEditNutrientDefault()),
-    on("cancelEditNutrientDefault", "click", () => cancelEditNutrientDefault()),
     on("selectPlantType", "click", (t) => selectPlantType(t.dataset.scope, t.dataset.type)),
     on("openPlantDetail", "click", (t) => openPlantDetail(t.dataset.id, t.dataset.cycleId)),
     on("toggleHeaderMenu", "click", () => toggleHeaderMenu()),

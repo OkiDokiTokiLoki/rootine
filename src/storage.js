@@ -1,4 +1,4 @@
-import { STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY, COLLAPSED_OBS_ON, COLLAPSED_OBS_OFF } from "./constants.js";
+import { STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY, COLLAPSED_OBS_ON, COLLAPSED_OBS_OFF, NUTRIENT_COLOR_DEFINITIONS } from "./constants.js";
 
 // Each migration takes cycles, returns cycles. Migrations[0] is v1→v2, [1] is
 // v2→v3, etc. To bump the version: write a function, append it. That's it.
@@ -342,6 +342,21 @@ const migrations = [
                 .filter(Boolean);
             return { ...c, plants, plantTypes, favourites, entries };
         }),
+
+    // v14 → v15: nutrient colours are stored explicitly so deleting or
+    // reordering nutrients no longer changes their presentation. Default
+    // concentrations are retired; historical logged concentrations remain.
+    (cycles) => {
+        const palette = NUTRIENT_COLOR_DEFINITIONS.map(({ value }) => value);
+        return cycles.map((c) => ({
+            ...c,
+            nutrients: (c.nutrients || []).map((nutrient, index) => {
+                const next = { ...nutrient, color: palette.includes(nutrient.color) ? nutrient.color : palette[index % palette.length] };
+                delete next.defaultConcentration;
+                return next;
+            }),
+        }));
+    },
 ];
 
 const STORAGE_VERSION = migrations.length + 1;
