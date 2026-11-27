@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction, someValue, cycleStageBadge, renderCycleSelector } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, escapeHtml, getNutrientColor, fmtQty, formatAction, someValue, cycleStageBadge, renderCycleSelector, getPlantGrowthStageAt, plantGrowthStageBadge } from "./utils.js";
 import { saveCollapsedWeeks, saveCollapsedCycles } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
@@ -107,37 +107,46 @@ function renderEntryCard(e, t) {
     const s = Object.values(e.plants || {}),
         a = s.some((p) => p && someValue(p.nutrients, (v) => v && v > 0)),
         n = s.some((p) => p && p.water > 0),
+        hasYield = s.some((p) => p && p.yieldGrams != null),
         l = (e.actions || []).some((a) => a && a.type === ACTION_TYPE.LIGHT),
         plantActions = (e.actions || []).filter((a) => a && PLANT_ACTION_TYPES.has(a.type)),
         actionBadges = [...new Set(plantActions.map((action) => action.type))]
             .map((type) => {
                 const definition = ACTION_BY_TYPE[type];
                 if (!definition) return "";
-                return `<span class="badge badge-scissors" style="margin-left:0" title="${escapeHtml(definition.pastLabel || definition.label)}">${icon.action(definition.icon, { width: 13, height: 15 })}</span>`;
+                const badgeClass = type === ACTION_TYPE.HARVEST ? "badge-harvest" : "badge-scissors";
+                return `<span class="badge ${badgeClass}" style="margin-left:0" title="${escapeHtml(definition.pastLabel || definition.label)}">${icon.action(definition.icon, { width: 13, height: 15 })}</span>`;
             })
             .join(""),
         i = !!e.obs?.trim() || hasPlantObs(e);
     let d = "";
-    (a && (d += `<span class="badge badge-feed" style="margin-left:0">${icon.badgeFeed()}</span>`), n && (d += `<span class="badge badge-water" style="margin-left:0">${icon.badgeWater()}</span>`), l && (d += `<span class="badge badge-light" style="margin-left:0;">${icon.badgeLight()}</span>`), (d += actionBadges), i && (d += `<span class="badge badge-note" style="margin-left:0;" title="Has observation">${icon.badgeNote()}</span>`));
-    const o = Object.entries(e.plants || {});
-    let r = "";
+    (a && (d += `<span class="badge badge-feed" style="margin-left:0">${icon.badgeFeed()}</span>`), n && (d += `<span class="badge badge-water" style="margin-left:0">${icon.badgeWater()}</span>`), l && (d += `<span class="badge badge-light" style="margin-left:0;">${icon.badgeLight()}</span>`), (d += actionBadges), hasYield && (d += `<span class="badge badge-yield" style="margin-left:0" title="Yield">${icon.action("yield", { width: 13, height: 15 })}</span>`), i && (d += `<span class="badge badge-note" style="margin-left:0;" title="Has observation">${icon.badgeNote()}</span>`));
+    const o = Object.entries(e.plants || {}),
+        actionTags = (e.actions || []).map((action) => `<span class="action-tag">${formatAction(action)}</span>`);
+    o.forEach(([plantName, plantData]) => {
+        if (plantData?.yieldGrams == null || Number.isNaN(Number(plantData.yieldGrams))) return;
+        actionTags.push(`<span class="action-tag">Yield (${escapeHtml(plantName)} - ${fmtQty(Number(plantData.yieldGrams))}g)</span>`);
+    });
+    let r = "",
+        plantRows = "";
+    o.forEach(([plantName, s]) => {
+        let a = "";
+        (t?.nutrients || []).forEach((e) => {
+            const n = s.nutrients?.[e.name];
+            if (n && n > 0) {
+                const s = getNutrientColor(t, e.name);
+                a += `<span class="pill pill--${s}">${escapeHtml(e.name)} - ${fmtQty(n)} cup${1 === n ? "" : "s"}</span>`;
+            }
+        });
+        s.water && (a += `<span class="pill pill-water">Water - ${fmtQty(s.water)} cup${1 === s.water ? "" : "s"}</span>`);
+        if (a) {
+            const growthStage = getPlantGrowthStageAt(t, plantName, e.dt).stage;
+            plantRows += `<div class="plant-row"><span class="pname">${escapeHtml(plantName)} ${plantGrowthStageBadge(growthStage, { compact: true })}</span><div class="pills">${a}</div></div>`;
+        }
+    });
+    plantRows && (r += `<div>${plantRows}</div>`);
     return (
-        o.length &&
-        ((r += "<div>"),
-            o.forEach(([e, s]) => {
-                let a = "";
-                ((t?.nutrients || []).forEach((e) => {
-                    const n = s.nutrients?.[e.name];
-                    if (n && n > 0) {
-                        const s = getNutrientColor(t, e.name);
-                        a += `<span class="pill pill--${s}">${escapeHtml(e.name)} - ${fmtQty(n)} cup${1 === n ? "" : "s"}</span>`;
-                    }
-                }),
-                    s.water && (a += `<span class="pill pill-water">Water - ${fmtQty(s.water)} cup${1 === s.water ? "" : "s"}</span>`),
-                    (r += `<div class="plant-row"><span class="pname">${escapeHtml(e)}</span><div class="pills">${a || "—"}</div></div>`));
-            }),
-            (r += "</div>")),
-        e.actions && e.actions.length && (r += '<div class="action-list">' + e.actions.map((e) => `<span class="action-tag">${formatAction(e)}</span>`).join("") + "</div>"),
+        actionTags.length && (r += '<div class="action-list">' + actionTags.join("") + "</div>"),
         e.obs && (r += `<div class="obs-box">${escapeHtml(e.obs)}</div>`),
         hasPlantObs(e) &&
         Object.entries(e.plantObs).forEach(([e, t]) => {

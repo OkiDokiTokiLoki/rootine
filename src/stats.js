@@ -1,4 +1,4 @@
-import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getNutrientColor, abbrevNutrient, fmtQty, renderCycleSelector } from "./utils.js";
+import { fmtDate, fmtTime, getWeekNum, entryType, escapeHtml, getPlantMeta, getNutrientColor, abbrevNutrient, fmtQty, renderCycleSelector, getPlantGrowthStageAt, plantGrowthStageBadge } from "./utils.js";
 import { saveCollapsedObs } from "./storage.js";
 import { on } from "./actions.js";
 import { icon } from "./icons.js";
@@ -68,6 +68,7 @@ function countPlantNotes(t, e) {
 }
 function renderPlantCard(t, e, s, a, n, l) {
     const typeDefinition = PLANT_TYPE_DEFINITIONS[s] || PLANT_TYPE_DEFINITIONS[PLANT_TYPE.AUTO],
+        growthStage = getPlantGrowthStageAt(l, t).stage,
         o = a ? icon.star({ size: 12 }) : "",
         c = typeDefinition.label,
         i = `plant-type-badge ${typeDefinition.className}`,
@@ -86,6 +87,7 @@ function renderPlantCard(t, e, s, a, n, l) {
             <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t)}</span>
             ${o}
             <span class="${i}" style="font-size:10px;padding:2px 6px">${c}</span>
+            ${plantGrowthStageBadge(growthStage, { compact: true })}
         </div>
         <span class="nutrient-totals">
             ${d}

@@ -54,6 +54,13 @@ export const PLANT_TYPE_DEFINITIONS = {
     [PLANT_TYPE.PHOTO]: { label: "PHOTO", longLabel: "Photoperiod", className: "photo", next: PLANT_TYPE.AUTO },
 };
 
+export const PLANT_GROWTH_STAGE = { SEEDLING: "seedling", VEG: "vegetative", FLOWER: "flowering" };
+export const PLANT_GROWTH_STAGE_DEFINITIONS = {
+    [PLANT_GROWTH_STAGE.SEEDLING]: { label: "Seedling", shortLabel: "S", className: "seedling" },
+    [PLANT_GROWTH_STAGE.VEG]: { label: "Vegetative", shortLabel: "V", className: "vegetative" },
+    [PLANT_GROWTH_STAGE.FLOWER]: { label: "Flowering", shortLabel: "F", className: "flowering" },
+};
+
 export const PLANT_DETAIL_METRIC_SECTIONS = [
     {
         label: "Last 7 days",

@@ -1,4 +1,4 @@
-import { ACTION_BY_TYPE, ACTION_TYPE, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, NUTRIENT_COLOR_DEFINITIONS } from "./constants.js";
+import { ACTION_BY_TYPE, ACTION_TYPE, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, NUTRIENT_COLOR_DEFINITIONS, PLANT_GROWTH_STAGE, PLANT_GROWTH_STAGE_DEFINITIONS } from "./constants.js";
 
 export const NUTRIENT_PALETTE = NUTRIENT_COLOR_DEFINITIONS.map(({ value }) => value);
 export function getNutrientColor(t, e) {
@@ -56,7 +56,46 @@ function inferredRepottedAt(cycle, plant) {
 export function getPlantMeta(t, e) {
     const n = t?.plantTypes?.[e],
         repottedAt = inferredRepottedAt(t, e);
-    return n ? ("string" == typeof n ? { type: n, repottedAt, flushedAt: null, harvestedAt: null } : { type: n.type || "auto", repottedAt, flushedAt: n.flushedAt || null, harvestedAt: n.harvestedAt || null }) : { type: "auto", repottedAt, flushedAt: null, harvestedAt: null };
+    const base = n && "object" == typeof n ? n : {};
+    return { ...base, type: "string" == typeof n ? n : base.type || "auto", repottedAt, flushedAt: base.flushedAt || null, harvestedAt: base.harvestedAt || null, stageHistory: normalizePlantStageHistory(t, e, base.stageHistory) };
+}
+export function normalizePlantStageHistory(cycle, plant, history) {
+    const valid = new Set(Object.keys(PLANT_GROWTH_STAGE_DEFINITIONS)),
+        repottedAt = inferredRepottedAt(cycle, plant),
+        rows = (Array.isArray(history) ? history : [])
+            .filter((item) => item && valid.has(item.stage) && /^\d{4}-\d{2}-\d{2}$/.test(String(item.dt || "")))
+            .map((item) => ({ stage: item.stage, dt: item.dt }))
+            .sort((a, b) => a.dt.localeCompare(b.dt));
+    if (!rows.length || rows[0].stage !== PLANT_GROWTH_STAGE.SEEDLING) rows.unshift({ stage: PLANT_GROWTH_STAGE.SEEDLING, dt: repottedAt });
+    else rows[0] = { ...rows[0], dt: repottedAt };
+    const byDate = new Map();
+    rows.forEach((item) => byDate.set(item.dt, item));
+    return [...byDate.values()].sort((a, b) => a.dt.localeCompare(b.dt));
+}
+export function getPlantGrowthStageAt(cycle, plant, dt = null) {
+    const history = getPlantMeta(cycle, plant).stageHistory,
+        target = String(dt || new Date().toISOString()).slice(0, 10);
+    let current = history[0] || { stage: PLANT_GROWTH_STAGE.SEEDLING, dt: target };
+    history.forEach((item) => item.dt <= target && (current = item));
+    return current;
+}
+export function plantGrowthStageBadge(stage, { compact = false } = {}) {
+    const definition = PLANT_GROWTH_STAGE_DEFINITIONS[stage] || PLANT_GROWTH_STAGE_DEFINITIONS[PLANT_GROWTH_STAGE.SEEDLING];
+    return `<span class="plant-growth-stage ${definition.className}" title="${escapeHtml(definition.label)}"><span aria-hidden="true">${definition.shortLabel}</span>${compact ? "" : `<em>${escapeHtml(definition.label)}</em>`}</span>`;
+}
+export function computePlantGrowthStageDurations(cycle, plant) {
+    const meta = getPlantMeta(cycle, plant),
+        history = meta.stageHistory,
+        end = meta.harvestedAt || new Date().toISOString().slice(0, 10),
+        durations = Object.fromEntries(Object.keys(PLANT_GROWTH_STAGE_DEFINITIONS).map((stage) => [stage, 0]));
+    history.forEach((item, index) => {
+        const next = history[index + 1]?.dt || end,
+            startMs = new Date(`${item.dt}T00:00:00`).getTime(),
+            endMs = new Date(`${next}T00:00:00`).getTime();
+        if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs >= startMs) durations[item.stage] += Math.floor((endMs - startMs) / 864e5);
+    });
+    const current = getPlantGrowthStageAt(cycle, plant, end);
+    return { current, durations, history };
 }
 export function fmtQty(t) {
     return t % 1 == 0 ? String(t) : t.toFixed(1);
@@ -89,8 +128,8 @@ export function cycleStageBadge(stage) {
     const definition = CYCLE_STAGE_DEFINITIONS[stage] || CYCLE_STAGE_DEFINITIONS[CYCLE_STAGE.GROW];
     return `<span class="cycle-badge ${definition.badgeClass}">${definition.label}</span>`;
 }
-export function renderCycleSelector(cycles, { selectedId, action, showStage = false, includeAll = false, allId = "all", allLabel = "All cycles", newestFirst = false, extraClass = "", buttonClass = "", wrap = true } = {}) {
-    const ordered = [...cycles].sort((a, b) => (newestFirst ? -1 : 1) * (new Date(a.startDate) - new Date(b.startDate)));
+export function renderCycleSelector(cycles, { selectedId, action, showStage = false, includeAll = false, allId = "all", allLabel = "All cycles", newestFirst = false, preserveOrder = false, extraClass = "", buttonClass = "", wrap = true } = {}) {
+    const ordered = preserveOrder ? [...cycles] : [...cycles].sort((a, b) => (newestFirst ? -1 : 1) * (new Date(a.startDate) - new Date(b.startDate)));
     const buttons = ordered.map((cycle) => {
         const definition = CYCLE_STAGE_DEFINITIONS[cycle.stage] || CYCLE_STAGE_DEFINITIONS[CYCLE_STAGE.GROW];
         const label = `${escapeHtml(cycle.name)}${showStage ? ` · ${definition.label}` : ""}`;

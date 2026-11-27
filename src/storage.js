@@ -357,6 +357,24 @@ const migrations = [
             }),
         }));
     },
+
+    // v15 → v16: add dated per-plant growth-stage history. Existing plants
+    // begin in Seedling on the earliest valid log date (the inferred repot
+    // date), falling back to the cycle start when no entries exist.
+    (cycles) =>
+        cycles.map((c) => {
+            const firstEntryDate = (c.entries || [])
+                .map((entry) => String(entry.dt || "").slice(0, 10))
+                .filter((dt) => /^\d{4}-\d{2}-\d{2}$/.test(dt))
+                .sort()[0] || c.startDate;
+            const plantTypes = { ...(c.plantTypes || {}) };
+            (c.plants || []).forEach((name) => {
+                const raw = plantTypes[name],
+                    meta = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : { type: typeof raw === "string" ? raw : "auto" };
+                plantTypes[name] = { ...meta, stageHistory: Array.isArray(meta.stageHistory) && meta.stageHistory.length ? meta.stageHistory : [{ stage: "seedling", dt: firstEntryDate }] };
+            });
+            return { ...c, plantTypes };
+        }),
 ];
 
 const STORAGE_VERSION = migrations.length + 1;

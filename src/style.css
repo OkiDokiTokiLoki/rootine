@@ -625,8 +625,8 @@ textarea.form-input {
 }
 .plant-manage-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
     padding: 10px 12px;
     background: var(--surface2);
     border: 0.5px solid var(--border2);
@@ -635,17 +635,180 @@ textarea.form-input {
     gap: 8px;
 }
 .plant-manage-name {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
     font-size: 14px;
     font-weight: 500;
+    overflow-wrap: anywhere;
+}
+.plant-manage-main {
+    display: grid;
+    gap: 7px;
     flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
+}
+.plant-stage-toggle {
+    display: flex;
+    width: 100%;
+    gap: 3px;
+}
+.plant-stage-opt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 1px solid var(--border2);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    flex: 1 1 0;
+    min-width: 0;
+}
+.plant-stage-opt span {
+    font-size: 10px;
+    font-weight: 500;
+}
+.plant-stage-opt.active {
+    border-color: var(--green-border);
+    background: var(--green-bg);
+    color: var(--green);
+}
+.plant-stage-history-title {
+    margin-top: 18px;
+}
+.plant-stage-history {
+    display: grid;
+    gap: 8px;
+}
+.plant-stage-history-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface2);
+}
+.plant-stage-history-row > div {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-width: 0;
+}
+.plant-stage-history-row time,
+.plant-stage-history-fixed {
+    color: var(--muted);
+    font-size: 12px;
+}
+.plant-stage-history-fixed {
     white-space: nowrap;
+}
+#plant-stage-modal .modal-content {
+    max-height: min(82vh, 620px);
+    overflow-y: auto;
+}
+#plant-stage-modal [hidden] {
+    display: none !important;
+}
+#plant-stage-edit-fields {
+    display: grid;
+    gap: 8px;
+    margin: 4px 0 18px;
+}
+#plant-stage-edit-fields .modal-label,
+#plant-stage-edit-fields .modal-hint {
+    margin: 0;
+}
+#plant-stage-edit-fields .form-input {
+    min-height: 42px;
+}
+#plant-stage-modal .plant-stage-history-title {
+    margin: 0 0 8px;
+}
+#plant-stage-modal .modal-actions {
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+#plant-stage-modal .modal-actions > button {
+    min-width: 120px;
+}
+.plant-growth-stage {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: var(--r-pill);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.3;
+    vertical-align: 1px;
+}
+.plant-growth-stage em {
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 600;
+}
+.plant-growth-stage.seedling {
+    background: var(--blue-bg);
+    color: var(--blue);
+}
+.plant-growth-stage.vegetative {
+    background: var(--green-bg);
+    color: var(--green);
+}
+.plant-growth-stage.flowering {
+    background: var(--pink-bg);
+    color: var(--pink);
 }
 .plant-manage-actions {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+}
+.plant-manage-edit-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+.nutrient-manage-row {
+    flex-direction: row;
+    align-items: center;
+}
+.nutrient-manage-row .plant-manage-name {
+    flex: 1;
+    min-width: 0;
+}
+.nutrient-manage-actions {
+    justify-content: flex-end;
+    width: auto;
     gap: 4px;
     flex-shrink: 0;
+}
+.cycle-manage-actions {
+    justify-content: flex-end;
+    width: auto;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.plant-detail-stage-since {
+    margin-left: 5px;
+    color: var(--muted);
+    font-size: 11px;
 }
 .plant-empty {
     color: var(--muted);
@@ -1217,7 +1380,14 @@ textarea.form-input {
     background: var(--neutral-bg);
     color: var(--neutral);
 }
-.badge-scissors svg {
+.badge-harvest,
+.badge-yield {
+    background: var(--amber-bg);
+    color: var(--green);
+}
+.badge-scissors svg,
+.badge-harvest svg,
+.badge-yield svg {
     fill: currentColor;
     stroke: none;
 }
@@ -1436,6 +1606,38 @@ textarea.form-input {
     color: var(--green);
     cursor: pointer;
 }
+.overview-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px;
+    margin-bottom: 14px;
+    border: 0.5px solid var(--green-border);
+    border-radius: var(--r-lg);
+    background: linear-gradient(145deg, var(--green-bg), var(--surface));
+}
+.overview-eyebrow {
+    margin-bottom: 5px;
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.overview-hero h2 {
+    margin: 0 0 6px;
+    font-size: 21px;
+    line-height: 1.15;
+}
+.overview-hero p {
+    max-width: 270px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+.overview-new-cycle,
 .overview-empty button {
     flex-shrink: 0;
     padding: 9px 12px;

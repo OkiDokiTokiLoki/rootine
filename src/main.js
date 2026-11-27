@@ -1,12 +1,12 @@
 import "./style.css";
-import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty, cycleStageBadge, renderCycleSelector } from "./utils.js";
+import { uid, cycleUid, fmtDate, fmtTime, escapeHtml, getPlantMeta, getNutrientColor, NUTRIENT_PALETTE, fmtQty, cycleStageBadge, renderCycleSelector, getPlantGrowthStageAt, plantGrowthStageBadge, computePlantGrowthStageDurations } from "./utils.js";
 import { loadCycles, saveCycles, loadActiveCycleId, saveActiveCycleId, loadCollapsedCycles, saveCollapsedCycles, loadCollapsedWeeks, saveCollapsedWeeks, loadCollapsedObs, isValidCyclesShape } from "./storage.js";
 import { initLog, renderLog, toggleWeek, toggleCycle, toggleEntry, getLogCycleId } from "./log.js";
 import { initStats, renderStats, setStatsMode, getStatsMode, initObsCollapsed, toggleObs } from "./stats.js";
 import { on, closeHeaderMenu } from "./actions.js";
 import { icon } from "./icons.js";
 import { registerServiceWorker } from "./sw.js";
-import { PLANT_TYPE, PLANT_TYPE_DEFINITIONS, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, PLANT_DETAIL_METRIC_SECTIONS, NUTRIENT_COLOR_DEFINITIONS } from "./constants.js";
+import { PLANT_TYPE, PLANT_TYPE_DEFINITIONS, PLANT_GROWTH_STAGE, PLANT_GROWTH_STAGE_DEFINITIONS, ACTION_TYPE, FORM_PLANT_ACTIONS, PLANT_ACTION_TYPES, STATS_MODE, NUTRIENT_TAB_ALL, STORAGE_KEY, STORAGE_VERSION_KEY, ACTIVE_CYCLE_KEY, COLLAPSED_CYCLES_KEY, COLLAPSED_WEEKS_KEY, COLLAPSED_OBS_KEY, CYCLE_STAGE, CYCLE_STAGE_DEFINITIONS, PLANT_DETAIL_METRIC_SECTIONS, NUTRIENT_COLOR_DEFINITIONS } from "./constants.js";
 let cycles = loadCycles(),
     activeCycleId = loadActiveCycleId(cycles);
 
@@ -42,7 +42,8 @@ let nutrientDrafts = {},
     nutrientActiveTab = NUTRIENT_TAB_ALL;
 let yieldDrafts = {};
 let plantManagerCycleId = null,
-    nutrientManagerCycleId = null;
+    nutrientManagerCycleId = null,
+    overviewCycleId = null;
 const draftState = { editingEntryId: null, pendingAddPlantType: PLANT_TYPE.AUTO, pendingRenamePlantType: PLANT_TYPE.AUTO, pendingPlantObs: [], selectedPlantObsTab: null, editingPlantObsIndex: null, orphanedEdits: {} };
 const modalFocusOrigins = new Map();
 let toastTimer = null;
@@ -192,7 +193,7 @@ function readYieldInputs() {
 }
 
 function writeYieldInputs(snap) {
-    const draft = snap || yieldDrafts[NUTRIENT_TAB_ALL] || {};
+    const draft = snap || yieldDrafts || {};
     document.querySelectorAll("input[data-yield]").forEach((el) => {
         const plant = el.dataset.yield;
         const v = draft[plant];
@@ -207,7 +208,22 @@ function renderYieldFormRows() {
     const t = document.getElementById("yield-rows");
     if (!t) return;
     t.innerHTML = "";
-    const plants = cyclePlants();
+    const cycle = activeCycle(),
+        recordedYieldPlants = new Set();
+    (cycle?.entries || []).forEach((entry) => {
+        Object.entries(entry.plants || {}).forEach(([name, plantData]) => {
+            plantData?.yieldGrams != null && recordedYieldPlants.add(name);
+        });
+    });
+    const savedYieldPlants = Object.keys(yieldDrafts).filter((name) => (cycle?.plants || []).includes(name)),
+        savedYieldSet = new Set(savedYieldPlants),
+        harvestedPlants = (cycle?.plants || []).filter((name) => {
+            const plantType = cycle.plantTypes?.[name];
+            return plantType && typeof plantType === "object" && plantType.harvestedAt != null && (!recordedYieldPlants.has(name) || savedYieldSet.has(name));
+        }),
+        plants = [...new Set([...harvestedPlants, ...savedYieldPlants])];
+    const yieldSection = document.getElementById("yield-section");
+    if (yieldSection) yieldSection.style.display = cycleShowsYield(cycle) && plants.length > 0 ? "" : "none";
     if (plants.length === 0) return;
     plants.forEach((name) => {
         const row = document.createElement("div");
@@ -389,12 +405,16 @@ function renderOverview() {
         { title: "Plants", description: "Manage plants and varieties for any grow cycle.", action: "openPlantManager", button: "Manage plants", icon: icon.action("feed", { size: 20 }) },
         { title: "Nutrients", description: "Manage the nutrient list for any grow cycle.", action: "openNutrientManager", button: "Manage nutrients", icon: icon.waterDropLine({ size: 20 }) },
     ];
-    const cycleCards = sortedCycles.map((cycle) => {
-        const stage = cycle.stage || CYCLE_STAGE.GROW,
-            entries = cycle.entries || [],
-            latestEntry = [...entries].sort((a, b) => new Date(b.dt) - new Date(a.dt))[0],
-            lastActivity = latestEntry ? fmtDate(latestEntry.dt) : "No entries yet";
-        return `<article class="overview-cycle-card">
+    if (!sortedCycles.some((cycle) => cycle.id === overviewCycleId)) overviewCycleId = sortedCycles[0]?.id || null;
+    const selectedCycle = sortedCycles.find((cycle) => cycle.id === overviewCycleId),
+        cycleSelector = selectedCycle ? renderCycleSelector(sortedCycles, { selectedId: selectedCycle.id, action: "selectOverviewCycle", showStage: true, preserveOrder: true }) : "",
+        cycleCard = selectedCycle ? (() => {
+            const cycle = selectedCycle;
+            const stage = cycle.stage || CYCLE_STAGE.GROW,
+                entries = cycle.entries || [],
+                latestEntry = [...entries].sort((a, b) => new Date(b.dt) - new Date(a.dt))[0],
+                lastActivity = latestEntry ? fmtDate(latestEntry.dt) : "No entries yet";
+            return `<article class="overview-cycle-card">
             <div class="overview-cycle-head">
                 <div><div class="overview-cycle-name">${escapeHtml(cycle.name)}</div><div class="overview-cycle-date">Last activity: ${lastActivity}</div></div>
                 ${cycleStageBadge(stage)}
@@ -410,17 +430,32 @@ function renderOverview() {
                 <button data-action="openOverviewNutrientManager" data-id="${escapeHtml(cycle.id)}">Nutrients</button>
             </div>
         </article>`;
-    }).join("");
+        })() : "";
     root.innerHTML = `
+        <div class="overview-hero">
+            <div><div class="overview-eyebrow">Grow overview</div><h2>Everything in one place</h2><p>Review your grows and jump straight into the manager you need.</p></div>
+            <button class="overview-new-cycle" data-action="newCycleFromManager">+ New cycle</button>
+        </div>
         <div class="overview-summary">${summary.map((item) => `<div class="overview-summary-card"><strong>${item.value}</strong><span>${item.label}</span></div>`).join("")}</div>
         <div class="section-title overview-section-title">Manage</div>
         <div class="overview-manager-grid">${managerCards.map((manager) => `<button class="overview-manager-card" data-action="${manager.action}"><i>${manager.icon}</i><strong>${manager.title}</strong><span>${manager.description}</span><em>${manager.button}</em></button>`).join("")}</div>
         <div class="section-title overview-section-title">Grow cycles</div>
-        <div class="overview-cycle-list">${cycleCards || `<div class="overview-empty"><strong>No grow cycles yet</strong><span>Create your first cycle to begin tracking plants, nutrients, and logs.</span><button data-action="newCycleFromManager">Create a grow cycle</button></div>`}</div>
+        ${cycleSelector}
+        <div class="overview-cycle-list">${cycleCard || `<div class="overview-empty"><strong>No grow cycles yet</strong><span>Create your first cycle to begin tracking plants, nutrients, and logs.</span><button data-action="newCycleFromManager">Create a grow cycle</button></div>`}</div>
         <div class="section-title overview-section-title">Data &amp; backup</div>
         <div class="overview-data-card"><div><strong>Your data stays on this device</strong><span>Export a backup regularly so your grow history can be restored on any device.</span></div><div class="overview-data-actions"><button data-action="exportBackup">Export backup</button><button data-action="triggerImport">Import backup</button></div></div>
         <div class="section-title overview-section-title overview-section-title--danger">Danger zone</div>
         <div class="overview-danger-card"><div><strong>Reset or remove local data</strong><span>Open guarded maintenance tools for interface settings or a complete Rootine reset.</span></div><button data-action="openDangerZone">Open danger zone</button></div>`;
+}
+function selectOverviewCycle(id) {
+    if (!cycles.some((cycle) => cycle.id === id) || id === overviewCycleId) return;
+    const previousScroll = document.querySelector("#overview-content .stats-cycle-toggle--scroll")?.scrollLeft || 0;
+    overviewCycleId = id;
+    renderOverview();
+    const selector = document.querySelector("#overview-content .stats-cycle-toggle--scroll");
+    if (!selector) return;
+    selector.scrollLeft = previousScroll;
+    selector.querySelector(".stats-cycle-btn.active")?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
 }
 function openOverviewCycleLog(id) {
     if (!cycles.some((cycle) => cycle.id === id)) return;
@@ -991,22 +1026,146 @@ function renderPlantList() {
             n.forEach((n, a) => {
                 const l = getPlantMeta(t, n).type,
                     typeDefinition = PLANT_TYPE_DEFINITIONS[l] || PLANT_TYPE_DEFINITIONS[PLANT_TYPE.AUTO],
+                    growthStage = getPlantGrowthStageAt(t, n).stage,
                     i = `plant-type-badge ${typeDefinition.className}`,
                     s = typeDefinition.label,
                     d = document.createElement("div");
                 ((d.className = "plant-manage-row"),
                     (d.innerHTML = `
-            <div class="plant-manage-name">${escapeHtml(n)}</div>
+            <div class="plant-manage-main">
+                <div class="plant-manage-name">${escapeHtml(n)}</div>
+                <div class="plant-stage-toggle" aria-label="Growth stage for ${escapeHtml(n)}">
+                    ${Object.entries(PLANT_GROWTH_STAGE_DEFINITIONS).map(([stage, definition]) => `<button type="button" class="plant-stage-opt${stage === growthStage ? " active" : ""}" data-action="setPlantGrowthStage" data-index="${a}" data-stage="${stage}" title="Set ${escapeHtml(n)} to ${definition.label}">${definition.shortLabel}<span>${definition.label}</span></button>`).join("")}
+                </div>
+            </div>
             <div class="plant-manage-actions">
                 <span class="${i}" data-action="togglePlantType" data-index="${a}" title="Click to toggle type">${s}</span>
-                <button class="settings-btn blue-btn" data-action="renamePlant" data-index="${a}" aria-label="Rename ${escapeHtml(n)}" title="Rename">${icon.editStroke()}</button>
-                <button class="settings-btn red-btn" data-action="deletePlant" data-index="${a}" aria-label="Delete ${escapeHtml(n)}" title="Delete">${icon.trashStroke()}</button>
-                <button class="settings-btn favourite-btn ${isFavourite(t, n) ? "is-favourite" : ""}" data-action="toggleFavourite" data-index="${a}" aria-label="${isFavourite(t, n) ? "Unfavourite" : "Favourite"} ${escapeHtml(n)}" title="${isFavourite(t, n) ? "Unfavourite" : "Favourite"}">${icon.star({ size: 18, filled: isFavourite(t, n) })}</button>
+                <div class="plant-manage-edit-actions">
+                    <button class="settings-btn blue-btn" data-action="renamePlant" data-index="${a}" aria-label="Rename ${escapeHtml(n)}" title="Rename">${icon.editStroke()}</button>
+                    <button class="settings-btn red-btn" data-action="deletePlant" data-index="${a}" aria-label="Delete ${escapeHtml(n)}" title="Delete">${icon.trashStroke()}</button>
+                    <button class="settings-btn favourite-btn ${isFavourite(t, n) ? "is-favourite" : ""}" data-action="toggleFavourite" data-index="${a}" aria-label="${isFavourite(t, n) ? "Unfavourite" : "Favourite"} ${escapeHtml(n)}" title="${isFavourite(t, n) ? "Unfavourite" : "Favourite"}">${icon.star({ size: 18, filled: isFavourite(t, n) })}</button>
+                </div>
             </div>
         `),
                     e.appendChild(d));
             }))
         : (e.innerHTML = '<div class="plant-empty">No plants yet. Add some to start logging.</div>');
+}
+function localDateValue(date = new Date()) {
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+function ensurePlantStageModal() {
+    let modal = document.getElementById("plant-stage-modal");
+    if (modal) return modal;
+    modal = document.createElement("div");
+    modal.id = "plant-stage-modal";
+    modal.className = "modal-overlay modal-overlay--higher";
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-title">Plant growth stages</div>
+            <div class="modal-subtitle" id="plant-stage-plant-name"></div>
+            <div id="plant-stage-edit-fields">
+                <div class="modal-label" id="plant-stage-date-label">Stage start date</div>
+                <input id="plant-stage-date" type="date" class="form-input form-input-full" />
+                <div class="modal-hint" id="plant-stage-date-hint"></div>
+            </div>
+            <div class="modal-label plant-stage-history-title">Stage history</div>
+            <div id="plant-stage-history" class="plant-stage-history"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" data-action="closePlantStageEditor">Cancel</button>
+                <button class="btn-confirm" id="plant-stage-save" data-action="savePlantGrowthStage">Save stage</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    return modal;
+}
+function renderPlantStageHistory() {
+    const modal = document.getElementById("plant-stage-modal"),
+        cycle = cycles.find((candidate) => candidate.id === modal?._cycleId),
+        plant = cycle?.plants?.[modal?._plantIndex],
+        container = document.getElementById("plant-stage-history");
+    if (!modal || !cycle || !plant || !container) return;
+    const history = getPlantMeta(cycle, plant).stageHistory;
+    container.innerHTML = history
+        .map((item) => {
+            const definition = PLANT_GROWTH_STAGE_DEFINITIONS[item.stage],
+                inferred = item.stage === PLANT_GROWTH_STAGE.SEEDLING && item === history[0];
+            return `<div class="plant-stage-history-row">
+                <div>${plantGrowthStageBadge(item.stage)}<time>${escapeHtml(item.dt)}</time></div>
+                ${inferred ? '<span class="plant-stage-history-fixed">First log</span>' : `<button type="button" class="settings-btn red-btn" data-action="removePlantGrowthStage" data-stage="${item.stage}" data-date="${item.dt}" aria-label="Remove ${definition.label} stage dated ${item.dt}" title="Remove">${icon.trashStroke()}</button>`}
+            </div>`;
+        })
+        .join("");
+}
+function setPlantGrowthStage(index, stage) {
+    const cycle = plantManagerCycle(),
+        definition = PLANT_GROWTH_STAGE_DEFINITIONS[stage],
+        plant = cycle?.plants?.[index];
+    if (!cycle || !definition || !plant) return;
+    const modal = ensurePlantStageModal(),
+        meta = getPlantMeta(cycle, plant),
+        existing = meta.stageHistory.find((item) => item.stage === stage),
+        seedling = stage === PLANT_GROWTH_STAGE.SEEDLING,
+        dateInput = document.getElementById("plant-stage-date"),
+        fields = document.getElementById("plant-stage-edit-fields"),
+        saveButton = document.getElementById("plant-stage-save");
+    modal._cycleId = cycle.id;
+    modal._plantIndex = index;
+    modal._stage = stage;
+    document.getElementById("plant-stage-plant-name").textContent = `${plant} · ${definition.label}`;
+    fields.hidden = seedling;
+    saveButton.hidden = seedling;
+    dateInput.min = meta.repottedAt;
+    dateInput.max = localDateValue();
+    dateInput.value = existing?.dt || localDateValue();
+    document.getElementById("plant-stage-date-label").textContent = `${definition.label} start date`;
+    document.getElementById("plant-stage-date-hint").textContent = existing ? "Change the date to correct this transition." : "Choose when this plant entered this stage.";
+    renderPlantStageHistory();
+    showModal("plant-stage-modal");
+}
+function closePlantStageEditor() {
+    hideModal("plant-stage-modal");
+}
+function updatePlantStageHistory(cycle, plant, history) {
+    const meta = getPlantMeta(cycle, plant);
+    cycle.plantTypes[plant] = { ...(cycle.plantTypes[plant] && typeof cycle.plantTypes[plant] === "object" ? cycle.plantTypes[plant] : {}), type: meta.type, repottedAt: meta.repottedAt, flushedAt: meta.flushedAt, harvestedAt: meta.harvestedAt, stageHistory: history };
+    persist();
+    renderPlantList();
+    invalidateLog();
+    invalidateStats();
+    invalidateModal();
+}
+function savePlantGrowthStage() {
+    const modal = document.getElementById("plant-stage-modal"),
+        cycle = cycles.find((candidate) => candidate.id === modal?._cycleId),
+        plant = cycle?.plants?.[modal?._plantIndex],
+        stage = modal?._stage,
+        definition = PLANT_GROWTH_STAGE_DEFINITIONS[stage],
+        dt = document.getElementById("plant-stage-date")?.value;
+    if (!cycle || !plant || !definition || stage === PLANT_GROWTH_STAGE.SEEDLING || !dt) return;
+    const meta = getPlantMeta(cycle, plant);
+    if (dt < meta.repottedAt || dt > localDateValue()) return void alert(`Choose a date from ${meta.repottedAt} through today.`);
+    const history = meta.stageHistory.filter((item) => item.stage !== stage && item.dt !== dt);
+    history.push({ stage, dt });
+    history.sort((a, b) => a.dt.localeCompare(b.dt));
+    updatePlantStageHistory(cycle, plant, history);
+    hideModal("plant-stage-modal");
+    showToast(`${plant}: ${definition.label} from ${dt}`);
+}
+function removePlantGrowthStage(target) {
+    const modal = document.getElementById("plant-stage-modal"),
+        cycle = cycles.find((candidate) => candidate.id === modal?._cycleId),
+        plant = cycle?.plants?.[modal?._plantIndex],
+        stage = target.dataset.stage,
+        dt = target.dataset.date;
+    if (!cycle || !plant || stage === PLANT_GROWTH_STAGE.SEEDLING) return;
+    const definition = PLANT_GROWTH_STAGE_DEFINITIONS[stage];
+    if (!confirm(`Remove the ${definition?.label || stage} transition dated ${dt}?`)) return;
+    const history = getPlantMeta(cycle, plant).stageHistory.filter((item) => !(item.stage === stage && item.dt === dt));
+    updatePlantStageHistory(cycle, plant, history);
+    renderPlantStageHistory();
+    showToast(`${definition?.label || stage} transition removed`);
 }
 function openAddPlant() {
     if (!plantManagerCycle()) return void alert("Select a grow cycle first.");
@@ -1041,7 +1200,7 @@ function confirmAddPlant() {
     if (!t) return void alert("Enter a plant name.");
     if (!PLANT_NAME_RE.test(t)) return void alert("Plant name can only contain letters, numbers, spaces, dashes, and underscores.");
     const e = plantManagerCycle();
-    e ? (Array.isArray(e.plants) || (e.plants = []), e.plants.includes(t) ? alert("A plant with that name already exists.") : (e.plants.push(t), (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {}), (e.plantTypes[t] = { type: draftState.pendingAddPlantType, repottedAt: e.startDate, flushedAt: null, harvestedAt: null }), persist(), hideModal("add-plant-modal"), renderPlantList(), e.id === activeCycleId && renderAddForm(), invalidateStats())) : alert("Select a grow cycle first.");
+    e ? (Array.isArray(e.plants) || (e.plants = []), e.plants.includes(t) ? alert("A plant with that name already exists.") : (e.plants.push(t), (e.plantTypes && "object" == typeof e.plantTypes) || (e.plantTypes = {}), (e.plantTypes[t] = { type: draftState.pendingAddPlantType, repottedAt: e.startDate, flushedAt: null, harvestedAt: null, stageHistory: [{ stage: PLANT_GROWTH_STAGE.SEEDLING, dt: e.startDate }] }), persist(), hideModal("add-plant-modal"), renderPlantList(), e.id === activeCycleId && renderAddForm(), invalidateStats())) : alert("Select a grow cycle first.");
 }
 function cancelAddPlant() {
     hideModal("add-plant-modal");
@@ -1070,7 +1229,9 @@ function confirmRenamePlant() {
     const n = document.getElementById("rename-plant-input").value.trim(),
         a = t._plantIndex,
         l = t._oldName,
-        i = draftState.pendingRenamePlantType;
+        i = draftState.pendingRenamePlantType,
+        previousMeta = getPlantMeta(e, l),
+        previousRawMeta = e.plantTypes?.[l];
     if (!n) return void alert("Plant name can't be empty.");
     const s = n === l ? l : n;
     if (s !== l) {
@@ -1092,7 +1253,7 @@ function confirmRenamePlant() {
                     });
             }));
     }
-    ((e.plantTypes[s] = { type: i, repottedAt: e.plantTypes[s]?.repottedAt || e.startDate, flushedAt: e.plantTypes[s]?.flushedAt || null, harvestedAt: e.plantTypes[s]?.harvestedAt || null }), persist(), hideModal("rename-plant-modal"), renderPlantList(), e.id === activeCycleId && renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
+    ((e.plantTypes[s] = { ...(previousRawMeta && typeof previousRawMeta === "object" ? previousRawMeta : {}), type: i, repottedAt: previousMeta.repottedAt || e.startDate, flushedAt: previousMeta.flushedAt || null, harvestedAt: previousMeta.harvestedAt || null, stageHistory: previousMeta.stageHistory }), persist(), hideModal("rename-plant-modal"), renderPlantList(), e.id === activeCycleId && renderAddForm(), invalidateLog(), invalidateStats(), invalidateModal());
 }
 function cancelRenamePlant() {
     hideModal("rename-plant-modal");
@@ -1195,10 +1356,10 @@ function renderCycleList() {
                     ${stageBadge}
                 </div>
                 <div class="cycle-manage-meta">
-                    Started ${startDate} · ${plantCount} plant${plantCount === 1 ? "" : "s"}
+                    ${startDate} · ${plantCount} plant${plantCount === 1 ? "" : "s"}
                 </div>
             </div>
-            <div class="plant-manage-actions">
+            <div class="plant-manage-actions cycle-manage-actions">
                 <button class="settings-btn ${nextBtnClass}" data-action="advanceCycleStage" data-id="${escapeHtml(cycle.id)}" title="${nextBtnTitle}">${icon.arrowUp()}</button>
                 <button class="settings-btn blue-btn" data-action="editCycleName" data-id="${escapeHtml(cycle.id)}" title="Rename">${icon.edit()}</button>
                 <button class="settings-btn green-btn" data-action="duplicateCycle" data-id="${escapeHtml(cycle.id)}" title="Duplicate cycle and all entries">${icon.duplicate()}</button>
@@ -1250,13 +1411,13 @@ function renderNutrientList() {
             n.forEach((n, a) => {
                 const l = getNutrientColor(t, n.name),
                     i = document.createElement("div");
-                ((i.className = "plant-manage-row"),
+                ((i.className = "plant-manage-row nutrient-manage-row"),
                     (i.innerHTML = `
             <div class="plant-manage-name">
                 <span class="nutrient-swatch nutrient-swatch--${l}"></span>
                 <span>${escapeHtml(n.name)}</span>
             </div>
-            <div class="plant-manage-actions">
+            <div class="plant-manage-actions nutrient-manage-actions">
                 <button class="settings-btn blue-btn" data-action="renameNutrient" data-index="${a}" title="Edit ${escapeHtml(n.name)}" aria-label="Edit ${escapeHtml(n.name)} name and colour">
                     ${icon.edit()}
                 </button>
@@ -1394,7 +1555,7 @@ function computePlantDetail(t, e) {
     const n = getPlantMeta(t, e),
         a = t.nutrients || [],
         l = Date.now() - 6048e5,
-        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0, activeMlPerL: null, activeSinceDt: null, _runningMlPerL: null }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, lastFlushDt: null, firstFlushDt: null, lastHarvestDt: null, firstHarvestDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, flushCount: 0, harvestCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, flushCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [], flushActions: [], harvestActions: [] };
+        i = { nutrients: Object.fromEntries(a.map((t) => [t.name, { totalCups: 0 }])), totalWaterCups: 0, totalYieldGrams: 0, lastFeedDt: null, lastWaterDt: null, lastLstDt: null, lastDefDt: null, lastFlushDt: null, firstFlushDt: null, lastHarvestDt: null, firstHarvestDt: null, feedCount: 0, waterCount: 0, lstCount: 0, defCount: 0, flushCount: 0, harvestCount: 0, feedCountLast7d: 0, waterCountLast7d: 0, lstCountLast7d: 0, defCountLast7d: 0, flushCountLast7d: 0, logCountLast7d: 0, notes: [], lstActions: [], defActions: [], flushActions: [], harvestActions: [] };
     for (const n of t.entries || []) {
         const t = new Date(n.dt),
             a = t.getTime() >= l;
@@ -1405,10 +1566,6 @@ function computePlantDetail(t, e) {
             for (const [t, e] of Object.entries(s.nutrients || {})) {
                 const n = i.nutrients[t];
                 n && (n.totalCups += e || 0);
-            }
-            for (const [e, a] of Object.entries(s.concentrations || {})) {
-                const l = i.nutrients[e];
-                l && (null == l.activeSinceDt || t > new Date(l.activeSinceDt)) && ((l.activeMlPerL = a), (l.activeSinceDt = n.dt), (l._runningMlPerL = a));
             }
             const e = s.water || 0;
             (e && ((i.totalWaterCups += e), i.waterCount++, a && i.waterCountLast7d++, (!i.lastWaterDt || t > new Date(i.lastWaterDt)) && (i.lastWaterDt = n.dt)), Object.values(s.nutrients || {}).some((t) => t && t > 0) && (i.feedCount++, a && i.feedCountLast7d++, (!i.lastFeedDt || t > new Date(i.lastFeedDt)) && (i.lastFeedDt = n.dt)));
@@ -1426,23 +1583,12 @@ function computePlantDetail(t, e) {
         if (!i.firstHarvestDt || new Date(t) < new Date(i.firstHarvestDt)) i.firstHarvestDt = t;
     }
     (delete i.lstActions, delete i.defActions, delete i.flushActions, delete i.harvestActions, i.notes.sort((t, e) => new Date(e.dt) - new Date(t.dt)));
-    const s = [...(t.entries || [])].sort((t, e) => new Date(t.dt) - new Date(e.dt));
-    for (const [t, n] of Object.entries(i.nutrients)) {
-        let a = 0;
-        for (const l of s) {
-            const i = l.plants?.[e];
-            if (!i) continue;
-            const s = i.nutrients?.[t],
-                d = i.concentrations?.[t] ?? null;
-            (null != d && d !== n._runningMlPerL && ((n._runningMlPerL = d), (a = 0)), s && s > 0 && null != d && d === n._runningMlPerL && a++);
-        }
-        ((n.feedsAtCurrent = a), delete n._runningMlPerL);
-    }
     const d = n.repottedAt || t.startDate;
     const harvestedAt = n.harvestedAt;
     const ageNow = harvestedAt || new Date().toISOString().slice(0, 10);
-    const c = Math.max(0, new Date(ageNow) - new Date(d));
-    return ((i.repottedAt = d), (i.harvestedAt = harvestedAt), (i.daysSinceRepot = Math.floor(c / 864e5)), (i.weeksSinceRepot = Math.max(1, Math.ceil(i.daysSinceRepot / 7))), i);
+    const c = Math.max(0, new Date(ageNow) - new Date(d)),
+        growth = computePlantGrowthStageDurations(t, e);
+    return ((i.repottedAt = d), (i.harvestedAt = harvestedAt), (i.daysSinceRepot = Math.floor(c / 864e5)), (i.weeksSinceRepot = Math.max(1, Math.ceil(i.daysSinceRepot / 7))), (i.growthStage = growth.current), (i.growthStageDurations = growth.durations), i);
 }
 
 function renderPlantDetailModal(t, e) {
@@ -1494,25 +1640,11 @@ function renderPlantDetailModal(t, e) {
                     .join(""),
         y = i
             .map((e) => {
-                const n = s.nutrients[e.name] || { totalCups: 0, activeMlPerL: null, activeSinceDt: null, feedsAtCurrent: 0 },
-                    a = `nutrient--${getNutrientColor(t, e.name)}`,
-                    i = n.activeSinceDt,
-                    d = i ? `<span class="plant-detail-rel">${r(i)}</span> since ${fmtDate(i)}` : "—";
+                const n = s.nutrients[e.name] || { totalCups: 0 },
+                    a = `nutrient--${getNutrientColor(t, e.name)}`;
                 return `
         <div class="plant-detail-nutrient-block">
             <div class="plant-detail-nutrient-name ${a}">${escapeHtml(e.name)}</div>
-            <div class="plant-detail-row">
-                <div class="plant-detail-label">Active dilution</div>
-                <div class="plant-detail-value">${null != n.activeMlPerL ? n.activeMlPerL + " ml/l" : "—"}</div>
-            </div>
-            <div class="plant-detail-row">
-                <div class="plant-detail-label">Used for</div>
-                <div class="plant-detail-value">${n.feedsAtCurrent} feed${1 === n.feedsAtCurrent ? "" : "s"}</div>
-            </div>
-            <div class="plant-detail-row">
-                <div class="plant-detail-label">Date</div>
-                <div class="plant-detail-value">${d}</div>
-            </div>
             <div class="plant-detail-row">
                 <div class="plant-detail-label">Cycle total</div>
                 <div class="plant-detail-value ${a}">${n.totalCups.toFixed(1)} cup${1 === n.totalCups ? "" : "s"}</div>
@@ -1531,10 +1663,21 @@ function renderPlantDetailModal(t, e) {
                 <div class="plant-detail-value${section.mutedZero ? f(value) : ""}">${value}</div>
             </div>`;
         }).join("")}`).join(""),
+        growthStageRows = Object.entries(PLANT_GROWTH_STAGE_DEFINITIONS).map(([stage, definition]) => {
+            const days = s.growthStageDurations[stage] || 0;
+            return `<div class="plant-detail-row">
+                <div class="plant-detail-label">${definition.label}</div>
+                <div class="plant-detail-value${f(days)}">${days} day${days === 1 ? "" : "s"}</div>
+            </div>`;
+        }).join(""),
         g = `
         <div class="plant-detail-row">
             <div class="plant-detail-label">Type</div>
             <div class="plant-detail-value">${a}</div>
+        </div>
+        <div class="plant-detail-row">
+            <div class="plant-detail-label">Growth stage</div>
+            <div class="plant-detail-value">${plantGrowthStageBadge(s.growthStage.stage)} <span class="plant-detail-stage-since">since ${fmtDate(s.growthStage.dt)}</span></div>
         </div>
                 ${cycleShowsYield(t)
                 ? `
@@ -1560,6 +1703,9 @@ function renderPlantDetailModal(t, e) {
             <div class="plant-detail-label">Age (since repot)</div>
             <div class="plant-detail-value"><span class="plant-detail-rel">${s.weeksSinceRepot} week${1 === s.weeksSinceRepot ? "" : "s"}</span> ${s.daysSinceRepot} day${1 === s.daysSinceRepot ? "" : "s"}</div>
         </div>
+        <div class="plant-detail-divider"></div>
+        <div class="plant-detail-section-label">Growth stage timeline</div>
+        ${growthStageRows}
         <div class="plant-detail-divider"></div>
         <div class="plant-detail-section-label">Cumulative nutrients &amp; water</div>
         ${i.length > 0
@@ -1684,6 +1830,7 @@ function editEntry(t) {
             Object.entries(e.plants || {}).forEach(([t, e]) => {
                 if (e.yieldGrams != null) yieldDrafts[t] = e.yieldGrams;
             }),
+            cycleShowsYield(targetCycle) && renderYieldFormRows(),
             writeNutrientInputs({}),
             document.querySelectorAll("#nutrient-plant-tabs .nutrient-tab").forEach((t) => {
                 t.classList.toggle("active", NUTRIENT_TAB_ALL === t.dataset.tab);
@@ -2377,6 +2524,7 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("editEntry", "click", (t) => editEntry(t.dataset.id)),
     on("deleteEntry", "click", (t) => deleteEntry(t.dataset.id)),
     on("duplicateEntry", "click", (t) => duplicateEntry(t.dataset.id)),
+    on("selectOverviewCycle", "click", (t) => selectOverviewCycle(t.dataset.id)),
     on("openOverviewCycleLog", "click", (t) => openOverviewCycleLog(t.dataset.id)),
     on("openOverviewPlantManager", "click", (t) => openOverviewPlantManager(t.dataset.id)),
     on("openOverviewNutrientManager", "click", (t) => openOverviewNutrientManager(t.dataset.id)),
@@ -2390,6 +2538,10 @@ document.addEventListener("rootine:log-cycle-changed", (event) => {
     on("selectPlantManagerCycle", "click", (t) => selectPlantManagerCycle(t.dataset.id)),
     on("selectNutrientManagerCycle", "click", (t) => selectNutrientManagerCycle(t.dataset.id)),
     on("togglePlantType", "click", (t) => togglePlantType(Number(t.dataset.index))),
+    on("setPlantGrowthStage", "click", (t) => setPlantGrowthStage(Number(t.dataset.index), t.dataset.stage)),
+    on("savePlantGrowthStage", "click", () => savePlantGrowthStage()),
+    on("removePlantGrowthStage", "click", (t) => removePlantGrowthStage(t)),
+    on("closePlantStageEditor", "click", () => closePlantStageEditor()),
     on("renamePlant", "click", (t) => renamePlant(Number(t.dataset.index))),
     on("deletePlant", "click", (t) => deletePlant(Number(t.dataset.index))),
     on("toggleFavourite", "click", (t) => toggleFavourite(Number(t.dataset.index))),
